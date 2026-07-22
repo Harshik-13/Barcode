@@ -81,7 +81,7 @@ These phases are **LOCKED**. No work should begin from a later phase until the c
 
 ---
 
-## Phase 3 — System Design
+## Phase 3 — System Design ✅ COMPLETED
 
 **Objective:** Design how the system behaves.
 
@@ -100,18 +100,23 @@ These phases are **LOCKED**. No work should begin from a later phase until the c
 - Integration architecture
 
 **Deliverables:**
-- Workflow diagrams
-- Sequence diagrams
-- Component diagrams
-- Interaction diagrams
-- Architecture decisions
-- Module responsibilities
+- Workflow diagrams (`docs/workflows/user-workflows.md`, `docs/workflows/system-workflows.md`, `docs/workflows/sequence-diagrams.md`)
+- Component architecture (`docs/architecture/component-architecture.md`)
+- Module responsibilities (`docs/architecture/module-responsibilities.md`)
+- Data flow (`docs/architecture/data-flow.md`)
+- Notification flow (`docs/architecture/notification-flow.md`)
+- Error flow (`docs/architecture/error-flow.md`)
+- Conversation history summary (`docs/conversation-history.md`)
+- Architecture decisions (`docs/architecture/architecture-decisions.md`)
+- Integration architecture (`docs/architecture/integration-architecture.md`)
 
 **Exit Criteria:** Every feature has a documented workflow before implementation. No implementation decisions should be made during this phase.
 
+**Completed At:** Tag `v0.3.0-system-design` (2026-07-22)
+
 ---
 
-## Phase 4 — Data & API Design
+## Phase 4 — Data & API Design ✅ COMPLETED
 
 **Objective:** Lock all contracts before implementation.
 
@@ -140,6 +145,8 @@ These phases are **LOCKED**. No work should begin from a later phase until the c
 - Authorization matrix
 
 **Exit Criteria:** Frontend and backend can be developed independently using only the documented contracts. No business logic implementation yet.
+
+**Completed At:** Tag `v0.4.0-data-api-design` (2026-07-22)
 
 ---
 
@@ -257,8 +264,10 @@ Requirement → Architecture Check → Implementation → Threat Modeling → Se
 
 ## Current Status
 
-**Current Phase:** Phase 3 — System Design
+**Current Phase:** Phase 5 — UI/UX Design
 
 Phase 1 complete (tag `v0.1.0-foundation`).  
 Phase 2 complete (tag `v0.2.0-domain-design`).  
-Do not perform work belonging to Phase 4 or later unless explicitly instructed by the human architect.
+Phase 3 complete (tag `v0.3.0-system-design`).  
+Phase 4 complete (tag `v0.4.0-data-api-design`).  
+Do not perform work belonging to Phase 6 or later unless explicitly instructed by the human architect.

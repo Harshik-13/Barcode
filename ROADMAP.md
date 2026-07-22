@@ -1,6 +1,6 @@
 # 8Hour Workspace Attendance System — Adaptation Roadmap
 
-This roadmap aligns with the [7 development phases](PHASES.md). Current phase: **Phase 3 — System Design**.
+This roadmap aligns with the [7 development phases](PHASES.md). Current phase: **Phase 5 — UI/UX Design**.
 
 ---
 
@@ -63,15 +63,50 @@ This roadmap aligns with the [7 development phases](PHASES.md). Current phase: *
 
 ---
 
-## Phase 3: System Design
+## Phase 3: System Design ✅ Completed
 
-User workflows, system workflows, component architecture, data flow, sequence diagrams, offline strategy.
+**Tag:** `v0.3.0-system-design`
+
+### Deliverables Produced
+
+| Document | Covers |
+|----------|--------|
+| `docs/workflows/user-workflows.md` | 9 user workflows with step-by-step flows and error handling |
+| `docs/workflows/system-workflows.md` | 3 system workflows: auto-completion, archival, reminders |
+| `docs/workflows/sequence-diagrams.md` | 14 sequence diagrams covering all workflows |
+| `docs/architecture/component-architecture.md` | Component diagram, layer responsibilities, key design decisions |
+| `docs/architecture/module-responsibilities.md` | 4 modules with endpoints, responsibilities, key patterns |
+| `docs/architecture/data-flow.md` | Entry/exit/summary/notification/auto-completion data flows |
+| `docs/architecture/notification-flow.md` | Notification creation, delivery, read lifecycle |
+| `docs/architecture/error-flow.md` | Error propagation, recovery strategies, user-facing error patterns |
+| `docs/architecture/integration-architecture.md` | Identity provider, notification delivery, background jobs |
+| `docs/architecture/architecture-decisions.md` | 10 key ADRs with context, decision, consequences |
 
 ---
 
-## Phase 4: Data & API Design
+## Phase 4: Data & API Design ✅ Completed
 
-Database schema, API contracts, request/response schemas, validation rules, authorization matrix.
+**Tag:** `v0.4.0-data-api-design`
+
+### Deliverables Produced
+
+| Document | Covers |
+|----------|--------|
+| `docs/data-api/data-model.md` | Logical data model with attributes, types, enums |
+| `docs/data-api/database-schema.md` | Full relational schema with 8 tables, PKs, FKs |
+| `docs/data-api/entity-relationships.md` | ER diagram, cardinality, cascade rules |
+| `docs/data-api/constraints.md` | Business constraints, referential integrity, immutable records |
+| `docs/data-api/index-strategy.md` | 30+ indexes with workflow justification |
+| `docs/data-api/data-lifecycle.md` | Lifecycle for all entities, archival policy, cleanup jobs |
+| `docs/data-api/api-inventory.md` | 40 endpoints across 9 modules |
+| `docs/data-api/api-contracts.md` | Every endpoint with method, path, request/response schemas |
+| `docs/data-api/validation-contracts.md` | Field rules, business validations, ownership, duplicate prevention |
+| `docs/data-api/authorization-matrix.md` | Per-endpoint permissions for Student/Faculty/Admin |
+| `docs/data-api/error-contracts.md` | Standardized error format, 30+ error codes |
+| `docs/data-api/query-contracts.md` | Pagination, sorting, filtering, rate limiting, caching |
+| `docs/data-api/audit-contracts.md` | 20 logged actions, retention, visibility, sensitivity rules |
+| `docs/data-api/integration-contracts.md` | JWT, bcrypt, background jobs, CORS, rate limit headers |
+| `docs/data-api/api-versioning.md` | URL path versioning, deprecation policy, backward compatibility |
 
 ---
 
