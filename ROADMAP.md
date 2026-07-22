@@ -1,113 +1,155 @@
 # 8Hour Workspace Attendance System — Adaptation Roadmap
 
-## Phase 1: Foundation (Database + Auth)
+This roadmap aligns with the [7 development phases](PHASES.md). Current phase: **Phase 2 — Domain Design**.
 
-### Database Migration
-- [ ] Create new migration script (`migrations-workspace.sql`)
+---
+
+## Phase 1: Foundation ✅ Completed
+
+**Tag:** `v0.1.0-foundation`
+
+### Deliverables Produced
+
+| Area | Documents |
+|------|-----------|
+| Project structure | `docs/repository-structure.md` |
+| Coding standards | `docs/coding-standards.md` |
+| Git workflow | `docs/git-strategy.md`, `CONTRIBUTING.md` |
+| Environment strategy | `docs/environment-strategy.md` |
+| CI/CD design | `docs/ci-cd.md` |
+| Dependency management | `docs/dependency-management.md` |
+| Documentation standards | `docs/documentation-standards.md` |
+| Logging & error handling | `docs/logging-error-handling.md` |
+| Configuration conventions | `docs/configuration.md` |
+| Security baseline | `docs/security-baseline.md`, `SECURITY.md` |
+| Testing standards | `docs/testing-standards.md` |
+| Definition of Done | `docs/definition-of-done.md` |
+| Architecture | `ARCHITECTURE.md` |
+| Engineering principles | `PRINCIPLES.md` |
+| Development phases | `PHASES.md` |
+| AI agent conventions | `AGENTS.md` |
+
+---
+
+## Phase 2: Domain Design (Current)
+
+Business entities, relationships, rules, state transitions, permissions, terminology.
+
+See `PHASES.md` for full scope.
+
+---
+
+## Phase 3: System Design
+
+User workflows, system workflows, component architecture, data flow, sequence diagrams, offline strategy.
+
+---
+
+## Phase 4: Data & API Design
+
+Database schema, API contracts, request/response schemas, validation rules, authorization matrix.
+
+---
+
+## Phase 5: UI/UX Design
+
+Wireframes, navigation maps, component library, responsive layouts, loading/empty/error states.
+
+---
+
+## Phase 6: Implementation
+
+### Work Package 6.1 — Database & Auth
+
+- [ ] Create `backend/` project with Express + SQLite
+- [ ] Create migration script with new schema
 - [ ] Add tables: `roles`, `users`, `categories`, `workspace_sessions`, `notifications`, `activity_logs`
-- [ ] Deprecate/remove: `scans`, `devices`, `memberships` tables
-- [ ] Seed data: default roles (student, faculty, admin), default categories
-- [ ] Seed data: admin user account
-
-### Auth & Roles
+- [ ] Deprecate legacy `scans`, `devices`, `memberships` tables
+- [ ] Seed data: default roles, default categories, admin user
 - [ ] Add role field to JWT payload
 - [ ] Create auth middleware with role checking
-- [ ] Update `/api/auth/login` to return role
-- [ ] Update `/api/auth/google` to return role
-- [ ] Auth middleware for each role level
+- [ ] Update `/api/auth/login` and `/api/auth/google` to return role
 
----
+### Work Package 6.2 — Session Management API
 
-## Phase 2: Session Management API
-
-### Entry/Exit Endpoints
-- [ ] `POST /api/session/entry` — Faculty scans → create WorkspaceSession (pending)
-- [ ] `POST /api/session/exit` — Faculty scans → close active WorkspaceSession
-- [ ] `GET /api/session/active/{roll}` — Check if student has active session
-- [ ] `GET /api/session/history/{roll}` — Student's session history
-
-### Category Selection
-- [ ] `GET /api/categories` — List available work categories
-- [ ] `POST /api/session/category` — Student selects category for active session
-
-### Work Summary
-- [ ] `POST /api/session/summary` — Student submits work summary
+- [ ] `POST /api/session/entry` — Faculty creates pending session
+- [ ] `POST /api/session/exit` — Faculty closes active session
+- [ ] `GET /api/session/active/{roll}` — Check active session
+- [ ] `GET /api/session/history/{roll}` — Session history
+- [ ] `GET /api/categories` — List work categories
+- [ ] `POST /api/session/category` — Student selects category
+- [ ] `POST /api/session/summary` — Student submits summary
 - [ ] `GET /api/session/summary/{sessionId}` — View summary
+- [ ] Notification endpoints (fetch, mark read)
 
-### Notifications
-- [ ] `GET /api/notifications` — Student fetches notifications
-- [ ] `POST /api/notifications/read/{id}` — Mark as read
+### Work Package 6.3 — Single PWA Restructure
 
----
+- [ ] Create `frontend/` project (React + Vite + TypeScript)
+- [ ] Merge passport-pwa + vjscanner-pwa into single app
+- [ ] Role-based routing (student / faculty / admin)
+- [ ] Shared component library
 
-## Phase 3: Single PWA Restructure
+### Work Package 6.4 — Student Dashboard
 
-### Project Merge
-- [ ] Create new top-level PWA project (or restructure existing)
-- [ ] Combine passport-pwa + vjscanner-pwa into single app
-- [ ] Role-based routing (student view / faculty view / admin view)
-- [ ] Shared component library (reused from both apps)
+- [ ] Dashboard homepage with active session status
+- [ ] Work category selector
+- [ ] Notification list
+- [ ] Attendance history
+- [ ] Streaks and statistics
 
-### Student Dashboard (adapted from passport-pwa)
-- [ ] Replace QR code display with dashboard homepage
-- [ ] Show active session status
-- [ ] Show today's work category selector
-- [ ] Show notification list
-- [ ] Show attendance history
-- [ ] Show streaks and statistics
-- [ ] Remove QR generation (students no longer display QR)
+### Work Package 6.5 — Faculty Scanner
 
-### Faculty Scanner (adapted from vjscanner-pwa)
-- [ ] Retain camera scanning (html5-qrcode)
-- [ ] Replace meal type selector with entry/exit mode toggle
-- [ ] Show live occupancy count
-- [ ] Student search functionality
-- [ ] Remove hostel selector
-- [ ] Remove meal time windows
+- [ ] Camera scanning (reuse html5-qrcode from legacy)
+- [ ] Entry/exit mode toggle (replace meal type selector)
+- [ ] Live occupancy count
+- [ ] Student search
+- [ ] Reports and analytics (adapted from legacy ReportsView)
 
-### Admin Panel
+### Work Package 6.6 — Admin Panel
+
 - [ ] User management (CRUD for faculty accounts)
 - [ ] Category management
 - [ ] Workspace settings
 - [ ] Global analytics dashboard
 
-### Reports & Analytics (adapted from ReportsView)
-- [ ] Attendance reports (date range, student, category filters)
-- [ ] Productivity analytics (hours per category, trends)
-- [ ] Streak tracking
-- [ ] CSV export (reuse existing export logic)
+### Work Package 6.7 — Security Hardening
 
----
-
-## Phase 4: Security & Production
-
-### Security Hardening
-- [ ] Rate limiting on session endpoints
-- [ ] Input sanitization on all endpoints
-- [ ] Ownership verification (students see only their data)
+- [ ] Rate limiting on all endpoints
+- [ ] Input sanitization and validation
+- [ ] Ownership verification middleware
 - [ ] Duplicate scan prevention (race condition safe)
 - [ ] Concurrent request handling with transactions
 - [ ] Audit logging for all state changes
 
-### Testing
+### Work Package 6.8 — Testing
+
 - [ ] Unit tests for session state machine
 - [ ] Unit tests for auth middleware
 - [ ] Integration tests for entry/exit flow
 - [ ] Integration tests for role enforcement
-- [ ] Test duplicate scan prevention
-- [ ] Test concurrent session creation
+- [ ] Concurrency tests (race conditions)
+- [ ] Authorization tests (every role × every endpoint)
 
----
+### Work Package 6.9 — Polish
 
-## Phase 5: Polish
-
-- [ ] Error handling improvements
 - [ ] Loading states and UX feedback
 - [ ] Offline support for faculty scanning
 - [ ] PWA manifest update
-- [ ] Environment configuration cleanup
 - [ ] Remove all remaining hostel/meal references
-- [ ] Final production readiness review
+- [ ] Error boundary implementation
+- [ ] Final cleanup
+
+---
+
+## Phase 7: Production Readiness
+
+- [ ] Security audit
+- [ ] Performance optimization and load testing
+- [ ] Monitoring and logging review
+- [ ] Backup and disaster recovery plan
+- [ ] Deployment guide
+- [ ] Release checklist
+- [ ] Operational documentation review
 
 ---
 
@@ -115,8 +157,8 @@
 
 ### What to Reuse (Don't Rewrite)
 
-| Existing Code | Reuse As |
-|---------------|----------|
+| Legacy Code | Reuse As |
+|-------------|----------|
 | CameraScanner.tsx | Faculty barcode scanner (unchanged) |
 | GoogleLogin.tsx | Auth component (unchanged) |
 | ReportsView.tsx | Analytics reports (adapted) |
