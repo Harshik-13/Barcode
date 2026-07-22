@@ -1,16 +1,13 @@
-# Campus Passport — Offline-first PWAs + API
+# Campus Passport — Legacy Codebase
 
-This workspace contains three sub-projects:
+This directory contains the pre-adaptation codebase (hostel meal attendance system) being adapted into the **8Hour Workspace Attendance System**.
 
-- `passport-pwa/` — Student PWA (React + Vite + TS)
-- `vjscanner-pwa/` — Warden/Scanner PWA (React + Vite + TS)
-- `api-server/` — Node.js + Express + SQLite backend
+## Sub-projects
 
-Each project has an `.env.example` and minimal run scripts. The apps are scaffolded as lightweight starters to demonstrate the following features:
+- `passport-pwa/` — Student QR display app (to become student dashboard)
+- `vjscanner-pwa/` — Warden/scanner app (to become faculty scanner)
+- `api-server/` — Node.js + Express + SQLite backend (to be adapted)
 
-- QR generation with HMAC-SHA256
-- Encrypted secrets (AES-GCM) stored in IndexedDB
-- Service Worker for offline caching
-- Sync endpoints to upload scan logs and download hostel key bundles
+## Status
 
-See individual README.md inside each subproject for run instructions.
+🚧 Under active adaptation. See `ARCHITECTURE.md` and `ROADMAP.md` in the project root for the target design.
