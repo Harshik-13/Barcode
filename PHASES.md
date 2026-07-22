@@ -44,7 +44,7 @@ These phases are **LOCKED**. No work should begin from a later phase until the c
 
 ---
 
-## Phase 2 — Domain Design
+## Phase 2 — Domain Design ✅ COMPLETED
 
 **Objective:** Design the business domain before writing implementation.
 
@@ -61,15 +61,23 @@ These phases are **LOCKED**. No work should begin from a later phase until the c
 - Terminology
 
 **Deliverables:**
-- Entity definitions
-- Relationship diagrams
-- Business rule documentation
-- Domain glossary
-- State diagrams
-- Validation rules
-- Access rules
+- Entity definitions (`docs/domain/entities.md`)
+- Relationship documentation (`docs/domain/relationships.md`)
+- Business rule documentation (`docs/domain/business-rules.md`)
+- Domain glossary (`docs/domain/glossary.md`)
+- State diagrams (`docs/domain/lifecycles.md`)
+- Validation rules (`docs/domain/validation.md`)
+- Access rules (`docs/domain/permissions.md`)
+- Actors (`docs/domain/actors.md`)
+- Business events (`docs/domain/business-events.md`)
+- Edge cases (`docs/domain/edge-cases.md`)
+- Constraints (`docs/domain/constraints.md`)
+- Domain definition (`docs/domain/domain-definition.md`)
+- Ownership (`docs/domain/ownership.md`)
 
 **Exit Criteria:** Every business concept is fully defined before implementation begins. Nothing in implementation should redefine the business domain.
+
+**Completed At:** Tag `v0.2.0-domain-design` (2026-07-22)
 
 ---
 
@@ -249,7 +257,8 @@ Requirement → Architecture Check → Implementation → Threat Modeling → Se
 
 ## Current Status
 
-**Current Phase:** Phase 2 — Domain Design
+**Current Phase:** Phase 3 — System Design
 
-Phase 1 is complete (tag `v0.1.0-foundation`).  
-Do not perform work belonging to Phase 3 or later unless explicitly instructed by the human architect.
+Phase 1 complete (tag `v0.1.0-foundation`).  
+Phase 2 complete (tag `v0.2.0-domain-design`).  
+Do not perform work belonging to Phase 4 or later unless explicitly instructed by the human architect.

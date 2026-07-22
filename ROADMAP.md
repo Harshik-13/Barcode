@@ -1,6 +1,6 @@
 # 8Hour Workspace Attendance System — Adaptation Roadmap
 
-This roadmap aligns with the [7 development phases](PHASES.md). Current phase: **Phase 2 — Domain Design**.
+This roadmap aligns with the [7 development phases](PHASES.md). Current phase: **Phase 3 — System Design**.
 
 ---
 
@@ -31,11 +31,35 @@ This roadmap aligns with the [7 development phases](PHASES.md). Current phase: *
 
 ---
 
-## Phase 2: Domain Design (Current)
+## Phase 2: Domain Design ✅ Completed
 
-Business entities, relationships, rules, state transitions, permissions, terminology.
+**Tag:** `v0.2.0-domain-design`
 
-See `PHASES.md` for full scope.
+### Deliverables Produced
+
+| Document | Covers |
+|----------|--------|
+| `docs/domain/domain-definition.md` | Purpose, scope, boundaries, primary entity |
+| `docs/domain/actors.md` | Student, Faculty, Admin, System roles |
+| `docs/domain/entities.md` | 7 business entities with attributes and lifecycle |
+| `docs/domain/relationships.md` | Entity relationships and business rationale |
+| `docs/domain/ownership.md` | Ownership matrix (create, modify, view, delete) |
+| `docs/domain/business-rules.md` | 45 business rules across all entities |
+| `docs/domain/lifecycles.md` | 5-state session lifecycle with transition diagrams |
+| `docs/domain/permissions.md` | Full capability matrix per actor × entity |
+| `docs/domain/validation.md` | 33 business validation rules |
+| `docs/domain/constraints.md` | 12 invariant rules |
+| `docs/domain/business-events.md` | 17 business events with triggers and effects |
+| `docs/domain/edge-cases.md` | 22 edge cases with expected behavior |
+| `docs/domain/glossary.md` | Standardized vocabulary and term usage rules |
+
+### Key Business Decisions Incorporated
+
+- Category is mandatory for session completion
+- Summary grace period with auto-completion
+- Manual exit as exceptional Faculty action
+- Formal 5-state lifecycle: Created → Active → Awaiting Summary → Completed → Archived
+- Completion Reason: NORMAL, AUTO_COMPLETED, MANUAL_EXIT, ADMIN_OVERRIDE
 
 ---
 
