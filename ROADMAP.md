@@ -1,6 +1,6 @@
 # 8Hour Workspace Attendance System — Adaptation Roadmap
 
-This roadmap aligns with the [7 development phases](PHASES.md). Current phase: **Phase 5 — UI/UX Design**.
+This roadmap aligns with the [7 development phases](PHASES.md). Current phase: **Phase 6 — Implementation**.
 
 ---
 
@@ -110,9 +110,37 @@ This roadmap aligns with the [7 development phases](PHASES.md). Current phase: *
 
 ---
 
-## Phase 5: UI/UX Design
+## Phase 5: UI/UX Design ✅ Completed
 
-Wireframes, navigation maps, component library, responsive layouts, loading/empty/error states.
+**Tag:** `v0.5.0-ui-ux-design`
+
+### Deliverables Produced
+
+| Document | Covers |
+|----------|--------|
+| `docs/ui-ux/information-architecture.md` | App structure, nav maps per role, screen hierarchy, PWA identity |
+| `docs/ui-ux/screen-inventory.md` | 28 screens across Auth/Student/Faculty/Admin/System |
+| `docs/ui-ux/ui-flows.md` | 10 complete flows with decision points and failure paths |
+| `docs/ui-ux/wireframes.md` | Text-based wireframes for all 28 screens |
+| `docs/ui-ux/component-library.md` | 14 reusable components with variants, states, usage rules |
+| `docs/ui-ux/design-system.md` | Typography, spacing, grid, color roles, elevation, icons, motion |
+| `docs/ui-ux/responsive-design.md` | 4 breakpoints, PWA-specific behavior, QR/Barcode viewfinder adaptation |
+| `docs/ui-ux/accessibility.md` | WCAG 2.1 AA, keyboard nav, focus management, screen reader, contrast |
+| `docs/ui-ux/feedback-states.md` | Success/warning/info/confirmation/progress/validation patterns |
+| `docs/ui-ux/loading-states.md` | Page/form/dashboard/report/background loading with timing |
+| `docs/ui-ux/empty-states.md` | 8 empty states with action buttons |
+| `docs/ui-ux/error-states.md` | 8 error states with recovery actions |
+| `docs/ui-ux/notification-ux.md` | HTTP polling (30s), badge, toast, reminder timing, future migration path |
+| `docs/ui-ux/dashboards.md` | Student/Faculty/Admin dashboards with widgets, metrics, quick actions |
+| `docs/ui-ux/ux-guidelines.md` | PWA guidelines, scanner mode guidelines, global UX rules |
+
+### Implementation Decisions Locked
+
+| Decision | Value |
+|----------|-------|
+| Application type | Progressive Web App (PWA) — single React codebase |
+| Scanner format | Dual: QR Code + 1D Barcode, user-selectable toggle |
+| Notification delivery | HTTP polling at 30s interval (MVP), WebSocket/SSE future |
 
 ---
 

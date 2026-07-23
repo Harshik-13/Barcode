@@ -150,7 +150,7 @@ These phases are **LOCKED**. No work should begin from a later phase until the c
 
 ---
 
-## Phase 5 — UI/UX Design
+## Phase 5 — UI/UX Design ✅ COMPLETED
 
 **Objective:** Design the user experience.
 
@@ -171,14 +171,25 @@ These phases are **LOCKED**. No work should begin from a later phase until the c
 - Notifications
 
 **Deliverables:**
-- Wireframes
-- Screen flows
-- Navigation maps
-- Component library
-- UI guidelines
-- Responsive layouts
+- Information architecture (`docs/ui-ux/information-architecture.md`)
+- Screen inventory (`docs/ui-ux/screen-inventory.md`)
+- UI flows (`docs/ui-ux/ui-flows.md`)
+- Wireframes (`docs/ui-ux/wireframes.md`)
+- Component library (`docs/ui-ux/component-library.md`)
+- Design system (`docs/ui-ux/design-system.md`)
+- Responsive design (`docs/ui-ux/responsive-design.md`)
+- Accessibility (`docs/ui-ux/accessibility.md`)
+- Feedback states (`docs/ui-ux/feedback-states.md`)
+- Loading states (`docs/ui-ux/loading-states.md`)
+- Empty states (`docs/ui-ux/empty-states.md`)
+- Error states (`docs/ui-ux/error-states.md`)
+- Notification UX (`docs/ui-ux/notification-ux.md`)
+- Dashboards (`docs/ui-ux/dashboards.md`)
+- UX guidelines (`docs/ui-ux/ux-guidelines.md`)
 
 **Exit Criteria:** Every screen is approved before implementation begins. No frontend implementation yet.
+
+**Completed At:** Tag `v0.5.0-ui-ux-design` (2026-07-22)
 
 ---
 
@@ -264,10 +275,11 @@ Requirement → Architecture Check → Implementation → Threat Modeling → Se
 
 ## Current Status
 
-**Current Phase:** Phase 5 — UI/UX Design
+**Current Phase:** Phase 6 — Implementation
 
 Phase 1 complete (tag `v0.1.0-foundation`).  
 Phase 2 complete (tag `v0.2.0-domain-design`).  
 Phase 3 complete (tag `v0.3.0-system-design`).  
 Phase 4 complete (tag `v0.4.0-data-api-design`).  
-Do not perform work belonging to Phase 6 or later unless explicitly instructed by the human architect.
+Phase 5 complete (tag `v0.5.0-ui-ux-design`).  
+Do not perform work belonging to Phase 7 or later unless explicitly instructed by the human architect.

@@ -1,0 +1,28 @@
+# Environment
+.env
+.env.local
+.env.production
+
+# Database
+*.db
+*.db-journal
+data/
+
+# Build output
+dist/
+build/
+node_modules/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/

@@ -1,0 +1,73 @@
+import { initDb, getDb, saveDb, closeDb } from './index';
+import bcrypt from 'bcryptjs';
+import { logger } from '../utils/logger';
+
+async function seed(): Promise<void> {
+  await initDb();
+  const db = getDb();
+
+  const stmt = db.prepare('SELECT COUNT(*) as count FROM roles');
+  stmt.step();
+  const count = stmt.getAsObject() as { count: number };
+  stmt.free();
+
+  if (count.count > 0) {
+    logger.info('Database already seeded');
+    closeDb();
+    return;
+  }
+
+  db.run("INSERT INTO roles (id, name) VALUES ('student', 'student')");
+  db.run("INSERT INTO roles (id, name) VALUES ('faculty', 'faculty')");
+  db.run("INSERT INTO roles (id, name) VALUES ('admin', 'admin')");
+
+  const adminHash = bcrypt.hashSync('admin123', 12);
+  db.run(
+    "INSERT INTO users (email, name, password_hash, role_id) VALUES ('admin@workspace.com', 'System Admin', ?, 'admin')",
+    [adminHash]
+  );
+
+  const facultyHash = bcrypt.hashSync('faculty123', 12);
+  db.run(
+    "INSERT INTO users (email, name, password_hash, role_id) VALUES ('faculty@workspace.com', 'Demo Faculty', ?, 'faculty')",
+    [facultyHash]
+  );
+
+  const studentUserHash = bcrypt.hashSync('student123', 12);
+  db.run(
+    "INSERT INTO users (email, name, password_hash, role_id) VALUES ('student@workspace.com', 'Demo Student', ?, 'student')",
+    [studentUserHash]
+  );
+
+  db.run(
+    "INSERT INTO students (roll, name, email) VALUES ('STU001', 'Alice Student', 'alice@workspace.com')"
+  );
+  db.run(
+    "INSERT INTO students (roll, name, email) VALUES ('STU002', 'Bob Student', 'bob@workspace.com')"
+  );
+  db.run(
+    "INSERT INTO students (roll, name, email) VALUES ('STU003', 'Charlie Student', 'charlie@workspace.com')"
+  );
+  db.run(
+    "INSERT INTO students (roll, name, email) VALUES ('STU004', 'Diana Student', 'diana@workspace.com')"
+  );
+
+  db.run(
+    "INSERT INTO categories (name, description) VALUES ('Coding', 'Software development work')"
+  );
+  db.run(
+    "INSERT INTO categories (name, description) VALUES ('Design', 'UI/UX and graphic design work')"
+  );
+  db.run(
+    "INSERT INTO categories (name, description) VALUES ('Research', 'Technical research and study')"
+  );
+
+  saveDb();
+  logger.info('Seed completed successfully');
+  closeDb();
+}
+
+seed().catch((err) => {
+  logger.error('Seed failed', { error: err.message });
+  process.exit(1);
+});
