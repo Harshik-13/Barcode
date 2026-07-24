@@ -138,6 +138,19 @@ export interface NotificationItem {
   createdAt: string;
 }
 
+export const activationApi = {
+  start: (roll: string) =>
+    api<DataResponse<{ message: string; emailDomain: string }>>('/api/activation/start', { method: 'POST', body: { roll } }),
+  verifyOtp: (roll: string, otp: string) =>
+    api<DataResponse<{ activationToken: string; message: string }>>('/api/activation/verify-otp', { method: 'POST', body: { roll, otp } }),
+  setPassword: (activationToken: string, password: string) =>
+    api<DataResponse<{ message: string }>>('/api/activation/set-password', { method: 'POST', body: { activationToken, password } }),
+  resendOtp: (roll: string) =>
+    api<DataResponse<{ message: string }>>('/api/activation/resend-otp', { method: 'POST', body: { roll } }),
+  status: (roll: string) =>
+    api<DataResponse<{ activated: boolean; name: string; emailDomain: string }>>('/api/activation/status', { method: 'POST', body: { roll } }),
+};
+
 export const notificationsApi = {
   list: (page = 1, limit = 20) =>
     api<PaginatedDataResponse<NotificationItem>>(`/api/notifications?page=${page}&limit=${limit}`),

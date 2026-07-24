@@ -22,6 +22,12 @@ export const config = {
     windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS ?? '60000', 10),
     maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS ?? '100', 10),
   },
+  activation: {
+    studentEmailDomain: process.env.STUDENT_EMAIL_DOMAIN ?? '@vnrvjiet.in',
+    otpExpiryMinutes: parseInt(process.env.OTP_EXPIRY_MINUTES ?? '10', 10),
+    otpMaxAttempts: parseInt(process.env.OTP_MAX_ATTEMPTS ?? '5', 10),
+    otpCooldownSeconds: parseInt(process.env.ACTIVATION_COOLDOWN_SECONDS ?? '30', 10),
+  },
   log: {
     level: process.env.LOG_LEVEL ?? 'info',
   },

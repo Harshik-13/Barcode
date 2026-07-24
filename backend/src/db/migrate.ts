@@ -101,6 +101,23 @@ export async function migrate(options?: { skipClose?: boolean }): Promise<void> 
   db.run(`CREATE INDEX IF NOT EXISTS idx_activity_logs_entity ON activity_logs(entity_type, entity_id)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_activity_logs_created ON activity_logs(created_at)`);
 
+  db.run(`
+    CREATE TABLE IF NOT EXISTS activation_otps (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      student_id INTEGER NOT NULL REFERENCES students(id),
+      otp_hash TEXT NOT NULL,
+      attempts INTEGER NOT NULL DEFAULT 0,
+      max_attempts INTEGER NOT NULL DEFAULT 5,
+      expires_at TEXT NOT NULL,
+      is_used INTEGER NOT NULL DEFAULT 0,
+      verified_at TEXT,
+      activation_token TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
+
+  db.run(`CREATE INDEX IF NOT EXISTS idx_activation_otps_student ON activation_otps(student_id, is_used)`);
+
   saveDb();
   logger.info('Migration completed successfully');
   if (!options?.skipClose) {

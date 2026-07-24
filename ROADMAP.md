@@ -144,9 +144,9 @@ This roadmap aligns with the [7 development phases](PHASES.md). Current phase: *
 
 ---
 
-## Phase 6: Implementation ✅ Complete — `v0.3.0`
+## Phase 6: Implementation ✅ Complete — `v0.4.0`
 
-**Tag:** `v0.3.0`
+**Tag:** `v0.4.0`
 
 ### Work Package 6.1 — Database & Auth ✅
 
@@ -226,6 +226,28 @@ This roadmap aligns with the [7 development phases](PHASES.md). Current phase: *
 - [x] Frontend API layer — `notificationsApi` with all 4 endpoints
 - [x] All 34 backend endpoints consumed by frontend — 100% alignment
 - [x] 101/101 tests passing, frontend + backend builds clean
+
+### Work Package 6.8 — Secure Student Account Activation ✅
+
+**Milestone 5.5** — Students can securely activate their own accounts via OTP verification without admin-set passwords.
+
+- [x] `activation_otps` table with OTP hash, attempts, expiry, activation token
+- [x] Email service (`services/email.ts`) — OTP delivery (logged to console, extensible for SMTP)
+- [x] Activation service (`services/activation.ts`) — `startActivation`, `verifyOtp`, `setPassword`, `resendOtp`, `checkActivationStatus`
+- [x] 5 activation endpoints under `/api/activation` — start, verify-otp, set-password, resend-otp, status
+- [x] OTP hashed with bcrypt before storage
+- [x] OTP expiry (10min), max attempts (5), cooldown (30s), single-use
+- [x] New OTP invalidates previous OTPs
+- [x] Server-side email derivation: `roll@vnrvjiet.in` (configurable domain)
+- [x] Password set only after OTP verification (activation token gated)
+- [x] Activation token expires after password set
+- [x] Login now accepts roll number (derives college email automatically)
+- [x] Frontend multi-step activation wizard (`ActivatePage.tsx`) — roll → OTP → password → done
+- [x] Cooldown timer with visual countdown on resend
+- [x] "Activate your account" link on Login page
+- [x] Designed for future Forgot Password reuse (same OTP framework)
+- [x] 15 comprehensive activation tests (valid/invalid/expired/used/rate-limited)
+- [x] 116/116 tests passing, zero regressions, both builds clean
 
 ---
 

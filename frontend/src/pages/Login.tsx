@@ -151,6 +151,13 @@ export default function Login() {
         >
           {isLoading ? 'Signing in...' : 'Sign in'}
         </button>
+
+        <div style={{ marginTop: '16px', textAlign: 'center', fontSize: '14px', color: '#6b7280' }}>
+          New student?{' '}
+          <a href="/activate" onClick={(e) => { e.preventDefault(); navigate('/activate'); }} style={{ color: '#2563eb', textDecoration: 'none', fontWeight: 500 }}>
+            Activate your account
+          </a>
+        </div>
       </form>
     </div>
   );

@@ -18,6 +18,7 @@ const SessionDetailPage = lazy(() => import('./pages/SessionDetailPage'));
 const Unauthorized = lazy(() => import('./pages/Unauthorized'));
 const Forbidden = lazy(() => import('./pages/Forbidden'));
 const NotFound = lazy(() => import('./pages/NotFound'));
+const ActivatePage = lazy(() => import('./pages/ActivatePage'));
 
 function App() {
   return (
@@ -27,6 +28,7 @@ function App() {
           <Suspense fallback={<Loading fullPage />}>
             <Routes>
               <Route path="/login" element={<Login />} />
+              <Route path="/activate" element={<ActivatePage />} />
               <Route path="/unauthorized" element={<Unauthorized />} />
               <Route path="/forbidden" element={<Forbidden />} />
               <Route element={<ProtectedRoute />}>

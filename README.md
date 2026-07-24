@@ -17,19 +17,20 @@ Role-based platform that records student attendance and daily work activity insi
 | 3 — System Design | ✅ Complete | `v0.3.0-system-design` |
 | 4 — Data & API Design | ✅ Complete | `v0.4.0-data-api-design` |
 | 5 — UI/UX Design | ✅ Complete | `v0.5.0-ui-ux-design` |
-| **6 — Implementation** | **✅ Complete** | **`v0.3.0`** |
+| **6 — Implementation** | **✅ Complete** | **`v0.4.0`** |
 
 ### Delivered
 
-- Full REST API (auth, students, sessions, categories, scan, activity logs, notifications) — **34 endpoints**
+- Full REST API (auth, students, sessions, categories, scan, activity logs, notifications, activation) — **39 endpoints**
 - QR barcode scanning pipeline with entry/exit/summary lifecycle
 - Role-based auth (admin, faculty, student) with JWT
+- Secure student account activation via OTP (bcrypt hashed, 10min expiry, max 5 attempts, cooldown)
 - Validation, rate limiting, audit trail, error handling
-- **101 tests passing** across 9 test suites
-- **Student Experience**: notification system (auto-created on entry/exit/complete/archive), notification center with unread badges, session detail page with summary submission
+- **116 tests passing** across 10 test suites
+- **Student Experience**: notification system (auto-created on entry/exit/complete/archive), notification center with unread badges, session detail page with summary submission, self-activation via OTP
 - **Role-based frontend** with separate dashboards for Student, Faculty, and Admin
 - **Management pages**: Students (list/create/suspend/depart), Categories (list/create/edit/archive), Sessions (list/filter/complete/archive), Activity Logs (filter/paginated audit trail)
-- All 34 backend endpoints consumed by the UI — 100% alignment
+- All 39 backend endpoints consumed by the UI — 100% alignment
 - Backend snake_case→camelCase conversion for consistent API contracts
 
 ---

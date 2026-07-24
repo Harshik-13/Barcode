@@ -7,7 +7,7 @@ import { validateBody } from '../utils/validation';
 const router = Router();
 
 const loginValidation = [
-  { field: 'email', type: 'email' as const, required: true },
+  { field: 'email', type: 'string' as const, required: true, min: 1 },
   { field: 'password', type: 'string' as const, required: true, min: 1 },
 ];
 

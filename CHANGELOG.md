@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.4.0] — 2026-07-24
+
+### Added
+
+- **Secure Student Account Activation** — multi-step OTP-based activation flow
+- `activation_otps` database table with OTP hash, expiry, attempts counter, activation token
+- `services/email.ts` — Email service for OTP delivery (console-logged, SMTP-ready)
+- `services/activation.ts` — Full activation business logic: start, verify OTP, set password, resend
+- 5 endpoints under `/api/activation`: `start`, `verify-otp`, `set-password`, `resend-otp`, `status`
+- OTP security: bcrypt hashed, 10min expiry, max 5 attempts, 30s cooldown, single-use
+- Server-side email derivation: `roll@vnrvjiet.in` (configurable via `STUDENT_EMAIL_DOMAIN`)
+- Login now supports roll number → auto-derives college email
+- Frontend `ActivatePage.tsx` — 3-step wizard: Roll → OTP → Password
+- Resend cooldown with visual countdown timer
+- "Activate your account" link on Login page
+- 15 integration tests covering all security requirements
+- Configurable via env vars: `STUDENT_EMAIL_DOMAIN`, `OTP_EXPIRY_MINUTES`, `OTP_MAX_ATTEMPTS`, `ACTIVATION_COOLDOWN_SECONDS`
+
+### Security
+
+- OTP hashed with bcrypt (10 rounds) — never stored in plaintext
+- Activation token is a cryptographic random 32-byte hex string
+- Multiple rate limit layers: global (100/min), per-endpoint, OTP attempt limit (5), cooldown (30s)
+- Password set endpoint is gated behind OTP verification — never accessible with roll number alone
+- Existing login flow unchanged: admin/faculty/student email+password login continues to work identically
+
 ## [0.3.0] — 2026-07-24
 
 ### Added
