@@ -4,6 +4,7 @@ import { migrate } from './db/migrate';
 import { seed } from './db/seed';
 import app from './app';
 import { logger } from './utils/logger';
+import { verifySmtp } from './services/email';
 
 validateEnv();
 
@@ -32,6 +33,8 @@ async function bootstrap(): Promise<void> {
 
 async function start(): Promise<void> {
   await bootstrap();
+
+  await verifySmtp();
 
   const port = config.port;
   app.listen(port, () => {

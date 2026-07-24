@@ -3,7 +3,7 @@
 Role-based platform that records student attendance and daily work activity inside the startup workspace.
 
 ![Status](https://img.shields.io/badge/status-active-brightgreen)
-![Tests](https://img.shields.io/badge/tests-101%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-115%20passing-brightgreen)
 ![Phase](https://img.shields.io/badge/phase-7%20Ready-yellow)
 
 ---
@@ -58,11 +58,27 @@ npm run dev      # starts on port 5173
 | Faculty | faculty@workspace.com | faculty123 |
 | Student | student@workspace.com | student123 |
 
+### Email Setup (Gmail SMTP)
+
+1. Generate a [Google App Password](https://myaccount.google.com/apppasswords) for `8hattendance@gmail.com`
+2. Copy `.env.example` to `.env` and set:
+
+```env
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=8hattendance@gmail.com
+SMTP_PASS=<your-16-char-app-password>
+SMTP_FROM="Barcode Attendance <8hattendance@gmail.com>"
+```
+
+On startup, the server runs `transporter.verify()` and logs `Gmail SMTP initialized successfully.` if credentials are valid. Invalid credentials will terminate startup with a clear error.
+
 ### Run Tests
 
 ```bash
 cd backend
-npm test         # runs all 101 tests
+npm test         # runs all 115 tests
 npm run test:scan   # scan pipeline tests only
 ```
 

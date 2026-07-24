@@ -29,12 +29,12 @@ export const config = {
     otpCooldownSeconds: parseInt(process.env.ACTIVATION_COOLDOWN_SECONDS ?? '30', 10),
   },
   email: {
-    host: process.env.EMAIL_HOST ?? 'smtp.resend.com',
-    port: parseInt(process.env.EMAIL_PORT ?? '587', 10),
-    user: process.env.EMAIL_HOST_USER ?? '',
-    password: process.env.EMAIL_HOST_PASSWORD ?? '',
-    useTls: process.env.EMAIL_USE_TLS === 'True',
-    from: process.env.DEFAULT_FROM_EMAIL ?? 'onboarding@resend.dev',
+    host: process.env.SMTP_HOST ?? 'smtp.gmail.com',
+    port: parseInt(process.env.SMTP_PORT ?? '587', 10),
+    secure: process.env.SMTP_SECURE === 'true',
+    user: process.env.SMTP_USER ?? '',
+    password: process.env.SMTP_PASS ?? '',
+    from: process.env.SMTP_FROM ?? 'Barcode Attendance <8hattendance@gmail.com>',
   },
   log: {
     level: process.env.LOG_LEVEL ?? 'info',
@@ -52,5 +52,8 @@ export function validateEnv(): void {
     if (!process.env[variable]) {
       throw new Error(`Missing required environment variable: ${variable}`);
     }
+  }
+  if (isProd && (!process.env.SMTP_USER || !process.env.SMTP_PASS)) {
+    throw new Error('Missing required SMTP credentials. Set SMTP_USER and SMTP_PASS.');
   }
 }
