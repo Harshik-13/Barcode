@@ -61,8 +61,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (saved.token && saved.user) {
       setToken(saved.token);
       setUser(saved.user);
+
+      api<{ id: number; name: string; email: string; role: RoleName }>('/api/auth/me')
+        .then((userData) => {
+          const freshUser: User = { id: userData.id, name: userData.name, email: userData.email, role: userData.role };
+          setUser(freshUser);
+          saveToStorage(saved.token, freshUser);
+        })
+        .catch(() => {
+          setUser(null);
+          setToken(null);
+          setAuthToken(null);
+          clearStorage();
+        })
+        .finally(() => {
+          setIsInitializing(false);
+        });
+    } else {
+      setIsInitializing(false);
     }
-    setIsInitializing(false);
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {

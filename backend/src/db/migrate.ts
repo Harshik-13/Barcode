@@ -1,7 +1,7 @@
 import { initDb, getDb, saveDb, closeDb } from './index';
 import { logger } from '../utils/logger';
 
-async function migrate(): Promise<void> {
+export async function migrate(options?: { skipClose?: boolean }): Promise<void> {
   await initDb();
   const db = getDb();
 
@@ -103,10 +103,14 @@ async function migrate(): Promise<void> {
 
   saveDb();
   logger.info('Migration completed successfully');
-  closeDb();
+  if (!options?.skipClose) {
+    closeDb();
+  }
 }
 
-migrate().catch((err) => {
-  logger.error('Migration failed', { error: err.message });
-  process.exit(1);
-});
+if (require.main === module) {
+  migrate().catch((err) => {
+    logger.error('Migration failed', { error: err.message });
+    process.exit(1);
+  });
+}

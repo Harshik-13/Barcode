@@ -8,7 +8,6 @@ let facultyToken: string;
 let studentToken: string;
 
 beforeAll(async () => {
-  process.env.JWT_SECRET = 'test-secret-for-scan-tests';
   await initDb();
 
   const adminRes = await request(app).post('/api/auth/login').send({ email: 'admin@workspace.com', password: 'admin123' });

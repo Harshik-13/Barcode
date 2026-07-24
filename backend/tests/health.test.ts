@@ -4,7 +4,6 @@ import { initDb, closeDb } from '../src/db';
 import app from '../src/app';
 
 beforeAll(async () => {
-  process.env.JWT_SECRET = 'test-secret';
   await initDb();
 }, 10000);
 

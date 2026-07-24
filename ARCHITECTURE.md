@@ -159,49 +159,65 @@ The project is adapted from **Campus Passport**, a QR-code-based hostel meal att
 
 ---
 
-## API Endpoints (Target)
+## API Endpoints (Implemented — Milestone 4)
+
+All endpoints are mounted under `/api` prefix.
 
 ### Auth
-| Method | Endpoint | Auth |
-|--------|----------|------|
-| POST | `/api/auth/login` | None |
-| POST | `/api/auth/google` | None |
+| Method | Endpoint | Auth | Role |
+|--------|----------|------|------|
+| POST | `/api/auth/login` | None | All |
+| POST | `/api/auth/logout` | Bearer | All |
+| GET | `/api/auth/me` | Bearer | All |
+
+### Scan
+| Method | Endpoint | Auth | Role |
+|--------|----------|------|------|
+| POST | `/api/scan` | Bearer | Faculty/Admin |
 
 ### Sessions
 | Method | Endpoint | Auth | Role |
 |--------|----------|------|------|
-| POST | `/api/session/entry` | Bearer | Faculty |
-| POST | `/api/session/exit` | Bearer | Faculty |
-| GET | `/api/session/active/{roll}` | Bearer | Faculty |
-| GET | `/api/session/history/{roll}` | Bearer | Student/Faculty |
+| GET | `/api/sessions` | Bearer | All |
+| GET | `/api/sessions/:id` | Bearer | All |
+| POST | `/api/sessions` | Bearer | Faculty/Admin |
+| PATCH | `/api/sessions/:id/start` | Bearer | Faculty/Admin |
+| PATCH | `/api/sessions/:id/exit` | Bearer | Faculty/Admin |
+| PATCH | `/api/sessions/:id/complete` | Bearer | Faculty/Admin |
+| PATCH | `/api/sessions/:id/archive` | Bearer | Admin |
+| GET | `/api/sessions/active/:studentId` | Bearer | All |
+| GET | `/api/students/:id/history` | Bearer | All |
+
+### Students
+| Method | Endpoint | Auth | Role |
+|--------|----------|------|------|
+| GET | `/api/students` | Bearer | All |
+| GET | `/api/students/:id` | Bearer | All |
+| POST | `/api/students` | Bearer | Admin |
+| PUT | `/api/students/:id` | Bearer | Admin |
+| PATCH | `/api/students/:id/depart` | Bearer | Admin |
+| GET | `/api/students/lookup` | Bearer | All |
+| GET | `/api/students/search` | Bearer | All |
 
 ### Categories
 | Method | Endpoint | Auth | Role |
 |--------|----------|------|------|
 | GET | `/api/categories` | Bearer | All |
+| GET | `/api/categories/:id` | Bearer | All |
 | POST | `/api/categories` | Bearer | Admin |
-| POST | `/api/session/category` | Bearer | Student |
+| PUT | `/api/categories/:id` | Bearer | Admin |
+| PATCH | `/api/categories/:id/archive` | Bearer | Admin |
 
-### Work Summary
+### Activity Logs
 | Method | Endpoint | Auth | Role |
 |--------|----------|------|------|
-| POST | `/api/session/summary` | Bearer | Student |
-| GET | `/api/session/summary/{sessionId}` | Bearer | Student/Faculty |
+| GET | `/api/activity-logs` | Bearer | Admin |
+| GET | `/api/activity-logs/recent` | Bearer | Admin |
 
-### Reports & Analytics
-| Method | Endpoint | Auth | Role |
-|--------|----------|------|------|
-| GET | `/api/reports/attendance` | Bearer | Faculty/Admin |
-| GET | `/api/reports/analytics` | Bearer | Faculty/Admin |
-| GET | `/api/reports/streaks` | Bearer | Student |
-
-### Admin
-| Method | Endpoint | Auth | Role |
-|--------|----------|------|------|
-| GET | `/api/admin/users` | Bearer | Admin |
-| POST | `/api/admin/users` | Bearer | Admin |
-| GET | `/api/admin/settings` | Bearer | Admin |
-| PUT | `/api/admin/settings` | Bearer | Admin |
+### System
+| Method | Endpoint | Auth |
+|--------|----------|------|
+| GET | `/api/health` | None |
 
 ---
 

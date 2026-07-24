@@ -93,7 +93,7 @@ export function authenticate(email: string, password: string, ip?: string) {
 
   return {
     token,
-    user: { id: user.id, name: user.name, type: user.role_id, email: user.email },
+    user: { id: user.id, name: user.name, role: user.role_id, email: user.email },
   };
 }
 
@@ -110,7 +110,7 @@ export function getCurrentUser(userId: number) {
   }
 
   const createdAt = (user as any).created_at;
-  return { id: user.id, name: user.name, type: user.role_id, email: user.email, status: user.status, createdAt };
+  return { id: user.id, name: user.name, role: user.role_id, email: user.email, status: user.status, createdAt };
 }
 
 export function logLogout(userId: number, role: string, ip?: string): void {

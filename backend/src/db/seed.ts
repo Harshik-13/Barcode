@@ -2,7 +2,7 @@ import { initDb, getDb, saveDb, closeDb } from './index';
 import bcrypt from 'bcryptjs';
 import { logger } from '../utils/logger';
 
-async function seed(): Promise<void> {
+export async function seed(options?: { skipClose?: boolean }): Promise<void> {
   await initDb();
   const db = getDb();
 
@@ -64,10 +64,14 @@ async function seed(): Promise<void> {
 
   saveDb();
   logger.info('Seed completed successfully');
-  closeDb();
+  if (!options?.skipClose) {
+    closeDb();
+  }
 }
 
-seed().catch((err) => {
-  logger.error('Seed failed', { error: err.message });
-  process.exit(1);
-});
+if (require.main === module) {
+  seed().catch((err) => {
+    logger.error('Seed failed', { error: err.message });
+    process.exit(1);
+  });
+}

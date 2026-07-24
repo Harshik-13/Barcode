@@ -4,7 +4,6 @@ import { initDb, closeDb } from '../src/db';
 import app from '../src/app';
 
 beforeAll(async () => {
-  process.env.JWT_SECRET = 'test-secret-for-auth-tests';
   await initDb();
 }, 10000);
 
@@ -22,7 +21,7 @@ describe('POST /api/auth/login', () => {
     expect(res.body.token).toBeDefined();
     expect(res.body.user).toBeDefined();
     expect(res.body.user.email).toBe('admin@workspace.com');
-    expect(res.body.user.type).toBe('admin');
+    expect(res.body.user.role).toBe('admin');
   });
 
   it('should login faculty with valid credentials', async () => {
@@ -32,7 +31,7 @@ describe('POST /api/auth/login', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.token).toBeDefined();
-    expect(res.body.user.type).toBe('faculty');
+    expect(res.body.user.role).toBe('faculty');
   });
 
   it('should login student with valid credentials', async () => {
@@ -42,7 +41,7 @@ describe('POST /api/auth/login', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.token).toBeDefined();
-    expect(res.body.user.type).toBe('student');
+    expect(res.body.user.role).toBe('student');
   });
 
   it('should reject invalid email', async () => {
@@ -92,7 +91,7 @@ describe('GET /api/auth/me', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.email).toBe('admin@workspace.com');
-    expect(res.body.type).toBe('admin');
+    expect(res.body.role).toBe('admin');
   });
 
   it('should reject missing token', async () => {

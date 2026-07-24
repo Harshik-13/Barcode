@@ -129,7 +129,7 @@ export interface AuthResponse {
   user: {
     id: number;
     name: string;
-    type: RoleName;
+    role: RoleName;
     email: string;
   };
 }

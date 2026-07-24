@@ -11,7 +11,7 @@ if (!fs.existsSync(dbDir)) {
   fs.mkdirSync(dbDir, { recursive: true });
 }
 
-let db: SqlJsDatabase;
+let db: SqlJsDatabase | null = null;
 
 export type { SqlJsDatabase };
 
@@ -52,4 +52,5 @@ export function closeDb(): void {
     db.close();
     logger.info('Database connection closed');
   }
+  db = null;
 }

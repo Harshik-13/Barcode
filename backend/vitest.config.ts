@@ -11,5 +11,11 @@ export default defineConfig({
     environment: 'node',
     globals: true,
     include: ['tests/**/*.test.ts'],
+    env: {
+      NODE_ENV: 'test',
+      JWT_SECRET: 'test-jwt-secret',
+      DATABASE_PATH: './data/test-workspace.db',
+    },
+    setupFiles: ['./tests/helpers/setupDb.ts'],
   },
 });

@@ -12,7 +12,6 @@ const facultyLogin = () => request(app).post('/api/auth/login').send({ email: 'f
 const studentLogin = () => request(app).post('/api/auth/login').send({ email: 'student@workspace.com', password: 'student123' });
 
 beforeAll(async () => {
-  process.env.JWT_SECRET = 'test-secret-for-domain-tests';
   await initDb();
 
   const adminRes = await adminLogin();

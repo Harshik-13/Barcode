@@ -17,9 +17,9 @@ Role-based platform that records student attendance and daily work activity insi
 | 3 — System Design | ✅ Complete | `v0.3.0-system-design` |
 | 4 — Data & API Design | ✅ Complete | `v0.4.0-data-api-design` |
 | 5 — UI/UX Design | ✅ Complete | `v0.5.0-ui-ux-design` |
-| **6 — Implementation** | **✅ Milestone 4** | **`v0.6.0-backend-impl`** |
+| **6 — Implementation** | **✅ Milestones 1–4** | **`v0.1.1-stabilized`** |
 
-### Milestone 4 Delivered
+### Milestones 1–4 Delivered
 
 - Full REST API (auth, students, sessions, categories, scan, activity logs)
 - QR barcode scanning pipeline with entry/exit/summary lifecycle
@@ -27,6 +27,12 @@ Role-based platform that records student attendance and daily work activity insi
 - Validation, rate limiting, audit trail, error handling
 - **101 tests passing** across 9 test suites
 - SPA frontend scaffold with scanner, dashboard, auth pages
+
+### Post-Milestone 4 Stabilization
+- 10-step integration audit: API contracts, routes, environment, response format, error handling, security, code quality — all verified
+- Login response `type`→`role` mismatch fixed
+- Session restoration: tokens verified via `GET /api/auth/me` on page load
+- Test DB auto-setup: isolated per worker, migration + seed automated, no race conditions
 
 ---
 
