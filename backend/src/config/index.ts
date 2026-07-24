@@ -28,6 +28,14 @@ export const config = {
     otpMaxAttempts: parseInt(process.env.OTP_MAX_ATTEMPTS ?? '5', 10),
     otpCooldownSeconds: parseInt(process.env.ACTIVATION_COOLDOWN_SECONDS ?? '30', 10),
   },
+  email: {
+    host: process.env.EMAIL_HOST ?? 'smtp.resend.com',
+    port: parseInt(process.env.EMAIL_PORT ?? '587', 10),
+    user: process.env.EMAIL_HOST_USER ?? '',
+    password: process.env.EMAIL_HOST_PASSWORD ?? '',
+    useTls: process.env.EMAIL_USE_TLS === 'True',
+    from: process.env.DEFAULT_FROM_EMAIL ?? 'onboarding@resend.dev',
+  },
   log: {
     level: process.env.LOG_LEVEL ?? 'info',
   },

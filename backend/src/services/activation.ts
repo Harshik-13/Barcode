@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { getDb } from '../db';
 import { config } from '../config';
 import { NotFoundError, ConflictError, BusinessRuleError, ForbiddenError } from '../utils/errors';
+import { logger } from '../utils/logger';
 import { logAudit } from './audit';
 import { lookupStudent } from './student';
 import { sendOtpEmail } from './email';
@@ -78,7 +79,7 @@ export function startActivation(roll: string, ip?: string) {
   stmt.run([student.id, otpHash, config.activation.otpMaxAttempts, expiresAt]);
   stmt.free();
 
-  sendOtpEmail(email, otp);
+  sendOtpEmail(email, otp).catch((err) => logger.error('Background OTP send failed', { error: err.message }));
 
   logAudit({ actorType: 'student', actorId: student.id, action: 'ACTIVATION_OTP_SENT', entityType: 'STUDENT', entityId: student.id, details: { roll }, ipAddress: ip });
 
@@ -203,7 +204,7 @@ export function resendOtp(roll: string, ip?: string) {
   insertStmt.run([student.id, otpHash, config.activation.otpMaxAttempts, expiresAt]);
   insertStmt.free();
 
-  sendOtpEmail(email, otp);
+  sendOtpEmail(email, otp).catch((err) => logger.error('Background OTP resend failed', { error: err.message }));
 
   logAudit({ actorType: 'student', actorId: student.id, action: 'ACTIVATION_OTP_RESENT', entityType: 'STUDENT', entityId: student.id, details: { roll }, ipAddress: ip });
 
