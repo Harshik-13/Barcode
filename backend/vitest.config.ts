@@ -16,6 +16,7 @@ export default defineConfig({
       JWT_SECRET: 'test-jwt-secret',
       DATABASE_PATH: './data/test-workspace.db',
     },
+    fileParallelism: false,
     setupFiles: ['./tests/helpers/setupDb.ts'],
   },
 });

@@ -8,7 +8,7 @@ export type NotificationType = 'entry' | 'exit' | 'reminder';
 
 export type ActorType = 'student' | 'faculty' | 'admin' | 'system';
 
-export type StudentStatus = 'enrolled' | 'suspended' | 'departed';
+export type StudentStatus = 'invited' | 'enrolled' | 'suspended' | 'departed';
 
 export type FacultyStatus = 'active' | 'suspended' | 'deactivated';
 

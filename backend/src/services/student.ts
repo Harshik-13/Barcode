@@ -22,7 +22,10 @@ export function listStudents(page: number, limit: number, status?: string) {
   let whereClause = '';
   const params: Array<string | number> = [];
 
-  if (status === 'enrolled') {
+  if (status === 'invited') {
+    whereClause = ' WHERE status = ?';
+    params.push('invited');
+  } else if (status === 'enrolled') {
     whereClause = ' WHERE status = ?';
     params.push('enrolled');
   } else if (status === 'suspended') {
@@ -87,7 +90,9 @@ export function searchStudents(searchTerm: string) {
   return rows.map(rowToStudent);
 }
 
-export function createStudent(roll: string, name: string, email: string | undefined, actorId: number, ip?: string) {
+import { config } from '../config';
+
+export function createStudent(roll: string, name: string, actorId: number, ip?: string) {
   const db = getDb();
 
   const dup = db.prepare('SELECT id FROM students WHERE roll = ?');
@@ -95,15 +100,14 @@ export function createStudent(roll: string, name: string, email: string | undefi
   if (dup.step()) { dup.free(); throw new ConflictError('DUPLICATE_ROLL', `Student with roll '${roll}' already exists`); }
   dup.free();
 
-  if (email) {
-    const dupEmail = db.prepare('SELECT id FROM students WHERE email = ?');
-    dupEmail.bind([email]);
-    if (dupEmail.step()) { dupEmail.free(); throw new ConflictError('DUPLICATE_EMAIL', `Student with email '${email}' already exists`); }
-    dupEmail.free();
-  }
+  const email = `${roll.toLowerCase()}${config.activation.studentEmailDomain}`;
+  const dupEmail = db.prepare('SELECT id FROM students WHERE email = ?');
+  dupEmail.bind([email]);
+  if (dupEmail.step()) { dupEmail.free(); throw new ConflictError('DUPLICATE_EMAIL', `Student with email '${email}' already exists`); }
+  dupEmail.free();
 
-  const stmt = db.prepare('INSERT INTO students (roll, name, email) VALUES (?, ?, ?)');
-  stmt.run([roll, name, email ?? null]);
+  const stmt = db.prepare("INSERT INTO students (roll, name, email, status) VALUES (?, ?, ?, 'invited')");
+  stmt.run([roll, name, email]);
   stmt.free();
 
   const id = db.exec('SELECT last_insert_rowid() as id')[0].values[0][0] as number;
@@ -113,22 +117,15 @@ export function createStudent(roll: string, name: string, email: string | undefi
   return getStudent(id);
 }
 
-export function updateStudent(id: number, name: string, email: string | undefined, actorId: number, ip?: string) {
+export function updateStudent(id: number, name: string, actorId: number, ip?: string) {
   const db = getDb();
   const existing = getStudent(id);
 
-  if (email && email !== existing.email) {
-    const dupEmail = db.prepare('SELECT id FROM students WHERE email = ? AND id != ?');
-    dupEmail.bind([email, id]);
-    if (dupEmail.step()) { dupEmail.free(); throw new ConflictError('DUPLICATE_EMAIL', `Email '${email}' is already in use`); }
-    dupEmail.free();
-  }
-
-  const stmt = db.prepare('UPDATE students SET name = ?, email = ? WHERE id = ?');
-  stmt.run([name, email ?? null, id]);
+  const stmt = db.prepare('UPDATE students SET name = ? WHERE id = ?');
+  stmt.run([name, id]);
   stmt.free();
 
-  logAudit({ actorType: 'admin', actorId, action: 'STUDENT_UPDATED', entityType: 'STUDENT', entityId: id, details: { before: { name: existing.name, email: existing.email }, after: { name, email } }, ipAddress: ip });
+  logAudit({ actorType: 'admin', actorId, action: 'STUDENT_UPDATED', entityType: 'STUDENT', entityId: id, details: { before: { name: existing.name }, after: { name } }, ipAddress: ip });
 
   return getStudent(id);
 }

@@ -13,7 +13,9 @@ export async function seed(options?: { skipClose?: boolean }): Promise<void> {
 
   if (count.count > 0) {
     logger.info('Database already seeded');
-    closeDb();
+    if (!options?.skipClose) {
+      closeDb();
+    }
     return;
   }
 
@@ -40,16 +42,16 @@ export async function seed(options?: { skipClose?: boolean }): Promise<void> {
   );
 
   db.run(
-    "INSERT INTO students (roll, name, email) VALUES ('STU001', 'Alice Student', 'alice@workspace.com')"
+    "INSERT INTO students (roll, name, email, status) VALUES ('STU001', 'Alice Student', 'stu001@vnrvjiet.in', 'enrolled')"
   );
   db.run(
-    "INSERT INTO students (roll, name, email) VALUES ('STU002', 'Bob Student', 'bob@workspace.com')"
+    "INSERT INTO students (roll, name, email, status) VALUES ('STU002', 'Bob Student', 'stu002@vnrvjiet.in', 'enrolled')"
   );
   db.run(
-    "INSERT INTO students (roll, name, email) VALUES ('STU003', 'Charlie Student', 'charlie@workspace.com')"
+    "INSERT INTO students (roll, name, email, status) VALUES ('STU003', 'Charlie Student', 'stu003@vnrvjiet.in', 'enrolled')"
   );
   db.run(
-    "INSERT INTO students (roll, name, email) VALUES ('STU004', 'Diana Student', 'diana@workspace.com')"
+    "INSERT INTO students (roll, name, email, status) VALUES ('STU004', 'Diana Student', 'stu004@vnrvjiet.in', 'enrolled')"
   );
 
   db.run(

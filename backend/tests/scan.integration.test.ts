@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
-import { initDb, closeDb } from '../src/db';
+import { initDb, getDb, closeDb } from '../src/db';
 import app from '../src/app';
 
 let adminToken: string;
@@ -9,6 +9,9 @@ let studentToken: string;
 
 beforeAll(async () => {
   await initDb();
+
+  const db = getDb();
+  db.run('DELETE FROM workspace_sessions');
 
   const adminRes = await request(app).post('/api/auth/login').send({ email: 'admin@workspace.com', password: 'admin123' });
   adminToken = adminRes.body.token;

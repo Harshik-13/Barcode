@@ -163,11 +163,13 @@ export function setPassword(activationToken: string, password: string, ip?: stri
   const passwordHash = bcrypt.hashSync(password, 12);
   db.run('INSERT INTO users (email, name, password_hash, role_id, status) VALUES (?, ?, ?, ?, ?)', [email, student.name, passwordHash, 'student', 'active']);
 
+  db.run("UPDATE students SET status = 'enrolled' WHERE id = ?", [record.student_id]);
+
   db.run('UPDATE activation_otps SET is_used = 1 WHERE id = ?', [record.id]);
 
   logAudit({ actorType: 'system', actorId: null, action: 'ACTIVATION_COMPLETED', entityType: 'STUDENT', entityId: record.student_id, details: { roll: student.roll, email }, ipAddress: ip });
 
-  return { message: 'Password set successfully. You can now log in.' };
+  return { message: 'Password set successfully. You can now log in with your college email.' };
 }
 
 export function resendOtp(roll: string, ip?: string) {

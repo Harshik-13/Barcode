@@ -32,12 +32,8 @@ function signToken(userId: number, role: string): string {
   return jwt.sign(payload, config.jwt.secret);
 }
 
-function isRollNumber(input: string): boolean {
-  return !input.includes('@');
-}
-
 export function authenticate(loginId: string, password: string, ip?: string) {
-  const email = isRollNumber(loginId) ? `${loginId.toLowerCase()}${config.activation.studentEmailDomain}` : loginId;
+  const email = loginId;
 
   const db = getDb();
   const stmt = db.prepare('SELECT * FROM users WHERE email = ?');

@@ -147,19 +147,4 @@ describe('POST /api/auth/login — existing flow still works', () => {
     const res = await request(app).post('/api/auth/login').send({ email: 'admin@workspace.com', password: 'wrongpassword' });
     expect(res.status).toBe(401);
   });
-
-  it('should login with roll number format (derives email)', async () => {
-    const db = getDb();
-    const bcrypt = await import('bcryptjs');
-    const hash = bcrypt.hashSync('testpass123', 12);
-    const stmt = db.prepare("INSERT OR IGNORE INTO users (email, name, password_hash, role_id, status) VALUES (?, ?, ?, 'student', 'active')");
-    stmt.bind(['testlogin@vnrvjiet.in', 'Test Login User', hash]);
-    stmt.run();
-    stmt.free();
-
-    const res = await request(app).post('/api/auth/login').send({ email: 'testlogin', password: 'testpass123' });
-    expect(res.status).toBe(200);
-    expect(res.body.token).toBeDefined();
-    expect(res.body.user.role).toBe('student');
-  });
 });

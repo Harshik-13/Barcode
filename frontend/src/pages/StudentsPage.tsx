@@ -3,6 +3,7 @@ import { studentsApi } from '../services/apiService';
 import type { Student } from '@workspace/shared';
 
 const STATUS_COLORS: Record<string, string> = {
+  invited: '#8b5cf6',
   enrolled: '#10b981',
   suspended: '#f59e0b',
   departed: '#ef4444',
@@ -20,7 +21,6 @@ export default function StudentsPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [createRoll, setCreateRoll] = useState('');
   const [createName, setCreateName] = useState('');
-  const [createEmail, setCreateEmail] = useState('');
   const [createError, setCreateError] = useState('');
 
   useEffect(() => {
@@ -41,11 +41,10 @@ export default function StudentsPage() {
     e.preventDefault();
     setCreateError('');
     try {
-      await studentsApi.create(createRoll, createName, createEmail || undefined);
+      await studentsApi.create(createRoll, createName);
       setShowCreate(false);
       setCreateRoll('');
       setCreateName('');
-      setCreateEmail('');
       studentsApi.list(page, 20, statusFilter).then((res) => setStudents(res.data));
     } catch (err: unknown) {
       setCreateError((err as { message?: string })?.message || 'Failed to create student');
@@ -103,9 +102,8 @@ export default function StudentsPage() {
             </div>
           )}
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-            <input placeholder="Roll Number" value={createRoll} onChange={(e) => setCreateRoll(e.target.value)} required style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '4px', fontSize: '14px', flex: 1, minWidth: '150px' }} />
+            <input placeholder="Roll Number" value={createRoll} onChange={(e) => setCreateRoll(e.target.value.toUpperCase())} required style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '4px', fontSize: '14px', flex: 1, minWidth: '150px' }} />
             <input placeholder="Full Name" value={createName} onChange={(e) => setCreateName(e.target.value)} required style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '4px', fontSize: '14px', flex: 1, minWidth: '200px' }} />
-            <input placeholder="Email (optional)" type="email" value={createEmail} onChange={(e) => setCreateEmail(e.target.value)} style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '4px', fontSize: '14px', flex: 1, minWidth: '200px' }} />
             <button type="submit" style={{ padding: '8px 16px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '14px', cursor: 'pointer' }}>
               Create
             </button>
@@ -117,6 +115,7 @@ export default function StudentsPage() {
         <label style={{ fontSize: '14px', color: '#6b7280', marginRight: '8px' }}>Status Filter:</label>
         <select value={statusFilter || ''} onChange={(e) => { setStatusFilter(e.target.value || undefined); setPage(1); }} style={{ padding: '6px 12px', border: '1px solid #e5e7eb', borderRadius: '4px', fontSize: '14px' }}>
           <option value="">All</option>
+          <option value="invited">Invited</option>
           <option value="enrolled">Enrolled</option>
           <option value="suspended">Suspended</option>
           <option value="departed">Departed</option>

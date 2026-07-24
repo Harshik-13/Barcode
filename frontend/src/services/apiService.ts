@@ -62,10 +62,10 @@ export const studentsApi = {
     api<DataResponse<Student>>(`/api/students/${id}`),
   getHistory: (id: number, page = 1, limit = 20) =>
     api<PaginatedDataResponse<SessionWithDetails>>(`/api/students/${id}/history?page=${page}&limit=${limit}`),
-  create: (roll: string, name: string, email?: string) =>
-    api<DataResponse<Student>>('/api/students', { method: 'POST', body: { roll, name, email } }),
-  update: (id: number, name: string, email?: string) =>
-    api<DataResponse<Student>>(`/api/students/${id}`, { method: 'PUT', body: { name, email } }),
+  create: (roll: string, name: string) =>
+    api<DataResponse<Student>>('/api/students', { method: 'POST', body: { roll, name } }),
+  update: (id: number, name: string) =>
+    api<DataResponse<Student>>(`/api/students/${id}`, { method: 'PUT', body: { name } }),
   suspend: (id: number) =>
     api<DataResponse<Student>>(`/api/students/${id}/suspend`, { method: 'PATCH' }),
   depart: (id: number) =>

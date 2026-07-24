@@ -219,7 +219,7 @@ export default function ActivatePage() {
           <div style={{ textAlign: 'center' }}>
             <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontSize: '28px' }}>&#10003;</div>
             <h2 style={{ fontSize: '18px', marginBottom: '8px' }}>Account Activated!</h2>
-            <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '24px' }}>Your account has been activated successfully. You can now sign in with your roll number or college email.</p>
+            <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '24px' }}>Your account has been activated successfully. You can now sign in with your college email.</p>
             <button onClick={() => navigate('/login')} style={{ width: '100%', padding: '10px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '14px', fontWeight: 500, cursor: 'pointer' }}>
               Go to Login
             </button>

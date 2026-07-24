@@ -138,15 +138,17 @@ describe('Students API', () => {
     expect(res.body.data.length).toBeGreaterThanOrEqual(1);
   });
 
-  it('POST /api/students — should create student as admin', async () => {
-    const res = await request(app).post('/api/students').set('Authorization', `Bearer ${adminToken}`).send({ roll: 'STU005', name: 'Eve Student', email: 'eve@workspace.com' });
+  it('POST /api/students — should create student as admin with invited status', async () => {
+    const res = await request(app).post('/api/students').set('Authorization', `Bearer ${adminToken}`).send({ roll: 'STU005', name: 'Eve Student' });
     expect(res.status).toBe(201);
     expect(res.body.data.roll).toBe('STU005');
+    expect(res.body.data.status).toBe('invited');
+    expect(res.body.data.email).toBe('stu005@vnrvjiet.in');
     studentId = res.body.data.id;
   });
 
   it('POST /api/students — should reject duplicate roll', async () => {
-    const res = await request(app).post('/api/students').set('Authorization', `Bearer ${adminToken}`).send({ roll: 'STU005', name: 'Duplicate', email: 'dup@workspace.com' });
+    const res = await request(app).post('/api/students').set('Authorization', `Bearer ${adminToken}`).send({ roll: 'STU005', name: 'Duplicate' });
     expect(res.status).toBe(409);
   });
 
@@ -162,10 +164,10 @@ describe('Students API', () => {
   });
 
   it('PUT /api/students/:id — should update student', async () => {
-    const res = await request(app).put(`/api/students/${studentId}`).set('Authorization', `Bearer ${adminToken}`).send({ name: 'Eve Updated', email: 'eve.new@workspace.com' });
+    const res = await request(app).put(`/api/students/${studentId}`).set('Authorization', `Bearer ${adminToken}`).send({ name: 'Eve Updated' });
     expect(res.status).toBe(200);
     expect(res.body.data.name).toBe('Eve Updated');
-    expect(res.body.data.email).toBe('eve.new@workspace.com');
+    expect(res.body.data.email).toBe('stu005@vnrvjiet.in');
   });
 
   it('PATCH /api/students/:id/depart — should depart student', async () => {

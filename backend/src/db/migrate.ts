@@ -31,11 +31,37 @@ export async function migrate(options?: { skipClose?: boolean }): Promise<void> 
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       roll TEXT UNIQUE NOT NULL,
       name TEXT NOT NULL,
-      email TEXT UNIQUE,
-      status TEXT NOT NULL DEFAULT 'enrolled' CHECK (status IN ('enrolled', 'suspended', 'departed')),
+      email TEXT,
+      status TEXT NOT NULL DEFAULT 'invited' CHECK (status IN ('invited', 'enrolled', 'suspended', 'departed')),
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     )
   `);
+
+  const schemaStmt = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='students'");
+  if (schemaStmt.step()) {
+    const row = schemaStmt.getAsObject() as { sql: string };
+    if (row.sql && !row.sql.includes('\'invited\'')) {
+      db.run('PRAGMA foreign_keys = OFF');
+      db.run('BEGIN TRANSACTION');
+      db.run('ALTER TABLE students RENAME TO students_old');
+      db.run(`
+        CREATE TABLE students (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          roll TEXT UNIQUE NOT NULL,
+          name TEXT NOT NULL,
+          email TEXT,
+          status TEXT NOT NULL DEFAULT 'invited' CHECK (status IN ('invited', 'enrolled', 'suspended', 'departed')),
+          created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )
+      `);
+      db.run('INSERT INTO students (id, roll, name, email, status, created_at) SELECT id, roll, name, email, status, created_at FROM students_old');
+      db.run('DROP TABLE students_old');
+      db.run('COMMIT');
+      db.run('PRAGMA foreign_keys = ON');
+      logger.info('Migrated students table to support invited status');
+    }
+  }
+  schemaStmt.free();
 
   db.run(`
     CREATE TABLE IF NOT EXISTS categories (

@@ -1,13 +1,37 @@
 import { config, validateEnv } from './config';
-import { initDb, saveDb, closeDb } from './db';
+import { initDb, getDb, saveDb, closeDb, validateDb } from './db';
+import { migrate } from './db/migrate';
+import { seed } from './db/seed';
 import app from './app';
 import { logger } from './utils/logger';
 
 validateEnv();
 
-async function start(): Promise<void> {
+async function bootstrap(): Promise<void> {
+  logger.info('Starting database bootstrap...');
+
   await initDb();
+
+  await migrate({ skipClose: true });
+
+  const db = getDb();
+  const stmt = db.prepare('SELECT COUNT(*) as count FROM roles');
+  stmt.step();
+  const { count } = stmt.getAsObject() as { count: number };
+  stmt.free();
+
+  if (count === 0) {
+    logger.info('Database is fresh, running seed...');
+    await seed({ skipClose: true });
+  }
+
+  validateDb();
   saveDb();
+  logger.info('Database bootstrap completed successfully');
+}
+
+async function start(): Promise<void> {
+  await bootstrap();
 
   const port = config.port;
   app.listen(port, () => {
@@ -17,7 +41,7 @@ async function start(): Promise<void> {
 }
 
 start().catch((err) => {
-  logger.error('Failed to start server', { error: err.message });
+  logger.error('Failed to start server', { error: err.message, stack: err.stack });
   process.exit(1);
 });
 

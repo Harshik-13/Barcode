@@ -60,11 +60,10 @@ router.post('/students',
   validateBody([
     { field: 'roll', type: 'string', required: true, min: 1, max: 50 },
     { field: 'name', type: 'string', required: true, min: 1, max: 200 },
-    { field: 'email', type: 'email', required: false },
   ]),
   (req: Request, res: Response, next: NextFunction) => {
     try {
-      const student = createStudent(req.body.roll, req.body.name, req.body.email, req.user!.userId, req.ip as string);
+      const student = createStudent(req.body.roll, req.body.name, req.user!.userId, req.ip as string);
       res.status(201).json({ data: student });
     } catch (err) { next(err); }
   }
@@ -75,11 +74,10 @@ router.put('/students/:id',
   requireRole('admin'),
   validateBody([
     { field: 'name', type: 'string', required: true, min: 1, max: 200 },
-    { field: 'email', type: 'email', required: false },
   ]),
   (req: Request, res: Response, next: NextFunction) => {
     try {
-      const student = updateStudent(parseInt(req.params.id as string, 10), req.body.name, req.body.email, req.user!.userId, req.ip as string);
+      const student = updateStudent(parseInt(req.params.id as string, 10), req.body.name, req.user!.userId, req.ip as string);
       res.json({ data: student });
     } catch (err) { next(err); }
   }
