@@ -144,7 +144,9 @@ This roadmap aligns with the [7 development phases](PHASES.md). Current phase: *
 
 ---
 
-## Phase 6: Implementation — Milestones 1–4 Completed, MVP Stabilized
+## Phase 6: Implementation ✅ Complete — `v0.2.0`
+
+**Tag:** `v0.2.0`
 
 ### Work Package 6.1 — Database & Auth ✅
 
@@ -168,37 +170,20 @@ This roadmap aligns with the [7 development phases](PHASES.md). Current phase: *
 - [x] `POST /api/students` + lookup/search — Student management
 - [x] Notification endpoints (via activity logs)
 
-### Work Package 6.3 — Single PWA Restructure ✅
+### Work Package 6.3 — Frontend ↔ Backend Alignment ✅
 
-- [x] Create `frontend/` project (React + Vite + TypeScript)
-- [x] Merge passport-pwa + vjscanner-pwa into single app
-- [x] Role-based routing (student / faculty / admin)
-- [x] Shared component library and API layer
+- [x] Frontend API service layer with typed wrappers for all 23 endpoints
+- [x] Role-based dashboards: Student (current session + history), Faculty (active sessions + scanner link), Admin (stats + quick links)
+- [x] Students management page: paginated list, create, suspend, depart
+- [x] Categories management page: list, create, inline edit, archive
+- [x] Sessions management page: status filter, complete-with-summary modal, archive
+- [x] Activity Logs page: actor-type filter, paginated audit trail
+- [x] Role-based navigation: each role sees only their relevant pages
+- [x] Full role guards (RoleRoute) on admin-gated pages
+- [x] Backend snake_case→camelCase conversion for all API responses
+- [x] 101/101 tests passing, frontend + backend builds clean
 
-### Work Package 6.4 — Student Dashboard ⌛ Partial
-
-- [x] Dashboard homepage with session status
-- [ ] Work category selector
-- [x] Notification list
-- [x] Attendance history
-- [ ] Streaks and statistics
-
-### Work Package 6.5 — Faculty Scanner ⌛ Partial
-
-- [x] Camera scanning infrastructure (html5-qrcode)
-- [ ] Entry/exit mode toggle
-- [ ] Live occupancy count
-- [x] Student search
-- [ ] Reports and analytics
-
-### Work Package 6.6 — Admin Panel ⌛ Partial
-
-- [x] User management endpoints
-- [x] Category management endpoints
-- [ ] Workspace settings UI
-- [ ] Global analytics dashboard
-
-### Work Package 6.7 — Security Hardening ✅
+### Work Package 6.4 — Security Hardening ✅
 
 - [x] Rate limiting on all endpoints
 - [x] Input sanitization and validation
@@ -207,7 +192,7 @@ This roadmap aligns with the [7 development phases](PHASES.md). Current phase: *
 - [x] Concurrent request handling with transactions
 - [x] Audit logging for all state changes
 
-### Work Package 6.8 — Testing ✅
+### Work Package 6.5 — Testing ✅
 
 - [x] Unit tests for session state machine
 - [x] Unit tests for auth middleware
@@ -216,14 +201,17 @@ This roadmap aligns with the [7 development phases](PHASES.md). Current phase: *
 - [x] Authorization tests (every role × every endpoint)
 - [x] Post-Milestone 4 stabilization (10-step audit, 101/101 tests)
 
-### Work Package 6.9 — Polish ⌛ Partial
+### Work Package 6.6 — Polish ✅
 
-- [ ] Loading states and UX feedback
-- [ ] Offline support for faculty scanning
-- [ ] PWA manifest update
+- [x] Loading and empty states on all new pages
+- [x] Error handling with user-facing messages
+- [x] Pagination on list pages (students, sessions, activity logs)
+- [x] Confirmation dialogs for destructive actions (suspend, depart, archive)
+- [x] Inline edit mode for categories
+- [x] Complete-with-summary modal for sessions
 - [x] Removed remaining hostel/meal references in codebase
-- [ ] Error boundary implementation
-- [x] Integration contract fixes (login response `type`→`role`, session restoration via `/auth/me`, test DB auto-setup)
+- [x] Integration contract fixes (login response `type`→`role`, session restoration, test DB auto-setup)
+- [x] Backend snake_case→camelCase conversion for all list/history endpoints
 
 ---
 

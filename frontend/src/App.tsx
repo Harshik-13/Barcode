@@ -2,13 +2,17 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './store/AuthContext';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { Layout } from './components/common/Layout';
-import { ProtectedRoute } from './components/common/ProtectedRoute';
+import { ProtectedRoute, RoleRoute } from './components/common/ProtectedRoute';
 import { Loading } from './components/common/Loading';
 import { lazy, Suspense } from 'react';
 
 const Login = lazy(() => import('./pages/Login'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Scanner = lazy(() => import('./pages/Scanner'));
+const StudentsPage = lazy(() => import('./pages/StudentsPage'));
+const CategoriesPage = lazy(() => import('./pages/CategoriesPage'));
+const SessionsPage = lazy(() => import('./pages/SessionsPage'));
+const ActivityLogsPage = lazy(() => import('./pages/ActivityLogsPage'));
 const Unauthorized = lazy(() => import('./pages/Unauthorized'));
 const Forbidden = lazy(() => import('./pages/Forbidden'));
 const NotFound = lazy(() => import('./pages/NotFound'));
@@ -28,6 +32,10 @@ function App() {
                   <Route path="/" element={<Dashboard />} />
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/scanner" element={<Scanner />} />
+                  <Route path="/students" element={<RoleRoute roles={['admin']}><StudentsPage /></RoleRoute>} />
+                  <Route path="/categories" element={<RoleRoute roles={['admin']}><CategoriesPage /></RoleRoute>} />
+                  <Route path="/sessions" element={<SessionsPage />} />
+                  <Route path="/activity-logs" element={<RoleRoute roles={['admin']}><ActivityLogsPage /></RoleRoute>} />
                 </Route>
               </Route>
               <Route path="*" element={<NotFound />} />

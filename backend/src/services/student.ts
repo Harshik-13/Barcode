@@ -190,7 +190,24 @@ export function getStudentHistory(studentId: number, page = 1, limit = 20) {
   stmt.bind([studentId, limit, offset]);
   const rows: Array<Record<string, unknown>> = [];
   while (stmt.step()) {
-    rows.push(stmt.getAsObject() as unknown as Record<string, unknown>);
+    const row = stmt.getAsObject() as unknown as Record<string, unknown>;
+    rows.push({
+      id: row.id,
+      studentId: row.student_id,
+      entryTime: row.entry_time,
+      exitTime: row.exit_time,
+      entryRecorderId: row.entry_recorder_id,
+      exitRecorderId: row.exit_recorder_id,
+      categoryId: row.category_id,
+      status: row.status,
+      completionReason: row.completion_reason,
+      summary: row.summary,
+      isManualExit: !!row.is_manual_exit,
+      manualExitReason: row.manual_exit_reason,
+      overrideReason: row.override_reason,
+      createdAt: row.created_at,
+      categoryName: row.category_name,
+    });
   }
   stmt.free();
 

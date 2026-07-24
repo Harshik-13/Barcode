@@ -159,65 +159,81 @@ The project is adapted from **Campus Passport**, a QR-code-based hostel meal att
 
 ---
 
-## API Endpoints (Implemented — Milestone 4)
+## API Endpoints (Implemented — Milestone 4 + Phase 6 Frontend Alignment)
 
-All endpoints are mounted under `/api` prefix.
+All endpoints are mounted under `/api` prefix. All **23 endpoints** are now consumed by the frontend UI.
 
 ### Auth
-| Method | Endpoint | Auth | Role |
-|--------|----------|------|------|
-| POST | `/api/auth/login` | None | All |
-| POST | `/api/auth/logout` | Bearer | All |
-| GET | `/api/auth/me` | Bearer | All |
+| Method | Endpoint | Auth | Role | Frontend |
+|--------|----------|------|------|----------|
+| POST | `/api/auth/login` | None | All | Login page |
+| POST | `/api/auth/logout` | Bearer | All | Layout logout button |
+| GET | `/api/auth/me` | Bearer | All | Session restore on page load |
 
 ### Scan
-| Method | Endpoint | Auth | Role |
-|--------|----------|------|------|
-| POST | `/api/scan` | Bearer | Faculty/Admin |
+| Method | Endpoint | Auth | Role | Frontend |
+|--------|----------|------|------|----------|
+| POST | `/api/scan` | Bearer | Faculty/Admin | Scanner page |
 
 ### Sessions
-| Method | Endpoint | Auth | Role |
-|--------|----------|------|------|
-| GET | `/api/sessions` | Bearer | All |
-| GET | `/api/sessions/:id` | Bearer | All |
-| POST | `/api/sessions` | Bearer | Faculty/Admin |
-| PATCH | `/api/sessions/:id/start` | Bearer | Faculty/Admin |
-| PATCH | `/api/sessions/:id/exit` | Bearer | Faculty/Admin |
-| PATCH | `/api/sessions/:id/complete` | Bearer | Faculty/Admin |
-| PATCH | `/api/sessions/:id/archive` | Bearer | Admin |
-| GET | `/api/sessions/active/:studentId` | Bearer | All |
-| GET | `/api/students/:id/history` | Bearer | All |
+| Method | Endpoint | Auth | Role | Frontend |
+|--------|----------|------|------|----------|
+| GET | `/api/sessions` | Bearer | All | Sessions page (all) / Student dashboard (filtered) |
+| GET | `/api/sessions/:id` | Bearer | All | (reserved for detail view) |
+| GET | `/api/sessions/active/:studentId` | Bearer | All | Student dashboard current session |
+| POST | `/api/sessions` | Bearer | Faculty/Admin | (reserved for manual creation) |
+| PATCH | `/api/sessions/:id/start` | Bearer | Faculty/Admin | (reserved) |
+| PATCH | `/api/sessions/:id/exit` | Bearer | Faculty/Admin | (reserved) |
+| PATCH | `/api/sessions/:id/manual-exit` | Bearer | Faculty/Admin | (reserved) |
+| PATCH | `/api/sessions/:id/complete` | Bearer | Faculty/Admin | Sessions page — complete with summary modal |
+| PATCH | `/api/sessions/:id/archive` | Bearer | Admin | Sessions page — archive button |
 
 ### Students
-| Method | Endpoint | Auth | Role |
-|--------|----------|------|------|
-| GET | `/api/students` | Bearer | All |
-| GET | `/api/students/:id` | Bearer | All |
-| POST | `/api/students` | Bearer | Admin |
-| PUT | `/api/students/:id` | Bearer | Admin |
-| PATCH | `/api/students/:id/depart` | Bearer | Admin |
-| GET | `/api/students/lookup` | Bearer | All |
-| GET | `/api/students/search` | Bearer | All |
+| Method | Endpoint | Auth | Role | Frontend |
+|--------|----------|------|------|----------|
+| GET | `/api/students` | Bearer | All | Students page — paginated list with status filter |
+| GET | `/api/students/:id` | Bearer | All | (reserved for detail view) |
+| GET | `/api/students/:id/history` | Bearer | All | Student dashboard — recent sessions |
+| POST | `/api/students` | Bearer | Admin | Students page — create form |
+| PUT | `/api/students/:id` | Bearer | Admin | (reserved) |
+| PATCH | `/api/students/:id/suspend` | Bearer | Admin | Students page — suspend button |
+| PATCH | `/api/students/:id/depart` | Bearer | Admin | Students page — depart button |
+| GET | `/api/students/lookup` | Bearer | All | (reserved for search) |
+| GET | `/api/students/search` | Bearer | All | (reserved for search) |
 
 ### Categories
-| Method | Endpoint | Auth | Role |
-|--------|----------|------|------|
-| GET | `/api/categories` | Bearer | All |
-| GET | `/api/categories/:id` | Bearer | All |
-| POST | `/api/categories` | Bearer | Admin |
-| PUT | `/api/categories/:id` | Bearer | Admin |
-| PATCH | `/api/categories/:id/archive` | Bearer | Admin |
+| Method | Endpoint | Auth | Role | Frontend |
+|--------|----------|------|------|----------|
+| GET | `/api/categories` | Bearer | All | Categories page — list |
+| GET | `/api/categories/:id` | Bearer | All | (reserved) |
+| POST | `/api/categories` | Bearer | Admin | Categories page — create form |
+| PUT | `/api/categories/:id` | Bearer | Admin | Categories page — inline edit |
+| PATCH | `/api/categories/:id/archive` | Bearer | Admin | Categories page — archive button |
 
 ### Activity Logs
-| Method | Endpoint | Auth | Role |
-|--------|----------|------|------|
-| GET | `/api/activity-logs` | Bearer | Admin |
-| GET | `/api/activity-logs/recent` | Bearer | Admin |
+| Method | Endpoint | Auth | Role | Frontend |
+|--------|----------|------|------|----------|
+| GET | `/api/activity-logs` | Bearer | Admin | Activity Logs page — paginated with actor-type filter |
+| GET | `/api/activity-logs/:id` | Bearer | Admin | (reserved) |
+| GET | `/api/activity-logs/recent` | Bearer | Admin | Admin dashboard — recent activity count |
 
 ### System
-| Method | Endpoint | Auth |
-|--------|----------|------|
-| GET | `/api/health` | None |
+| Method | Endpoint | Auth | Frontend |
+|--------|----------|------|----------|
+| GET | `/api/health` | None | (health check, not UI-consumed) |
+
+### Response Format
+
+All endpoints return camelCase JSON properties. The backend converts SQLite snake_case column names to camelCase at the service layer:
+
+| Snake case (DB) | Camel case (API) |
+|-----------------|------------------|
+| `student_id` | `studentId` |
+| `entry_time` | `entryTime` |
+| `created_at` | `createdAt` |
+| `actor_type` | `actorType` |
+| `student_roll` | `studentRoll` (from JOIN) |
+| `category_name` | `categoryName` (from JOIN) |
 
 ---
 

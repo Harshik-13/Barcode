@@ -12,6 +12,10 @@ data/
 dist/
 build/
 node_modules/
+*.tsbuildinfo
+
+# Playwright MCP
+.playwright-mcp/
 
 # IDE
 .idea/

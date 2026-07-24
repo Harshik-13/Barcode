@@ -108,6 +108,28 @@ export function getSessionById(id: number) {
   return rowToSession(row);
 }
 
+function rowToSessionDetails(row: Record<string, unknown>) {
+  return {
+    id: row.id,
+    studentId: row.student_id,
+    entryTime: row.entry_time,
+    exitTime: row.exit_time,
+    entryRecorderId: row.entry_recorder_id,
+    exitRecorderId: row.exit_recorder_id,
+    categoryId: row.category_id,
+    status: row.status,
+    completionReason: row.completion_reason,
+    summary: row.summary,
+    isManualExit: !!row.is_manual_exit,
+    manualExitReason: row.manual_exit_reason,
+    overrideReason: row.override_reason,
+    createdAt: row.created_at,
+    studentRoll: row.student_roll,
+    studentName: row.student_name,
+    categoryName: row.category_name,
+  };
+}
+
 export function listSessions(page = 1, limit = 20, filters?: { studentId?: number; status?: string; dateFrom?: string; dateTo?: string }) {
   const db = getDb();
   const offset = (page - 1) * limit;
@@ -136,7 +158,8 @@ export function listSessions(page = 1, limit = 20, filters?: { studentId?: numbe
   }
   stmt.free();
 
-  return { sessions: rows, total, page, limit, totalPages: Math.ceil(total / limit) };
+  const sessions = rows.map(rowToSessionDetails);
+  return { sessions, total, page, limit, totalPages: Math.ceil(total / limit) };
 }
 
 export function getActiveSessionForStudent(studentId: number) {

@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.2.0] — 2026-07-24
+
+### Added
+
+- API service layer (`apiService.ts`) with typed wrappers for all 23 backend endpoints
+- 7 new frontend pages: StudentDashboard, FacultyDashboard, AdminDashboard, StudentsPage, CategoriesPage, SessionsPage, ActivityLogsPage
+- Role-based navigation in Layout (student/faculty/admin each see different nav items)
+- RoleRoute guard component for role-gated pages
+- Dashboard dispatcher that renders role-appropriate dashboard
+- Admin dashboard with live stats (students, categories, sessions counts)
+- Student dashboard with active session status + session history table
+- Faculty dashboard with active/pending sessions overview + scanner link
+- Students management page: paginated list, status filter, create form, suspend/depart actions
+- Categories management page: list with inline edit, create form, archive action
+- Sessions management page: status filter, complete-with-summary modal, archive action
+- Activity Logs page: actor-type filter, paginated audit trail table
+
+### Fixed
+
+- Activity log snake_case→camelCase conversion (`created_at`→`createdAt`, `actor_type`→`actorType`, etc.)
+- Session list snake_case→camelCase conversion (`student_roll`→`studentRoll`, `student_name`→`studentName`)
+- Student history snake_case→camelCase conversion (`category_name`→`categoryName`)
+- AuthContext null token TypeScript error (`saved.token!` assertion)
+
 ## [0.1.1] — 2026-07-24
 
 ### Fixed

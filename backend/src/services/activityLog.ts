@@ -1,6 +1,32 @@
 import { getDb } from '../db';
 import { NotFoundError } from '../utils/errors';
 
+interface ActivityLogRow {
+  id: number;
+  actor_type: string;
+  actor_id: number | null;
+  action: string;
+  entity_type: string;
+  entity_id: number | null;
+  details: string | Record<string, unknown> | null;
+  ip_address: string | null;
+  created_at: string;
+}
+
+function rowToActivityLog(row: ActivityLogRow) {
+  return {
+    id: row.id,
+    actorType: row.actor_type,
+    actorId: row.actor_id,
+    action: row.action,
+    entityType: row.entity_type,
+    entityId: row.entity_id,
+    details: typeof row.details === 'string' ? (() => { try { return JSON.parse(row.details); } catch { return row.details; } })() : row.details,
+    ipAddress: row.ip_address,
+    createdAt: row.created_at,
+  };
+}
+
 export function listActivityLogs(page = 1, limit = 50, filters?: { actorType?: string; action?: string; entityType?: string; dateFrom?: string; dateTo?: string }) {
   const db = getDb();
   const offset = (page - 1) * limit;
@@ -23,17 +49,14 @@ export function listActivityLogs(page = 1, limit = 50, filters?: { actorType?: s
 
   const stmt = db.prepare(`SELECT * FROM activity_logs${whereClause} ORDER BY created_at DESC LIMIT ? OFFSET ?`);
   stmt.bind([...params, limit, offset]);
-  const rows: Array<Record<string, unknown>> = [];
+  const rows: ActivityLogRow[] = [];
   while (stmt.step()) {
-    const row = stmt.getAsObject() as unknown as Record<string, unknown>;
-    if (typeof row.details === 'string') {
-      try { row.details = JSON.parse(row.details as string); } catch { /* keep as string */ }
-    }
-    rows.push(row);
+    rows.push(stmt.getAsObject() as unknown as ActivityLogRow);
   }
   stmt.free();
 
-  return { logs: rows, total, page, limit, totalPages: Math.ceil(total / limit) };
+  const logs = rows.map(rowToActivityLog);
+  return { logs, total, page, limit, totalPages: Math.ceil(total / limit) };
 }
 
 export function getActivityLog(id: number) {
@@ -41,26 +64,19 @@ export function getActivityLog(id: number) {
   const stmt = db.prepare('SELECT * FROM activity_logs WHERE id = ?');
   stmt.bind([id]);
   if (!stmt.step()) { stmt.free(); throw new NotFoundError('ActivityLog'); }
-  const row = stmt.getAsObject() as unknown as Record<string, unknown>;
+  const row = stmt.getAsObject() as unknown as ActivityLogRow;
   stmt.free();
-  if (typeof row.details === 'string') {
-    try { row.details = JSON.parse(row.details as string); } catch { /* keep as string */ }
-  }
-  return row;
+  return rowToActivityLog(row);
 }
 
 export function getRecentActivity(limit = 10) {
   const db = getDb();
   const stmt = db.prepare('SELECT * FROM activity_logs ORDER BY created_at DESC LIMIT ?');
   stmt.bind([limit]);
-  const rows: Array<Record<string, unknown>> = [];
+  const rows: ActivityLogRow[] = [];
   while (stmt.step()) {
-    const row = stmt.getAsObject() as unknown as Record<string, unknown>;
-    if (typeof row.details === 'string') {
-      try { row.details = JSON.parse(row.details as string); } catch { /* keep as string */ }
-    }
-    rows.push(row);
+    rows.push(stmt.getAsObject() as unknown as ActivityLogRow);
   }
   stmt.free();
-  return rows;
+  return rows.map(rowToActivityLog);
 }

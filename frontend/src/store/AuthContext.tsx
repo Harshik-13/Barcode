@@ -66,7 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .then((userData) => {
           const freshUser: User = { id: userData.id, name: userData.name, email: userData.email, role: userData.role };
           setUser(freshUser);
-          saveToStorage(saved.token, freshUser);
+          saveToStorage(saved.token!, freshUser);
         })
         .catch(() => {
           setUser(null);
