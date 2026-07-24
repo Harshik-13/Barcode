@@ -2,6 +2,7 @@ import { getDb } from '../db';
 import { NotFoundError, ConflictError } from '../utils/errors';
 import { logAudit } from './audit';
 import { getStudent } from './student';
+import { createNotification } from './notification';
 
 interface SessionRow {
   id: number;
@@ -243,6 +244,10 @@ export function completeSession(id: number, recorderId: number, summary: string,
   });
 
   logAudit({ actorType: actorRole as 'admin' | 'faculty', actorId: recorderId, action: 'SESSION_COMPLETED', entityType: 'SESSION', entityId: id, details: { summary }, ipAddress: ip });
+
+  const completedSession = getSessionById(id);
+  createNotification(completedSession.studentId, id, 'exit', 'Your work session has been completed');
+
   return session;
 }
 
@@ -252,6 +257,10 @@ export function archiveSession(id: number, recorderId: number, reason: string | 
   });
 
   logAudit({ actorType: actorRole as 'admin' | 'faculty', actorId: recorderId, action: 'SESSION_ARCHIVED', entityType: 'SESSION', entityId: id, details: { reason }, ipAddress: ip });
+
+  const archivedSession = getSessionById(id);
+  createNotification(archivedSession.studentId, id, 'reminder', reason ? `Session archived: ${reason}` : 'Your session has been archived');
+
   return session;
 }
 

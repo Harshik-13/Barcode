@@ -127,3 +127,24 @@ export const scanApi = {
   submit: (barcode: string) =>
     api<DataResponse<{ code: string; message: string; sessionId: number; studentId: number; studentName: string; studentRoll: string; entryTime: string; exitTime: string | null; sessionStatus: string }>>('/api/scan', { method: 'POST', body: { barcode } }),
 };
+
+export interface NotificationItem {
+  id: number;
+  studentId: number;
+  sessionId: number | null;
+  type: string;
+  message: string;
+  isRead: boolean;
+  createdAt: string;
+}
+
+export const notificationsApi = {
+  list: (page = 1, limit = 20) =>
+    api<PaginatedDataResponse<NotificationItem>>(`/api/notifications?page=${page}&limit=${limit}`),
+  unreadCount: () =>
+    api<DataResponse<{ count: number }>>('/api/notifications/unread-count'),
+  markAsRead: (id: number) =>
+    api<DataResponse<{ success: boolean }>>(`/api/notifications/${id}/read`, { method: 'PATCH' }),
+  markAllAsRead: () =>
+    api<DataResponse<{ success: boolean }>>('/api/notifications/read-all', { method: 'PATCH' }),
+};

@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.3.0] — 2026-07-24
+
+### Added
+
+- Notification system: `services/notification.ts` with `createNotification`, `getNotifications`, `getUnreadCount`, `markAsRead`, `markAllAsRead`
+- 4 notification endpoints: `GET /api/notifications`, `GET /api/notifications/unread-count`, `PATCH /api/notifications/:id/read`, `PATCH /api/notifications/read-all`
+- Auto-notifications on scan entry (`"Entry recorded..."`), scan exit (`"Session exited — submit summary"`), session complete, session archive
+- Student can now call `PATCH /api/sessions/:id/complete` on own sessions (with `requireOwnership` middleware)
+- `NotificationsPage.tsx` — full notification center with mark-read, mark-all-read, session links
+- `SessionDetailPage.tsx` — session detail view + summary submission form for `awaiting_summary` status
+- Student dashboard rewrite — 3-card grid: active session, pending summaries, recent notifications widget
+- Notification bell with live unread badge in Layout header (30s auto-poll)
+- `notificationsApi` in frontend API service layer
+
+### Changed
+
+- `PATCH /api/sessions/:id/complete` now accepts `student` role with ownership verification
+- `StudentDashboard.tsx` now shows pending summaries and recent notifications alongside active session
+- `Layout.tsx` — notification bell icon + nav link for student role
+- `App.tsx` — new routes: `/notifications`, `/sessions/:id`
+
+### Fixed
+
+- N/A (all changes are additive)
+
 ## [0.2.0] — 2026-07-24
 
 ### Added

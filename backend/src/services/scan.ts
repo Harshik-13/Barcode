@@ -3,6 +3,7 @@ import { NotFoundError, ConflictError, ValidationError } from '../utils/errors';
 import { logAudit } from './audit';
 import { lookupStudent } from './student';
 import { getActiveSessionForStudent } from './session';
+import { createNotification } from './notification';
 import type { ScanResultCode } from '../../../shared';
 
 interface ScanSuccessResponse {
@@ -80,6 +81,7 @@ export function processScan(barcode: unknown, recorderId: number, actorRole: str
       db.run('COMMIT');
 
       logAudit({ actorType: actorRole as 'admin' | 'faculty', actorId: recorderId, action: 'SCAN_ENTRY', entityType: 'SESSION', entityId: sessionId, details: { studentId: student.id, barcode }, ipAddress: ip });
+      createNotification(student.id, sessionId, 'entry', `Entry recorded at ${new Date().toLocaleTimeString()}`);
 
       return {
         code: 'SUCCESS_ENTRY',
@@ -120,6 +122,7 @@ export function processScan(barcode: unknown, recorderId: number, actorRole: str
       db.run('COMMIT');
 
       logAudit({ actorType: actorRole as 'admin' | 'faculty', actorId: recorderId, action: 'SCAN_EXIT', entityType: 'SESSION', entityId: existing.id, details: { studentId: student.id, barcode }, ipAddress: ip });
+      createNotification(student.id, existing.id, 'exit', 'Session exited — please submit your work summary');
 
       return {
         code: 'SUCCESS_EXIT',

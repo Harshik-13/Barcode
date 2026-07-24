@@ -1,9 +1,12 @@
-import { Outlet, NavLink } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../store/AuthContext';
+import { useState, useEffect } from 'react';
+import { notificationsApi } from '../../services/apiService';
 
 const NAV_ITEMS: Record<string, Array<{ label: string; path: string }>> = {
   student: [
     { label: 'Dashboard', path: '/' },
+    { label: 'Notifications', path: '/notifications' },
   ],
   faculty: [
     { label: 'Dashboard', path: '/' },
@@ -38,7 +41,21 @@ const linkActive: React.CSSProperties = {
 
 export function Layout() {
   const { isAuthenticated, user, logout } = useAuth();
+  const navigate = useNavigate();
   const navItems = user ? NAV_ITEMS[user.role] || [] : [];
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    if (!user || user.role !== 'student') return;
+    const fetchCount = () => {
+      notificationsApi.unreadCount()
+        .then((res) => setUnreadCount(res.data.count))
+        .catch(() => {});
+    };
+    fetchCount();
+    const interval = setInterval(fetchCount, 30000);
+    return () => clearInterval(interval);
+  }, [user]);
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -70,6 +87,16 @@ export function Layout() {
             </nav>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            {user?.role === 'student' && (
+              <div onClick={() => navigate('/notifications')} style={{ position: 'relative', cursor: 'pointer', padding: '4px' }}>
+                <span style={{ fontSize: '18px' }}>&#128276;</span>
+                {unreadCount > 0 && (
+                  <span style={{ position: 'absolute', top: '-2px', right: '-4px', background: '#ef4444', color: '#fff', borderRadius: '999px', padding: '1px 6px', fontSize: '11px', fontWeight: 600, lineHeight: 1.4 }}>
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </div>
+            )}
             <span style={{ color: '#6b7280', fontSize: '14px' }}>
               {user?.name}
               <span style={{ marginLeft: '6px', padding: '2px 6px', borderRadius: '4px', background: '#f3f4f6', fontSize: '12px', color: '#6b7280' }}>

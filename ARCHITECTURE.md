@@ -159,9 +159,9 @@ The project is adapted from **Campus Passport**, a QR-code-based hostel meal att
 
 ---
 
-## API Endpoints (Implemented — Milestone 4 + Phase 6 Frontend Alignment)
+## API Endpoints (Implemented — Milestone 5)
 
-All endpoints are mounted under `/api` prefix. All **23 endpoints** are now consumed by the frontend UI.
+All endpoints are mounted under `/api` prefix. All **34 endpoints** are consumed by the frontend UI — 100% alignment.
 
 ### Auth
 | Method | Endpoint | Auth | Role | Frontend |
@@ -179,14 +179,16 @@ All endpoints are mounted under `/api` prefix. All **23 endpoints** are now cons
 | Method | Endpoint | Auth | Role | Frontend |
 |--------|----------|------|------|----------|
 | GET | `/api/sessions` | Bearer | All | Sessions page (all) / Student dashboard (filtered) |
-| GET | `/api/sessions/:id` | Bearer | All | (reserved for detail view) |
+| GET | `/api/sessions/:id` | Bearer | All | Session detail page |
 | GET | `/api/sessions/active/:studentId` | Bearer | All | Student dashboard current session |
 | POST | `/api/sessions` | Bearer | Faculty/Admin | (reserved for manual creation) |
 | PATCH | `/api/sessions/:id/start` | Bearer | Faculty/Admin | (reserved) |
 | PATCH | `/api/sessions/:id/exit` | Bearer | Faculty/Admin | (reserved) |
 | PATCH | `/api/sessions/:id/manual-exit` | Bearer | Faculty/Admin | (reserved) |
-| PATCH | `/api/sessions/:id/complete` | Bearer | Faculty/Admin | Sessions page — complete with summary modal |
+| PATCH | `/api/sessions/:id/complete` | Bearer | Faculty/Admin/Student* | Sessions page + Session detail page (student own sessions) |
 | PATCH | `/api/sessions/:id/archive` | Bearer | Admin | Sessions page — archive button |
+
+*Students can only complete their own sessions (ownership check via `requireOwnership`).
 
 ### Students
 | Method | Endpoint | Auth | Role | Frontend |
@@ -216,6 +218,14 @@ All endpoints are mounted under `/api` prefix. All **23 endpoints** are now cons
 | GET | `/api/activity-logs` | Bearer | Admin | Activity Logs page — paginated with actor-type filter |
 | GET | `/api/activity-logs/:id` | Bearer | Admin | (reserved) |
 | GET | `/api/activity-logs/recent` | Bearer | Admin | Admin dashboard — recent activity count |
+
+### Notifications
+| Method | Endpoint | Auth | Role | Frontend |
+|--------|----------|------|------|----------|
+| GET | `/api/notifications` | Bearer | Student | Notifications page — paginated list |
+| GET | `/api/notifications/unread-count` | Bearer | Student | Layout notification bell badge |
+| PATCH | `/api/notifications/:id/read` | Bearer | Student | Notifications page — mark single as read |
+| PATCH | `/api/notifications/read-all` | Bearer | Student | Notifications page — mark all as read |
 
 ### System
 | Method | Endpoint | Auth | Frontend |
@@ -321,3 +331,4 @@ CREATE TABLE activity_logs (
 4. **No meal concepts** — All hostel/meal terminology removed. Replaced by work categories and workspace sessions.
 5. **Duplicate scan prevention** — Prevent double entry (no active session) and double exit (no open session). Validate at API level.
 6. **Offline-first** — Faculty app caches student roster and can queue scans for sync.
+7. **Notification system** — Notifications are auto-created server-side on entry/exit/complete/archive via `createNotification()`. Students poll for unread count every 30s and view full history in the notification center.

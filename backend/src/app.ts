@@ -12,6 +12,7 @@ import studentRoutes from './routes/students';
 import sessionRoutes from './routes/sessions';
 import scanRoutes from './routes/scan';
 import activityLogRoutes from './routes/activityLogs';
+import notificationRoutes from './routes/notifications';
 
 const app = express();
 
@@ -28,6 +29,7 @@ app.use('/api', studentRoutes);
 app.use('/api', sessionRoutes);
 app.use('/api', scanRoutes);
 app.use('/api', activityLogRoutes);
+app.use('/api', notificationRoutes);
 
 app.use((_req, res) => {
   res.status(404).json({ error: 'NOT_FOUND', message: 'Route not found' });

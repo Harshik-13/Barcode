@@ -1,5 +1,5 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { requireAuth, requireRole } from '../middleware/auth';
+import { requireAuth, requireRole, requireOwnership } from '../middleware/auth';
 import { listSessions, getSessionById, createSession, startSession, exitSession, manualExitSession, completeSession, archiveSession, getActiveSessionForStudent } from '../services/session';
 import { validateBody } from '../utils/validation';
 import { parsePagination } from '../utils/pagination';
@@ -89,7 +89,8 @@ router.patch('/sessions/:id/manual-exit',
 
 router.patch('/sessions/:id/complete',
   requireAuth,
-  requireRole('faculty', 'admin'),
+  requireOwnership((req) => getSessionById(parseInt(req.params.id as string, 10)).studentId),
+  requireRole('faculty', 'admin', 'student'),
   validateBody([
     { field: 'summary', type: 'string', required: true, min: 1, max: 2000 },
   ]),

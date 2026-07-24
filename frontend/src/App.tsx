@@ -13,6 +13,8 @@ const StudentsPage = lazy(() => import('./pages/StudentsPage'));
 const CategoriesPage = lazy(() => import('./pages/CategoriesPage'));
 const SessionsPage = lazy(() => import('./pages/SessionsPage'));
 const ActivityLogsPage = lazy(() => import('./pages/ActivityLogsPage'));
+const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
+const SessionDetailPage = lazy(() => import('./pages/SessionDetailPage'));
 const Unauthorized = lazy(() => import('./pages/Unauthorized'));
 const Forbidden = lazy(() => import('./pages/Forbidden'));
 const NotFound = lazy(() => import('./pages/NotFound'));
@@ -36,6 +38,8 @@ function App() {
                   <Route path="/categories" element={<RoleRoute roles={['admin']}><CategoriesPage /></RoleRoute>} />
                   <Route path="/sessions" element={<SessionsPage />} />
                   <Route path="/activity-logs" element={<RoleRoute roles={['admin']}><ActivityLogsPage /></RoleRoute>} />
+                  <Route path="/notifications" element={<RoleRoute roles={['student']}><NotificationsPage /></RoleRoute>} />
+                  <Route path="/sessions/:id" element={<SessionDetailPage />} />
                 </Route>
               </Route>
               <Route path="*" element={<NotFound />} />

@@ -1,6 +1,6 @@
 # 8Hour Workspace Attendance System — Adaptation Roadmap
 
-This roadmap aligns with the [7 development phases](PHASES.md). Current phase: **Phase 6 — Implementation**.
+This roadmap aligns with the [7 development phases](PHASES.md). Current phase: **Phase 7 — Production Readiness**.
 
 ---
 
@@ -144,9 +144,9 @@ This roadmap aligns with the [7 development phases](PHASES.md). Current phase: *
 
 ---
 
-## Phase 6: Implementation ✅ Complete — `v0.2.0`
+## Phase 6: Implementation ✅ Complete — `v0.3.0`
 
-**Tag:** `v0.2.0`
+**Tag:** `v0.3.0`
 
 ### Work Package 6.1 — Database & Auth ✅
 
@@ -212,6 +212,20 @@ This roadmap aligns with the [7 development phases](PHASES.md). Current phase: *
 - [x] Removed remaining hostel/meal references in codebase
 - [x] Integration contract fixes (login response `type`→`role`, session restoration, test DB auto-setup)
 - [x] Backend snake_case→camelCase conversion for all list/history endpoints
+
+### Work Package 6.7 — Student Experience & Notification System ✅
+
+- [x] Notification service (`services/notification.ts`) — `createNotification`, `getNotifications`, `getUnreadCount`, `markAsRead`, `markAllAsRead`
+- [x] Notification routes (`routes/notifications.ts`) — 4 endpoints under `/api/notifications`
+- [x] Auto-create notifications on scan entry/exit and session complete/archive
+- [x] Student session complete via `PATCH /api/sessions/:id/complete` with ownership check
+- [x] Frontend notification center (`NotificationsPage.tsx`) — full list, mark read, mark all read
+- [x] Student dashboard rewrite with active session card, pending summaries, recent notifications widget
+- [x] Session detail page (`SessionDetailPage.tsx`) — session details + summary submission form
+- [x] Notification bell + live unread badge in Layout for students (30s polling)
+- [x] Frontend API layer — `notificationsApi` with all 4 endpoints
+- [x] All 34 backend endpoints consumed by frontend — 100% alignment
+- [x] 101/101 tests passing, frontend + backend builds clean
 
 ---
 
