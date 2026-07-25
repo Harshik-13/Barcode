@@ -3,7 +3,7 @@
 Role-based platform that records student attendance and daily work activity inside the startup workspace.
 
 ![Status](https://img.shields.io/badge/status-active-brightgreen)
-![Tests](https://img.shields.io/badge/tests-115%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-160%20passing-brightgreen)
 ![Phase](https://img.shields.io/badge/phase-7%20Ready-yellow)
 
 ---
@@ -26,28 +26,38 @@ Role-based platform that records student attendance and daily work activity insi
 - Role-based auth (admin, faculty, student) with JWT
 - Secure student account activation via OTP (bcrypt hashed, 10min expiry, max 5 attempts, cooldown)
 - Validation, rate limiting, audit trail, error handling
-- **116 tests passing** across 10 test suites
+- **160 tests passing** across 11 test suites
 - **Student Experience**: notification system (auto-created on entry/exit/complete/archive), notification center with unread badges, session detail page with summary submission, self-activation via OTP
 - **Role-based frontend** with separate dashboards for Student, Faculty, and Admin
 - **Management pages**: Students (list/create/suspend/depart), Categories (list/create/edit/archive), Sessions (list/filter/complete/archive), Activity Logs (filter/paginated audit trail)
 - All 39 backend endpoints consumed by the UI — 100% alignment
+- **PostgreSQL migration**: migrated from SQLite (sql.js) to PostgreSQL (node-postgres) with lazy pool, ended-pool recovery, timestamp string compatibility
 - Backend snake_case→camelCase conversion for consistent API contracts
 
 ---
 
 ## Quick Start
 
+### Prerequisites
+
+- **PostgreSQL 15+** running on `localhost:5432`
+- Databases: `workspace` (main) and `workspace_test` (tests)
+
 ```bash
+# Create databases
+node backend/scripts/create-db.js
+node backend/scripts/create-test-db.js
+
 # Backend
 cd backend
 npm install
-npm run setup    # build + migrate + seed
-npm run dev      # starts on port 8080
+npm run build   # compile TypeScript
+npm run dev     # starts on port 8080 (auto migrate + seed)
 
 # Frontend
 cd frontend
 npm install
-npm run dev      # starts on port 5173
+npm run dev     # starts on port 5173
 ```
 
 ### Default Credentials
@@ -78,8 +88,7 @@ On startup, the server runs `transporter.verify()` and logs `Gmail SMTP initiali
 
 ```bash
 cd backend
-npm test         # runs all 115 tests
-npm run test:scan   # scan pipeline tests only
+npm test         # runs all 160 tests (fresh DB each run)
 ```
 
 ---
@@ -87,10 +96,10 @@ npm run test:scan   # scan pipeline tests only
 ## Tech Stack
 
 - **Frontend**: React 18 + TypeScript + Vite (single PWA)
-- **Backend**: Node.js + Express + better-sqlite3
+- **Backend**: Node.js + Express
 - **Auth**: JWT (email/password)
 - **Scanning**: html5-qrcode (camera-based QR/barcode)
-- **Database**: SQLite (via sql.js)
+- **Database**: PostgreSQL (via node-postgres)
 - **Testing**: Vitest + Supertest
 
 ---
@@ -98,7 +107,7 @@ npm run test:scan   # scan pipeline tests only
 ## Project Structure
 
 ```
-├── backend/           # REST API server (Express + SQLite)
+├── backend/           # REST API server (Express + PostgreSQL)
 │   ├── src/
 │   │   ├── config/    # App configuration
 │   │   ├── db/        # Database setup, migrations, seeds
