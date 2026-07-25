@@ -1,31 +1,37 @@
-import { Router, Request, Response } from 'express';
-import { authenticate, getCurrentUser, logLogout } from '../services/auth';
+import { Router, Request, Response, NextFunction } from 'express';
 import { requireAuth } from '../middleware/auth';
-import { authRateLimiter } from '../middleware/authRateLimiter';
+import { authenticate, getCurrentUser, logLogout, logPermissionDenied } from '../services/auth';
+import { authLimiter } from '../middleware/rateLimiter';
 import { validateBody } from '../utils/validation';
 
 const router = Router();
 
-const loginValidation = [
-  { field: 'email', type: 'string' as const, required: true, min: 1 },
-  { field: 'password', type: 'string' as const, required: true, min: 1 },
-];
+router.post('/auth/login',
+  authLimiter,
+  validateBody([
+    { field: 'email', type: 'string', required: true, min: 1 },
+    { field: 'password', type: 'string', required: true, min: 1 },
+  ]),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const result = await authenticate(req.body.email, req.body.password, req.ip as string);
+      res.json(result);
+    } catch (err) { next(err); }
+  }
+);
 
-router.post('/auth/login', authRateLimiter, validateBody(loginValidation), (req: Request, res: Response) => {
-  const ip = (req.headers['x-forwarded-for'] as string) ?? req.ip;
-  const result = authenticate(req.body.email, req.body.password, ip);
-  res.json(result);
+router.get('/auth/me', requireAuth, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const user = await getCurrentUser(req.user!.userId);
+    res.json(user);
+  } catch (err) { next(err); }
 });
 
-router.post('/auth/logout', requireAuth, (req: Request, res: Response) => {
-  const ip = (req.headers['x-forwarded-for'] as string) ?? req.ip;
-  logLogout(req.user!.userId, req.user!.role, ip);
-  res.json({ message: 'Logged out successfully' });
-});
-
-router.get('/auth/me', requireAuth, (req: Request, res: Response) => {
-  const user = getCurrentUser(req.user!.userId);
-  res.json(user);
+router.post('/auth/logout', requireAuth, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    await logLogout(req.user!.userId, req.user!.role, req.ip as string);
+    res.json({ message: 'Logged out successfully' });
+  } catch (err) { next(err); }
 });
 
 export default router;

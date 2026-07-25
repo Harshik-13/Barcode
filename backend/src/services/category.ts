@@ -14,90 +14,92 @@ function rowToCategory(row: CategoryRow) {
   return { id: row.id, name: row.name, description: row.description, status: row.status, createdAt: row.created_at };
 }
 
-export function listCategories(status?: string) {
+export async function listCategories(status?: string) {
   const db = getDb();
   let sql = 'SELECT * FROM categories';
   const params: Array<string | number> = [];
 
   if (status === 'active') {
-    sql += ' WHERE status = ?';
+    sql += ' WHERE status = $1';
     params.push('active');
   } else if (status === 'archived') {
-    sql += ' WHERE status = ?';
+    sql += ' WHERE status = $1';
     params.push('archived');
   }
 
   sql += ' ORDER BY name ASC';
-  const stmt = db.prepare(sql);
-  if (params.length > 0) stmt.bind(params);
-  const rows: CategoryRow[] = [];
-  while (stmt.step()) {
-    rows.push(stmt.getAsObject() as unknown as CategoryRow);
-  }
-  stmt.free();
+  const result = await db.query(sql, params);
+  const rows: CategoryRow[] = result.rows as CategoryRow[];
   return rows.map(rowToCategory);
 }
 
-export function getCategory(id: number) {
+export async function getCategory(id: number) {
   const db = getDb();
-  const stmt = db.prepare('SELECT * FROM categories WHERE id = ?');
-  stmt.bind([id]);
-  if (!stmt.step()) { stmt.free(); throw new NotFoundError('Category'); }
-  const row = stmt.getAsObject() as unknown as CategoryRow;
-  stmt.free();
-  return rowToCategory(row);
+  const result = await db.query('SELECT * FROM categories WHERE id = $1', [id]);
+  if (result.rows.length === 0) throw new NotFoundError('Category');
+  return rowToCategory(result.rows[0] as CategoryRow);
 }
 
-export function createCategory(name: string, description: string | undefined, actorId: number, ip?: string) {
+export async function createCategory(name: string, description: string | undefined, actorId: number, ip?: string) {
   const db = getDb();
 
-  const dup = db.prepare('SELECT id FROM categories WHERE name = ? AND status = ?');
-  dup.bind([name, 'active']);
-  if (dup.step()) { dup.free(); throw new ConflictError('DUPLICATE_CATEGORY', `A category with name '${name}' already exists`); }
-  dup.free();
+  const dupResult = await db.query('SELECT id FROM categories WHERE name = $1 AND status = $2', [name, 'active']);
+  if (dupResult.rows.length > 0) throw new ConflictError('DUPLICATE_CATEGORY', `A category with name '${name}' already exists`);
 
-  const stmt = db.prepare('INSERT INTO categories (name, description) VALUES (?, ?)');
-  stmt.run([name, description ?? null]);
-  stmt.free();
-
-  const id = db.exec('SELECT last_insert_rowid() as id')[0].values[0][0] as number;
+  const insertResult = await db.query('INSERT INTO categories (name, description) VALUES ($1, $2) RETURNING id', [name, description ?? null]);
+  const id = insertResult.rows[0].id as number;
 
   logAudit({ actorType: 'admin', actorId, action: 'CATEGORY_CREATED', entityType: 'CATEGORY', entityId: id, details: { name, description }, ipAddress: ip });
 
-  return getCategory(id);
+  return await getCategory(id);
 }
 
-export function updateCategory(id: number, name: string, description: string | undefined, actorId: number, ip?: string) {
+export async function updateCategory(id: number, name: string, description: string | undefined, actorId: number, ip?: string) {
   const db = getDb();
-  const existing = getCategory(id);
+  const existing = await getCategory(id);
 
-  const dup = db.prepare('SELECT id FROM categories WHERE name = ? AND status = ? AND id != ?');
-  dup.bind([name, 'active', id]);
-  if (dup.step()) { dup.free(); throw new ConflictError('DUPLICATE_CATEGORY', `A category with name '${name}' already exists`); }
-  dup.free();
+  const dupResult = await db.query('SELECT id FROM categories WHERE name = $1 AND status = $2 AND id != $3', [name, 'active', id]);
+  if (dupResult.rows.length > 0) throw new ConflictError('DUPLICATE_CATEGORY', `A category with name '${name}' already exists`);
 
-  const stmt = db.prepare('UPDATE categories SET name = ?, description = ? WHERE id = ?');
-  stmt.run([name, description ?? null, id]);
-  stmt.free();
+  await db.query('UPDATE categories SET name = $1, description = $2 WHERE id = $3', [name, description ?? null, id]);
 
   logAudit({ actorType: 'admin', actorId, action: 'CATEGORY_UPDATED', entityType: 'CATEGORY', entityId: id, details: { before: existing, after: { name, description } }, ipAddress: ip });
 
-  return getCategory(id);
+  return await getCategory(id);
 }
 
-export function archiveCategory(id: number, actorId: number, ip?: string) {
+export async function getCategoryUsage(id: number): Promise<{ usageCount: number; activeSessions: number; deletionAllowed: boolean; blockedReason: string | null }> {
   const db = getDb();
-  const existing = getCategory(id);
+  await getCategory(id);
+
+  const countResult = await db.query('SELECT COUNT(*) as count FROM workspace_sessions WHERE category_id = $1', [id]);
+  const usageCount = parseInt(countResult.rows[0].count, 10);
+
+  const activeResult = await db.query("SELECT COUNT(*) as count FROM workspace_sessions WHERE category_id = $1 AND status IN ('created', 'active', 'awaiting_summary')", [id]);
+  const activeSessions = parseInt(activeResult.rows[0].count, 10);
+
+  let deletionAllowed = true;
+  let blockedReason: string | null = null;
+
+  if (usageCount > 0) {
+    deletionAllowed = false;
+    blockedReason = `Category is used in ${usageCount} session(s). Archive instead of delete.`;
+  }
+
+  return { usageCount, activeSessions, deletionAllowed, blockedReason };
+}
+
+export async function archiveCategory(id: number, actorId: number, ip?: string) {
+  const db = getDb();
+  const existing = await getCategory(id);
 
   if (existing.status === 'archived') {
     throw new ConflictError('CATEGORY_ALREADY_ARCHIVED', 'Category is already archived');
   }
 
-  const stmt = db.prepare("UPDATE categories SET status = 'archived' WHERE id = ?");
-  stmt.run([id]);
-  stmt.free();
+  await db.query("UPDATE categories SET status = 'archived' WHERE id = $1", [id]);
 
   logAudit({ actorType: 'admin', actorId, action: 'CATEGORY_ARCHIVED', entityType: 'CATEGORY', entityId: id, details: { previousStatus: existing.status }, ipAddress: ip });
 
-  return getCategory(id);
+  return await getCategory(id);
 }

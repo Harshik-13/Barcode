@@ -20,28 +20,26 @@ function deriveEmail(roll: string): string {
   return `${roll.toLowerCase()}${config.activation.studentEmailDomain}`;
 }
 
-function getStudentOrError(roll: string): { id: number; name: string; roll: string } {
+async function getStudentOrError(roll: string): Promise<{ id: number; name: string; roll: string }> {
   try {
-    return lookupStudent(roll) as { id: number; name: string; roll: string };
+    const student = await lookupStudent(roll);
+    return student as { id: number; name: string; roll: string };
   } catch {
     throw new NotFoundError('Student account not found');
   }
 }
 
-function checkAlreadyActivated(studentId: number, email: string): void {
+async function checkAlreadyActivated(studentId: number, email: string): Promise<void> {
   const db = getDb();
-  const stmt = db.prepare('SELECT id FROM users WHERE email = ?');
-  stmt.bind([email]);
-  if (stmt.step()) {
-    stmt.free();
+  const result = await db.query('SELECT id FROM users WHERE email = $1', [email]);
+  if (result.rows.length > 0) {
     throw new ConflictError('ALREADY_ACTIVATED', 'This account has already been activated');
   }
-  stmt.free();
 }
 
-function invalidatePreviousOtps(studentId: number): void {
+async function invalidatePreviousOtps(studentId: number): Promise<void> {
   const db = getDb();
-  db.run('UPDATE activation_otps SET is_used = 1 WHERE student_id = ? AND is_used = 0', [studentId]);
+  await db.query('UPDATE activation_otps SET is_used = 1 WHERE student_id = $1 AND is_used = 0', [studentId]);
 }
 
 function verifyOtpNotExpired(expiresAt: string): void {
@@ -62,47 +60,51 @@ function verifyOtpAttempts(record: { attempts: number; max_attempts: number }): 
   }
 }
 
-export function startActivation(roll: string, ip?: string) {
-  const student = getStudentOrError(roll);
+export async function startActivation(roll: string, ip?: string) {
+  const student = await getStudentOrError(roll);
   const email = deriveEmail(student.roll);
 
-  checkAlreadyActivated(student.id, email);
-
-  invalidatePreviousOtps(student.id);
-
-  const otp = generateOtp();
-  const otpHash = bcrypt.hashSync(otp, 10);
-  const expiresAt = new Date(Date.now() + config.activation.otpExpiryMinutes * 60 * 1000).toISOString();
+  await checkAlreadyActivated(student.id, email);
 
   const db = getDb();
-  const stmt = db.prepare('INSERT INTO activation_otps (student_id, otp_hash, max_attempts, expires_at) VALUES (?, ?, ?, ?)');
-  stmt.run([student.id, otpHash, config.activation.otpMaxAttempts, expiresAt]);
-  stmt.free();
 
-  sendOtpEmail(email, otp).catch((err) => logger.error('Background OTP send failed', { error: err.message }));
+  await db.query('BEGIN');
+  let rolledBack = false;
+  try {
+    await invalidatePreviousOtps(student.id);
 
-  logAudit({ actorType: 'student', actorId: student.id, action: 'ACTIVATION_OTP_SENT', entityType: 'STUDENT', entityId: student.id, details: { roll }, ipAddress: ip });
+    const otp = generateOtp();
+    const otpHash = bcrypt.hashSync(otp, 10);
+    const expiresAt = new Date(Date.now() + config.activation.otpExpiryMinutes * 60 * 1000).toISOString();
 
-  return { message: 'OTP sent to your college email', emailDomain: config.activation.studentEmailDomain };
+    await db.query('INSERT INTO activation_otps (student_id, otp_hash, max_attempts, expires_at) VALUES ($1, $2, $3, $4)', [student.id, otpHash, config.activation.otpMaxAttempts, expiresAt]);
+    await db.query('COMMIT');
+
+    sendOtpEmail(email, otp).catch((err) => logger.error('Background OTP send failed', { error: err.message }));
+
+    logAudit({ actorType: 'student', actorId: student.id, action: 'ACTIVATION_OTP_SENT', entityType: 'STUDENT', entityId: student.id, details: { roll }, ipAddress: ip });
+
+    return { message: 'OTP sent to your college email', emailDomain: config.activation.studentEmailDomain };
+  } catch (err) {
+    if (!rolledBack) { try { await db.query('ROLLBACK'); } catch { /* ignore */ } }
+    throw err;
+  }
 }
 
-export function verifyOtp(roll: string, otp: string, ip?: string) {
-  const student = getStudentOrError(roll);
+export async function verifyOtp(roll: string, otp: string, ip?: string) {
+  const student = await getStudentOrError(roll);
   const email = deriveEmail(student.roll);
 
-  checkAlreadyActivated(student.id, email);
+  await checkAlreadyActivated(student.id, email);
 
   const db = getDb();
-  const stmt = db.prepare('SELECT * FROM activation_otps WHERE student_id = ? AND is_used = 0 ORDER BY created_at DESC LIMIT 1');
-  stmt.bind([student.id]);
-  if (!stmt.step()) {
-    stmt.free();
+  const result = await db.query('SELECT * FROM activation_otps WHERE student_id = $1 AND is_used = 0 ORDER BY created_at DESC LIMIT 1', [student.id]);
+  if (result.rows.length === 0) {
     throw new NotFoundError('No active OTP found. Please request a new OTP');
   }
-  const record = stmt.getAsObject() as unknown as {
+  const record = result.rows[0] as unknown as {
     id: number; otp_hash: string; attempts: number; max_attempts: number; expires_at: string; is_used: number;
   };
-  stmt.free();
 
   verifyOtpNotExpired(record.expires_at);
   verifyOtpNotUsed(record);
@@ -110,116 +112,114 @@ export function verifyOtp(roll: string, otp: string, ip?: string) {
 
   const valid = bcrypt.compareSync(otp, record.otp_hash);
   if (!valid) {
-    db.run('UPDATE activation_otps SET attempts = attempts + 1 WHERE id = ?', [record.id]);
+    await db.query('UPDATE activation_otps SET attempts = attempts + 1 WHERE id = $1', [record.id]);
     logAudit({ actorType: 'student', actorId: student.id, action: 'ACTIVATION_OTP_FAILED', entityType: 'STUDENT', entityId: student.id, details: { roll, attempt: record.attempts + 1 }, ipAddress: ip });
     throw new BusinessRuleError('INVALID_OTP', 'Invalid OTP. Please try again.');
   }
 
   const activationToken = generateActivationToken();
-  db.run('UPDATE activation_otps SET verified_at = ?, activation_token = ? WHERE id = ?', [new Date().toISOString(), activationToken, record.id]);
+  await db.query('UPDATE activation_otps SET verified_at = $1, activation_token = $2 WHERE id = $3', [new Date().toISOString(), activationToken, record.id]);
 
   logAudit({ actorType: 'student', actorId: student.id, action: 'ACTIVATION_OTP_VERIFIED', entityType: 'STUDENT', entityId: student.id, details: { roll }, ipAddress: ip });
 
   return { activationToken, message: 'OTP verified successfully' };
 }
 
-export function setPassword(activationToken: string, password: string, ip?: string) {
+export async function setPassword(activationToken: string, password: string, ip?: string) {
   if (!password || password.length < 8) {
     throw new BusinessRuleError('WEAK_PASSWORD', 'Password must be at least 8 characters');
   }
 
   const db = getDb();
-  const stmt = db.prepare('SELECT * FROM activation_otps WHERE activation_token = ? AND is_used = 0 AND verified_at IS NOT NULL');
-  stmt.bind([activationToken]);
-  if (!stmt.step()) {
-    stmt.free();
+  const result = await db.query('SELECT * FROM activation_otps WHERE activation_token = $1 AND is_used = 0 AND verified_at IS NOT NULL', [activationToken]);
+  if (result.rows.length === 0) {
     throw new ForbiddenError('Invalid or expired activation token');
   }
-  const record = stmt.getAsObject() as unknown as {
+  const record = result.rows[0] as unknown as {
     id: number; student_id: number; expires_at: string; is_used: number;
   };
-  stmt.free();
 
   verifyOtpNotUsed(record);
 
-  const studentStmt = db.prepare('SELECT roll, name FROM students WHERE id = ?');
-  studentStmt.bind([record.student_id]);
-  if (!studentStmt.step()) {
-    studentStmt.free();
+  const studentResult = await db.query('SELECT roll, name FROM students WHERE id = $1', [record.student_id]);
+  if (studentResult.rows.length === 0) {
     throw new NotFoundError('Student');
   }
-  const student = studentStmt.getAsObject() as unknown as { roll: string; name: string };
-  studentStmt.free();
+  const student = studentResult.rows[0] as unknown as { roll: string; name: string };
 
   const email = deriveEmail(student.roll);
 
-  const existingUser = db.prepare('SELECT id FROM users WHERE email = ?');
-  existingUser.bind([email]);
-  if (existingUser.step()) {
-    existingUser.free();
+  const existingUserResult = await db.query('SELECT id FROM users WHERE email = $1', [email]);
+  if (existingUserResult.rows.length > 0) {
     throw new ConflictError('ALREADY_ACTIVATED', 'This account has already been activated');
   }
-  existingUser.free();
 
   const passwordHash = bcrypt.hashSync(password, 12);
-  db.run('INSERT INTO users (email, name, password_hash, role_id, status) VALUES (?, ?, ?, ?, ?)', [email, student.name, passwordHash, 'student', 'active']);
 
-  db.run("UPDATE students SET status = 'enrolled' WHERE id = ?", [record.student_id]);
+  await db.query('BEGIN');
+  let rolledBack = false;
+  try {
+    await db.query('INSERT INTO users (email, name, password_hash, role_id, status) VALUES ($1, $2, $3, $4, $5)', [email, student.name, passwordHash, 'student', 'active']);
+    await db.query("UPDATE students SET status = 'enrolled' WHERE id = $1", [record.student_id]);
+    await db.query('UPDATE activation_otps SET is_used = 1 WHERE id = $1', [record.id]);
+    await db.query('COMMIT');
 
-  db.run('UPDATE activation_otps SET is_used = 1 WHERE id = ?', [record.id]);
+    logAudit({ actorType: 'system', actorId: null, action: 'ACTIVATION_COMPLETED', entityType: 'STUDENT', entityId: record.student_id, details: { roll: student.roll, email }, ipAddress: ip });
 
-  logAudit({ actorType: 'system', actorId: null, action: 'ACTIVATION_COMPLETED', entityType: 'STUDENT', entityId: record.student_id, details: { roll: student.roll, email }, ipAddress: ip });
-
-  return { message: 'Password set successfully. You can now log in with your college email.' };
+    return { message: 'Password set successfully. You can now log in with your college email.' };
+  } catch (err) {
+    if (!rolledBack) { try { await db.query('ROLLBACK'); } catch { /* ignore */ } }
+    throw err;
+  }
 }
 
-export function resendOtp(roll: string, ip?: string) {
-  const student = getStudentOrError(roll);
+export async function resendOtp(roll: string, ip?: string) {
+  const student = await getStudentOrError(roll);
   const email = deriveEmail(student.roll);
 
-  checkAlreadyActivated(student.id, email);
+  await checkAlreadyActivated(student.id, email);
 
   const db = getDb();
-  const latestStmt = db.prepare('SELECT created_at FROM activation_otps WHERE student_id = ? AND is_used = 0 ORDER BY created_at DESC LIMIT 1');
-  latestStmt.bind([student.id]);
-  if (latestStmt.step()) {
-    const latest = latestStmt.getAsObject() as unknown as { created_at: string };
-    latestStmt.free();
+  const latestResult = await db.query('SELECT created_at FROM activation_otps WHERE student_id = $1 AND is_used = 0 ORDER BY created_at DESC LIMIT 1', [student.id]);
+  if (latestResult.rows.length > 0) {
+    const latest = latestResult.rows[0] as unknown as { created_at: string };
     const elapsed = (Date.now() - new Date(latest.created_at).getTime()) / 1000;
     if (elapsed < config.activation.otpCooldownSeconds) {
       const remaining = Math.ceil(config.activation.otpCooldownSeconds - elapsed);
       throw new BusinessRuleError('OTP_COOLDOWN', `Please wait ${remaining} seconds before requesting a new OTP`);
     }
-  } else {
-    latestStmt.free();
   }
 
-  invalidatePreviousOtps(student.id);
+  await db.query('BEGIN');
+  let rolledBack = false;
+  try {
+    await invalidatePreviousOtps(student.id);
 
-  const otp = generateOtp();
-  const otpHash = bcrypt.hashSync(otp, 10);
-  const expiresAt = new Date(Date.now() + config.activation.otpExpiryMinutes * 60 * 1000).toISOString();
+    const otp = generateOtp();
+    const otpHash = bcrypt.hashSync(otp, 10);
+    const expiresAt = new Date(Date.now() + config.activation.otpExpiryMinutes * 60 * 1000).toISOString();
 
-  const insertStmt = db.prepare('INSERT INTO activation_otps (student_id, otp_hash, max_attempts, expires_at) VALUES (?, ?, ?, ?)');
-  insertStmt.run([student.id, otpHash, config.activation.otpMaxAttempts, expiresAt]);
-  insertStmt.free();
+    await db.query('INSERT INTO activation_otps (student_id, otp_hash, max_attempts, expires_at) VALUES ($1, $2, $3, $4)', [student.id, otpHash, config.activation.otpMaxAttempts, expiresAt]);
+    await db.query('COMMIT');
 
-  sendOtpEmail(email, otp).catch((err) => logger.error('Background OTP resend failed', { error: err.message }));
+    sendOtpEmail(email, otp).catch((err) => logger.error('Background OTP resend failed', { error: err.message }));
 
-  logAudit({ actorType: 'student', actorId: student.id, action: 'ACTIVATION_OTP_RESENT', entityType: 'STUDENT', entityId: student.id, details: { roll }, ipAddress: ip });
+    logAudit({ actorType: 'student', actorId: student.id, action: 'ACTIVATION_OTP_RESENT', entityType: 'STUDENT', entityId: student.id, details: { roll }, ipAddress: ip });
 
-  return { message: 'OTP resent to your college email' };
+    return { message: 'OTP resent to your college email' };
+  } catch (err) {
+    if (!rolledBack) { try { await db.query('ROLLBACK'); } catch { /* ignore */ } }
+    throw err;
+  }
 }
 
-export function checkActivationStatus(roll: string) {
-  const student = getStudentOrError(roll);
+export async function checkActivationStatus(roll: string) {
+  const student = await getStudentOrError(roll);
   const email = deriveEmail(student.roll);
 
   const db = getDb();
-  const stmt = db.prepare('SELECT id FROM users WHERE email = ?');
-  stmt.bind([email]);
-  const activated = stmt.step();
-  stmt.free();
+  const result = await db.query('SELECT id FROM users WHERE email = $1', [email]);
+  const activated = result.rows.length > 0;
 
   return { activated, name: student.name, emailDomain: config.activation.studentEmailDomain };
 }

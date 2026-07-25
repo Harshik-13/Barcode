@@ -11,7 +11,10 @@ beforeAll(async () => {
   await initDb();
 
   const db = getDb();
-  db.run('DELETE FROM workspace_sessions');
+  await db.query('DELETE FROM faculty_notifications');
+  await db.query('DELETE FROM notifications');
+  await db.query('DELETE FROM activity_logs');
+  await db.query('DELETE FROM workspace_sessions');
 
   const adminRes = await request(app).post('/api/auth/login').send({ email: 'admin@workspace.com', password: 'admin123' });
   adminToken = adminRes.body.token;
@@ -23,8 +26,8 @@ beforeAll(async () => {
   studentToken = stuRes.body.token;
 }, 15000);
 
-afterAll(() => {
-  closeDb();
+afterAll(async () => {
+  await closeDb();
 });
 
 describe('POST /api/scan — Functional', () => {

@@ -4,7 +4,7 @@ export type SessionStatus = 'created' | 'active' | 'awaiting_summary' | 'complet
 
 export type CompletionReason = 'normal' | 'auto_completed' | 'manual_exit' | 'admin_override';
 
-export type NotificationType = 'entry' | 'exit' | 'reminder';
+export type NotificationType = 'entry' | 'exit' | 'reminder' | 'completed' | 'auto_completed' | 'status_change' | 'broadcast';
 
 export type ActorType = 'student' | 'faculty' | 'admin' | 'system';
 
@@ -36,6 +36,8 @@ export interface Student {
   roll: string;
   name: string;
   email: string | null;
+  branch: string | null;
+  section: string | null;
   status: StudentStatus;
   createdAt: string;
 }

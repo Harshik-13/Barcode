@@ -1,21 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../store/AuthContext';
-import { studentsApi, categoriesApi, sessionsApi, activityLogsApi } from '../services/apiService';
-
-interface Stats {
-  totalStudents: number;
-  enrolledStudents: number;
-  activeCategories: number;
-  activeSessions: number;
-  awaitingSummary: number;
-  recentLogs: number;
-}
+import { dashboardApi, sessionsStatsApi, facultyApi, categoriesApi, activityLogsApi } from '../services/apiService';
+import type { DashboardStats, FacultyMember } from '../services/apiService';
+import type { ActivityLog } from '@workspace/shared';
 
 export default function AdminDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [stats, setStats] = useState<Stats | null>(null);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [liveCount, setLiveCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -24,59 +18,47 @@ export default function AdminDashboard() {
     setError('');
 
     Promise.all([
-      studentsApi.list(1, 1, 'enrolled').catch(() => null),
-      studentsApi.list(1, 1).catch(() => null),
-      categoriesApi.list('active').catch(() => null),
-      sessionsApi.list({ status: 'active', limit: 1 }).catch(() => null),
-      sessionsApi.list({ status: 'awaiting_summary', limit: 1 }).catch(() => null),
-      activityLogsApi.recent(1).catch(() => null),
+      dashboardApi.stats().then(r => r.data).catch(() => null),
+      sessionsStatsApi.live().then(r => r.data.count).catch(() => 0),
     ])
-      .then(([enrolled, all, categories, active, awaiting, logs]) => {
-        setStats({
-          enrolledStudents: enrolled?.pagination?.total ?? 0,
-          totalStudents: all?.pagination?.total ?? 0,
-          activeCategories: categories?.data?.length ?? 0,
-          activeSessions: active?.pagination?.total ?? 0,
-          awaitingSummary: awaiting?.pagination?.total ?? 0,
-          recentLogs: logs?.data?.length ?? 0,
-        });
+      .then(([s, live]) => {
+        setStats(s);
+        setLiveCount(live);
       })
       .catch(() => setError('Failed to load statistics'))
       .finally(() => setLoading(false));
   }, []);
 
   if (loading) {
-    return (
-      <div style={{ textAlign: 'center', padding: '48px', color: '#6b7280' }}>
-        Loading dashboard...
-      </div>
-    );
+    return <div style={{ textAlign: 'center', padding: '48px', color: '#6b7280' }}>Loading dashboard...</div>;
   }
 
   if (error) {
-    return (
-      <div style={{ padding: '16px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#dc2626' }}>
-        {error}
-      </div>
-    );
+    return <div style={{ padding: '16px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#dc2626' }}>{error}</div>;
   }
 
   return (
     <div>
-      <h1 style={{ fontSize: '24px', marginBottom: '24px' }}>Admin Dashboard</h1>
+      <h1 style={{ fontSize: '24px', marginBottom: '4px' }}>Admin Dashboard</h1>
       <p style={{ color: '#6b7280', marginBottom: '24px' }}>Welcome, {user?.name}</p>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px', marginBottom: '32px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: '12px', marginBottom: '24px' }}>
         <StatCard label="Total Students" value={stats?.totalStudents ?? 0} />
         <StatCard label="Enrolled" value={stats?.enrolledStudents ?? 0} color="#10b981" />
-        <StatCard label="Active Categories" value={stats?.activeCategories ?? 0} color="#3b82f6" />
-        <StatCard label="Active Sessions" value={stats?.activeSessions ?? 0} color="#f59e0b" />
+        <StatCard label="Invited" value={stats?.invitedStudents ?? 0} color="#f59e0b" />
+        <StatCard label="Active Faculty" value={stats?.activeFaculty ?? 0} color="#3b82f6" />
+        <StatCard label="Invited Faculty" value={stats?.invitedFaculty ?? 0} color="#f59e0b" />
+        <StatCard label="Students Inside" value={liveCount} color="#10b981" />
+        <StatCard label="Active Categories" value={stats?.activeCategories ?? 0} color="#8b5cf6" />
         <StatCard label="Awaiting Summary" value={stats?.awaitingSummary ?? 0} color="#f97316" />
-        <StatCard label="Recent Activity" value={stats?.recentLogs ?? 0} color="#8b5cf6" />
+        <StatCard label="Today's Sessions" value={stats?.todaySessions ?? 0} color="#14b8a6" />
+        <StatCard label="Today's Activity" value={stats?.recentLogs ?? 0} color="#6366f1" />
+        <StatCard label="Total Sessions" value={(stats?.activeSessions ?? 0) + (stats?.awaitingSummary ?? 0)} color="#111827" />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '12px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px', marginBottom: '32px' }}>
         <QuickLink title="Manage Students" path="/students" navigate={navigate} />
+        <QuickLink title="Manage Faculty" path="/faculty-management" navigate={navigate} />
         <QuickLink title="Manage Categories" path="/categories" navigate={navigate} />
         <QuickLink title="View Sessions" path="/sessions" navigate={navigate} />
         <QuickLink title="Activity Logs" path="/activity-logs" navigate={navigate} />
@@ -88,9 +70,9 @@ export default function AdminDashboard() {
 
 function StatCard({ label, value, color }: { label: string; value: number; color?: string }) {
   return (
-    <div style={{ padding: '20px', background: '#fff', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
-      <p style={{ color: '#6b7280', fontSize: '13px', marginBottom: '8px' }}>{label}</p>
-      <p style={{ fontSize: '28px', fontWeight: 700, color: color || '#111827' }}>{value}</p>
+    <div style={{ padding: '16px', background: '#fff', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
+      <p style={{ color: '#6b7280', fontSize: '12px', marginBottom: '6px' }}>{label}</p>
+      <p style={{ fontSize: '22px', fontWeight: 700, color: color || '#111827', margin: 0 }}>{value}</p>
     </div>
   );
 }
@@ -99,7 +81,7 @@ function QuickLink({ title, path, navigate }: { title: string; path: string; nav
   return (
     <button
       onClick={() => navigate(path)}
-      style={{ padding: '20px', background: '#fff', borderRadius: '8px', border: '1px solid #e5e7eb', cursor: 'pointer', fontSize: '15px', fontWeight: 500, textAlign: 'left', transition: 'border-color 0.15s' }}
+      style={{ padding: '16px', background: '#fff', borderRadius: '8px', border: '1px solid #e5e7eb', cursor: 'pointer', fontSize: '14px', fontWeight: 500, textAlign: 'left', transition: 'border-color 0.15s' }}
       onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#2563eb'; }}
       onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#e5e7eb'; }}
     >

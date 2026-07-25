@@ -16,6 +16,7 @@ const NAV_ITEMS: Record<string, Array<{ label: string; path: string }>> = {
   admin: [
     { label: 'Dashboard', path: '/' },
     { label: 'Students', path: '/students' },
+    { label: 'Faculty', path: '/faculty-management' },
     { label: 'Categories', path: '/categories' },
     { label: 'Sessions', path: '/sessions' },
     { label: 'Activity Logs', path: '/activity-logs' },

@@ -19,6 +19,8 @@ const Unauthorized = lazy(() => import('./pages/Unauthorized'));
 const Forbidden = lazy(() => import('./pages/Forbidden'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 const ActivatePage = lazy(() => import('./pages/ActivatePage'));
+const FacultyManagementPage = lazy(() => import('./pages/FacultyManagementPage'));
+const FacultyActivatePage = lazy(() => import('./pages/FacultyActivatePage'));
 
 function App() {
   return (
@@ -29,6 +31,7 @@ function App() {
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/activate" element={<ActivatePage />} />
+              <Route path="/faculty/activate" element={<FacultyActivatePage />} />
               <Route path="/unauthorized" element={<Unauthorized />} />
               <Route path="/forbidden" element={<Forbidden />} />
               <Route element={<ProtectedRoute />}>
@@ -37,6 +40,7 @@ function App() {
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/scanner" element={<Scanner />} />
                   <Route path="/students" element={<RoleRoute roles={['admin']}><StudentsPage /></RoleRoute>} />
+                  <Route path="/faculty-management" element={<RoleRoute roles={['admin']}><FacultyManagementPage /></RoleRoute>} />
                   <Route path="/categories" element={<RoleRoute roles={['admin']}><CategoriesPage /></RoleRoute>} />
                   <Route path="/sessions" element={<SessionsPage />} />
                   <Route path="/activity-logs" element={<RoleRoute roles={['admin']}><ActivityLogsPage /></RoleRoute>} />

@@ -62,10 +62,10 @@ export const studentsApi = {
     api<DataResponse<Student>>(`/api/students/${id}`),
   getHistory: (id: number, page = 1, limit = 20) =>
     api<PaginatedDataResponse<SessionWithDetails>>(`/api/students/${id}/history?page=${page}&limit=${limit}`),
-  create: (roll: string, name: string) =>
-    api<DataResponse<Student>>('/api/students', { method: 'POST', body: { roll, name } }),
-  update: (id: number, name: string) =>
-    api<DataResponse<Student>>(`/api/students/${id}`, { method: 'PUT', body: { name } }),
+  create: (roll: string, name: string, branch?: string, section?: string) =>
+    api<DataResponse<Student>>('/api/students', { method: 'POST', body: { roll, name, branch, section } }),
+  update: (id: number, name: string, branch?: string, section?: string) =>
+    api<DataResponse<Student>>(`/api/students/${id}`, { method: 'PUT', body: { name, branch, section } }),
   suspend: (id: number) =>
     api<DataResponse<Student>>(`/api/students/${id}/suspend`, { method: 'PATCH' }),
   depart: (id: number) =>
@@ -160,4 +160,89 @@ export const notificationsApi = {
     api<DataResponse<{ success: boolean }>>(`/api/notifications/${id}/read`, { method: 'PATCH' }),
   markAllAsRead: () =>
     api<DataResponse<{ success: boolean }>>('/api/notifications/read-all', { method: 'PATCH' }),
+};
+
+export interface FacultyMember {
+  id: number;
+  email: string;
+  name: string;
+  status: string;
+  createdAt: string;
+}
+
+export const facultyApi = {
+  list: (params?: { status?: string; search?: string }) => {
+    const searchParams = new URLSearchParams();
+    if (params?.status) searchParams.set('status', params.status);
+    if (params?.search) searchParams.set('search', params.search);
+    return api<DataResponse<FacultyMember[]>>(`/api/faculty?${searchParams}`);
+  },
+  get: (id: number) =>
+    api<DataResponse<FacultyMember>>(`/api/faculty/${id}`),
+  create: (email: string, name: string) =>
+    api<DataResponse<FacultyMember>>('/api/faculty', { method: 'POST', body: { email, name } }),
+  update: (id: number, name: string, email: string) =>
+    api<DataResponse<FacultyMember>>(`/api/faculty/${id}`, { method: 'PUT', body: { name, email } }),
+  deactivate: (id: number) =>
+    api<DataResponse<FacultyMember>>(`/api/faculty/${id}/deactivate`, { method: 'PATCH' }),
+  activate: (id: number) =>
+    api<DataResponse<FacultyMember>>(`/api/faculty/${id}/activate`, { method: 'PATCH' }),
+};
+
+export interface DashboardStats {
+  totalStudents: number;
+  enrolledStudents: number;
+  invitedStudents: number;
+  activeFaculty: number;
+  invitedFaculty: number;
+  totalFaculty: number;
+  activeCategories: number;
+  activeSessions: number;
+  awaitingSummary: number;
+  todaySessions: number;
+  recentLogs: number;
+}
+
+export const dashboardApi = {
+  stats: () =>
+    api<DataResponse<DashboardStats>>('/api/dashboard/stats'),
+};
+
+export interface LiveSessionInfo {
+  id: number;
+  studentId: number;
+  studentRoll: string;
+  studentName: string;
+  entryTime: string;
+  status: string;
+}
+
+export interface LiveSessionData {
+  count: number;
+  students: LiveSessionInfo[];
+}
+
+export const sessionsStatsApi = {
+  live: () =>
+    api<DataResponse<LiveSessionData>>('/api/sessions/stats/live'),
+};
+
+export interface CategoryUsage {
+  usageCount: number;
+  activeSessions: number;
+  deletionAllowed: boolean;
+  blockedReason: string | null;
+}
+
+export const facultyActivationApi = {
+  start: (email: string) =>
+    api<DataResponse<{ message: string }>>('/api/faculty-activation/start', { method: 'POST', body: { email } }),
+  verifyOtp: (email: string, otp: string) =>
+    api<DataResponse<{ activationToken: string; message: string }>>('/api/faculty-activation/verify-otp', { method: 'POST', body: { email, otp } }),
+  setPassword: (activationToken: string, password: string) =>
+    api<DataResponse<{ message: string }>>('/api/faculty-activation/set-password', { method: 'POST', body: { activationToken, password } }),
+  resendOtp: (email: string) =>
+    api<DataResponse<{ message: string }>>('/api/faculty-activation/resend-otp', { method: 'POST', body: { email } }),
+  status: (email: string) =>
+    api<DataResponse<{ activated: boolean; name: string }>>('/api/faculty-activation/status', { method: 'POST', body: { email } }),
 };

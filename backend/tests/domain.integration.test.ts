@@ -24,8 +24,8 @@ beforeAll(async () => {
   studentToken = stuRes.body.token;
 }, 15000);
 
-afterAll(() => {
-  closeDb();
+afterAll(async () => {
+  await closeDb();
 });
 
 describe('GET /api/health', () => {

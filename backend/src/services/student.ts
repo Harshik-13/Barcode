@@ -1,21 +1,25 @@
 import { getDb } from '../db';
 import { NotFoundError, ConflictError } from '../utils/errors';
 import { logAudit } from './audit';
+import { createNotification } from './notification';
+import { config } from '../config';
 
 interface StudentRow {
   id: number;
   roll: string;
   name: string;
   email: string | null;
+  branch: string | null;
+  section: string | null;
   status: string;
   created_at: string;
 }
 
 function rowToStudent(row: StudentRow) {
-  return { id: row.id, roll: row.roll, name: row.name, email: row.email, status: row.status, createdAt: row.created_at };
+  return { id: row.id, roll: row.roll, name: row.name, email: row.email, branch: row.branch, section: row.section, status: row.status, createdAt: row.created_at };
 }
 
-export function listStudents(page: number, limit: number, status?: string) {
+export async function listStudents(page: number, limit: number, status?: string) {
   const db = getDb();
   const offset = (page - 1) * limit;
 
@@ -23,190 +27,176 @@ export function listStudents(page: number, limit: number, status?: string) {
   const params: Array<string | number> = [];
 
   if (status === 'invited') {
-    whereClause = ' WHERE status = ?';
+    whereClause = ' WHERE status = $1';
     params.push('invited');
   } else if (status === 'enrolled') {
-    whereClause = ' WHERE status = ?';
+    whereClause = ' WHERE status = $1';
     params.push('enrolled');
   } else if (status === 'suspended') {
-    whereClause = ' WHERE status = ?';
+    whereClause = ' WHERE status = $1';
     params.push('suspended');
   } else if (status === 'departed') {
-    whereClause = ' WHERE status = ?';
+    whereClause = ' WHERE status = $1';
     params.push('departed');
   }
 
-  const countStmt = db.prepare(`SELECT COUNT(*) as total FROM students${whereClause}`);
-  if (params.length > 0) countStmt.bind(params);
-  countStmt.step();
-  const total = (countStmt.getAsObject() as unknown as { total: number }).total;
-  countStmt.free();
+  const countResult = await db.query(`SELECT COUNT(*) as total FROM students${whereClause}`, params);
+  const total = parseInt(countResult.rows[0].total, 10);
 
-  const stmt = db.prepare(`SELECT * FROM students${whereClause} ORDER BY roll ASC LIMIT ? OFFSET ?`);
-  stmt.bind([...params, limit, offset]);
-  const rows: StudentRow[] = [];
-  while (stmt.step()) {
-    rows.push(stmt.getAsObject() as unknown as StudentRow);
-  }
-  stmt.free();
+  const result = await db.query(`SELECT * FROM students${whereClause} ORDER BY roll ASC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`, [...params, limit, offset]);
+  const rows: StudentRow[] = result.rows as StudentRow[];
 
   return { students: rows.map(rowToStudent), total, page, limit, totalPages: Math.ceil(total / limit) };
 }
 
-export function getStudent(id: number) {
+export async function getStudent(id: number) {
   const db = getDb();
-  const stmt = db.prepare('SELECT * FROM students WHERE id = ?');
-  stmt.bind([id]);
-  if (!stmt.step()) { stmt.free(); throw new NotFoundError('Student'); }
-  const row = stmt.getAsObject() as unknown as StudentRow;
-  stmt.free();
-  return rowToStudent(row);
+  const result = await db.query('SELECT * FROM students WHERE id = $1', [id]);
+  if (result.rows.length === 0) throw new NotFoundError('Student');
+  return rowToStudent(result.rows[0] as StudentRow);
 }
 
-export function lookupStudent(query: string) {
+export async function lookupStudent(query: string) {
   const db = getDb();
   const byId = parseInt(query, 10);
   if (!isNaN(byId)) {
-    try { return getStudent(byId); } catch { /* not found by id, continue */ }
+    try { return await getStudent(byId); } catch { /* not found by id, continue */ }
   }
-  const stmt = db.prepare('SELECT * FROM students WHERE roll = ? OR email = ?');
-  stmt.bind([query, query]);
-  if (!stmt.step()) { stmt.free(); throw new NotFoundError('Student'); }
-  const row = stmt.getAsObject() as unknown as StudentRow;
-  stmt.free();
-  return rowToStudent(row);
+  const result = await db.query('SELECT * FROM students WHERE roll = $1 OR email = $2', [query, query]);
+  if (result.rows.length === 0) throw new NotFoundError('Student');
+  return rowToStudent(result.rows[0] as StudentRow);
 }
 
-export function searchStudents(searchTerm: string) {
+export async function searchStudents(searchTerm: string) {
   const db = getDb();
   const pattern = `%${searchTerm}%`;
-  const stmt = db.prepare('SELECT * FROM students WHERE name LIKE ? OR roll LIKE ? OR email LIKE ?');
-  stmt.bind([pattern, pattern, pattern]);
-  const rows: StudentRow[] = [];
-  while (stmt.step()) {
-    rows.push(stmt.getAsObject() as unknown as StudentRow);
-  }
-  stmt.free();
-  return rows.map(rowToStudent);
+  const result = await db.query('SELECT * FROM students WHERE name ILIKE $1 OR roll ILIKE $2 OR email ILIKE $3', [pattern, pattern, pattern]);
+  return (result.rows as StudentRow[]).map(rowToStudent);
 }
 
-import { config } from '../config';
-
-export function createStudent(roll: string, name: string, actorId: number, ip?: string) {
+export async function createStudent(roll: string, name: string, actorId: number, ip?: string, branch?: string, section?: string) {
   const db = getDb();
-
-  const dup = db.prepare('SELECT id FROM students WHERE roll = ?');
-  dup.bind([roll]);
-  if (dup.step()) { dup.free(); throw new ConflictError('DUPLICATE_ROLL', `Student with roll '${roll}' already exists`); }
-  dup.free();
-
   const email = `${roll.toLowerCase()}${config.activation.studentEmailDomain}`;
-  const dupEmail = db.prepare('SELECT id FROM students WHERE email = ?');
-  dupEmail.bind([email]);
-  if (dupEmail.step()) { dupEmail.free(); throw new ConflictError('DUPLICATE_EMAIL', `Student with email '${email}' already exists`); }
-  dupEmail.free();
 
-  const stmt = db.prepare("INSERT INTO students (roll, name, email, status) VALUES (?, ?, ?, 'invited')");
-  stmt.run([roll, name, email]);
-  stmt.free();
+  await db.query('BEGIN');
+  let rolledBack = false;
+  try {
+    const dupResult = await db.query('SELECT id FROM students WHERE roll = $1', [roll]);
+    if (dupResult.rows.length > 0) { await db.query('ROLLBACK'); rolledBack = true; throw new ConflictError('DUPLICATE_ROLL', `Student with roll '${roll}' already exists`); }
 
-  const id = db.exec('SELECT last_insert_rowid() as id')[0].values[0][0] as number;
+    const dupEmailResult = await db.query('SELECT id FROM students WHERE email = $1', [email]);
+    if (dupEmailResult.rows.length > 0) { await db.query('ROLLBACK'); rolledBack = true; throw new ConflictError('DUPLICATE_EMAIL', `Student with email '${email}' already exists`); }
 
-  logAudit({ actorType: 'admin', actorId, action: 'STUDENT_CREATED', entityType: 'STUDENT', entityId: id, details: { roll, name, email }, ipAddress: ip });
+    const insertResult = await db.query("INSERT INTO students (roll, name, email, branch, section, status) VALUES ($1, $2, $3, $4, $5, 'invited') RETURNING id", [roll, name, email, branch || null, section || null]);
+    const id = insertResult.rows[0].id as number;
+    await db.query('COMMIT');
 
-  return getStudent(id);
+    logAudit({ actorType: 'admin', actorId, action: 'STUDENT_CREATED', entityType: 'STUDENT', entityId: id, details: { roll, name, email, branch, section }, ipAddress: ip });
+
+    return await getStudent(id);
+  } catch (err) {
+    if (!rolledBack) { try { await db.query('ROLLBACK'); } catch { /* ignore */ } }
+    throw err;
+  }
 }
 
-export function updateStudent(id: number, name: string, actorId: number, ip?: string) {
+export async function updateStudent(id: number, name: string, actorId: number, ip?: string, branch?: string, section?: string) {
   const db = getDb();
-  const existing = getStudent(id);
+  const existing = await getStudent(id);
 
-  const stmt = db.prepare('UPDATE students SET name = ? WHERE id = ?');
-  stmt.run([name, id]);
-  stmt.free();
+  const sets: string[] = ['name = $1'];
+  const params: Array<string | number | null> = [name];
+  let paramIndex = 2;
+  if (branch !== undefined) { sets.push(`branch = $${paramIndex}`); params.push(branch || null); paramIndex++; }
+  if (section !== undefined) { sets.push(`section = $${paramIndex}`); params.push(section || null); paramIndex++; }
+  params.push(id);
+  await db.query(`UPDATE students SET ${sets.join(', ')} WHERE id = $${paramIndex}`, params);
 
-  logAudit({ actorType: 'admin', actorId, action: 'STUDENT_UPDATED', entityType: 'STUDENT', entityId: id, details: { before: { name: existing.name }, after: { name } }, ipAddress: ip });
+  logAudit({ actorType: 'admin', actorId, action: 'STUDENT_UPDATED', entityType: 'STUDENT', entityId: id, details: { before: { name: existing.name, branch: existing.branch, section: existing.section }, after: { name, branch, section } }, ipAddress: ip });
 
-  return getStudent(id);
+  return await getStudent(id);
 }
 
-export function suspendStudent(id: number, actorId: number, ip?: string) {
+export async function suspendStudent(id: number, actorId: number, ip?: string) {
   const db = getDb();
-  const existing = getStudent(id);
+  const existing = await getStudent(id);
   if (existing.status !== 'enrolled') {
     throw new ConflictError('INVALID_STATUS', 'Only enrolled students can be suspended');
   }
 
-  const activeStmt = db.prepare("SELECT id FROM workspace_sessions WHERE student_id = ? AND status IN ('created', 'active', 'awaiting_summary')");
-  activeStmt.bind([id]);
-  if (activeStmt.step()) { activeStmt.free(); throw new ConflictError('HAS_ACTIVE_SESSIONS', 'Cannot suspend student with active sessions'); }
-  activeStmt.free();
+  await db.query('BEGIN');
+  let rolledBack = false;
+  try {
+    const activeResult = await db.query("SELECT id FROM workspace_sessions WHERE student_id = $1 AND status IN ('created', 'active', 'awaiting_summary')", [id]);
+    if (activeResult.rows.length > 0) { await db.query('ROLLBACK'); rolledBack = true; throw new ConflictError('HAS_ACTIVE_SESSIONS', 'Cannot suspend student with active sessions'); }
 
-  const stmt = db.prepare("UPDATE students SET status = 'suspended' WHERE id = ?");
-  stmt.run([id]);
-  stmt.free();
+    await db.query("UPDATE students SET status = 'suspended' WHERE id = $1", [id]);
+    await db.query('COMMIT');
 
-  logAudit({ actorType: 'admin', actorId, action: 'STUDENT_SUSPENDED', entityType: 'STUDENT', entityId: id, details: { previousStatus: existing.status }, ipAddress: ip });
+    logAudit({ actorType: 'admin', actorId, action: 'STUDENT_SUSPENDED', entityType: 'STUDENT', entityId: id, details: { previousStatus: existing.status }, ipAddress: ip });
+    createNotification(id, null, 'status_change', 'Your account has been suspended. Please contact admin.');
 
-  return getStudent(id);
+    return await getStudent(id);
+  } catch (err) {
+    if (!rolledBack) { try { await db.query('ROLLBACK'); } catch { /* ignore */ } }
+    throw err;
+  }
 }
 
-export function departStudent(id: number, actorId: number, ip?: string) {
+export async function departStudent(id: number, actorId: number, ip?: string) {
   const db = getDb();
-  const existing = getStudent(id);
+  const existing = await getStudent(id);
   if (existing.status === 'departed') {
     throw new ConflictError('ALREADY_DEPARTED', 'Student has already departed');
   }
 
-  const activeStmt = db.prepare("SELECT id FROM workspace_sessions WHERE student_id = ? AND status IN ('created', 'active', 'awaiting_summary')");
-  activeStmt.bind([id]);
-  if (activeStmt.step()) { activeStmt.free(); throw new ConflictError('HAS_ACTIVE_SESSIONS', 'Cannot depart student with active sessions'); }
-  activeStmt.free();
+  await db.query('BEGIN');
+  let rolledBack = false;
+  try {
+    const activeResult = await db.query("SELECT id FROM workspace_sessions WHERE student_id = $1 AND status IN ('created', 'active', 'awaiting_summary')", [id]);
+    if (activeResult.rows.length > 0) { await db.query('ROLLBACK'); rolledBack = true; throw new ConflictError('HAS_ACTIVE_SESSIONS', 'Cannot depart student with active sessions'); }
 
-  const stmt = db.prepare("UPDATE students SET status = 'departed' WHERE id = ?");
-  stmt.run([id]);
-  stmt.free();
+    await db.query("UPDATE students SET status = 'departed' WHERE id = $1", [id]);
+    await db.query('COMMIT');
 
-  logAudit({ actorType: 'admin', actorId, action: 'STUDENT_DEPARTED', entityType: 'STUDENT', entityId: id, details: { previousStatus: existing.status }, ipAddress: ip });
+    logAudit({ actorType: 'admin', actorId, action: 'STUDENT_DEPARTED', entityType: 'STUDENT', entityId: id, details: { previousStatus: existing.status }, ipAddress: ip });
+    createNotification(id, null, 'status_change', 'You have been marked as departed. Your account is no longer active.');
 
-  return getStudent(id);
+    return await getStudent(id);
+  } catch (err) {
+    if (!rolledBack) { try { await db.query('ROLLBACK'); } catch { /* ignore */ } }
+    throw err;
+  }
 }
 
-export function getStudentHistory(studentId: number, page = 1, limit = 20) {
+export async function getStudentHistory(studentId: number, page = 1, limit = 20) {
   const db = getDb();
-  getStudent(studentId);
+  await getStudent(studentId);
   const offset = (page - 1) * limit;
 
-  const countStmt = db.prepare('SELECT COUNT(*) as total FROM workspace_sessions WHERE student_id = ?');
-  countStmt.bind([studentId]);
-  countStmt.step();
-  const total = (countStmt.getAsObject() as unknown as { total: number }).total;
-  countStmt.free();
+  const countResult = await db.query('SELECT COUNT(*) as total FROM workspace_sessions WHERE student_id = $1', [studentId]);
+  const total = parseInt(countResult.rows[0].total, 10);
 
-  const stmt = db.prepare('SELECT ws.*, c.name as category_name FROM workspace_sessions ws LEFT JOIN categories c ON ws.category_id = c.id WHERE ws.student_id = ? ORDER BY ws.entry_time DESC LIMIT ? OFFSET ?');
-  stmt.bind([studentId, limit, offset]);
-  const rows: Array<Record<string, unknown>> = [];
-  while (stmt.step()) {
-    const row = stmt.getAsObject() as unknown as Record<string, unknown>;
-    rows.push({
-      id: row.id,
-      studentId: row.student_id,
-      entryTime: row.entry_time,
-      exitTime: row.exit_time,
-      entryRecorderId: row.entry_recorder_id,
-      exitRecorderId: row.exit_recorder_id,
-      categoryId: row.category_id,
-      status: row.status,
-      completionReason: row.completion_reason,
-      summary: row.summary,
-      isManualExit: !!row.is_manual_exit,
-      manualExitReason: row.manual_exit_reason,
-      overrideReason: row.override_reason,
-      createdAt: row.created_at,
-      categoryName: row.category_name,
-    });
-  }
-  stmt.free();
+  const result = await db.query('SELECT ws.*, c.name as category_name FROM workspace_sessions ws LEFT JOIN categories c ON ws.category_id = c.id WHERE ws.student_id = $1 ORDER BY ws.entry_time DESC LIMIT $2 OFFSET $3', [studentId, limit, offset]);
+  const rows = result.rows as Array<Record<string, unknown>>;
 
-  return { sessions: rows, total, page, limit, totalPages: Math.ceil(total / limit) };
+  const sessions = rows.map(row => ({
+    id: row.id,
+    studentId: row.student_id,
+    entryTime: row.entry_time,
+    exitTime: row.exit_time,
+    entryRecorderId: row.entry_recorder_id,
+    exitRecorderId: row.exit_recorder_id,
+    categoryId: row.category_id,
+    status: row.status,
+    completionReason: row.completion_reason,
+    summary: row.summary,
+    isManualExit: !!row.is_manual_exit,
+    manualExitReason: row.manual_exit_reason,
+    overrideReason: row.override_reason,
+    createdAt: row.created_at,
+    categoryName: row.category_name,
+  }));
+
+  return { sessions, total, page, limit, totalPages: Math.ceil(total / limit) };
 }

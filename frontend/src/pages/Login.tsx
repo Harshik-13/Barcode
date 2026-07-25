@@ -152,11 +152,19 @@ export default function Login() {
           {isLoading ? 'Signing in...' : 'Sign in'}
         </button>
 
-        <div style={{ marginTop: '16px', textAlign: 'center', fontSize: '14px', color: '#6b7280' }}>
-          New student?{' '}
-          <a href="/activate" onClick={(e) => { e.preventDefault(); navigate('/activate'); }} style={{ color: '#2563eb', textDecoration: 'none', fontWeight: 500 }}>
-            Activate your account
-          </a>
+        <div style={{ marginTop: '16px', textAlign: 'center', fontSize: '14px', color: '#6b7280', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <div>
+            New student?{' '}
+            <a href="/activate" onClick={(e) => { e.preventDefault(); navigate('/activate'); }} style={{ color: '#2563eb', textDecoration: 'none', fontWeight: 500 }}>
+              Activate your account
+            </a>
+          </div>
+          <div>
+            New faculty?{' '}
+            <a href="/faculty/activate" onClick={(e) => { e.preventDefault(); navigate('/faculty/activate'); }} style={{ color: '#2563eb', textDecoration: 'none', fontWeight: 500 }}>
+              Activate your account
+            </a>
+          </div>
         </div>
       </form>
     </div>

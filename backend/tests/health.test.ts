@@ -7,8 +7,8 @@ beforeAll(async () => {
   await initDb();
 }, 10000);
 
-afterAll(() => {
-  closeDb();
+afterAll(async () => {
+  await closeDb();
 });
 
 describe('GET /api/health', () => {

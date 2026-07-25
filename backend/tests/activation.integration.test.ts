@@ -14,14 +14,10 @@ function createStudent(roll: string, name: string) {
     .send({ roll, name });
 }
 
-function getStudentId(roll: string): number {
+async function getStudentId(roll: string): Promise<number> {
   const db = getDb();
-  const stmt = db.prepare('SELECT id FROM students WHERE roll = ?');
-  stmt.bind([roll]);
-  stmt.step();
-  const id = (stmt.getAsObject() as { id: number }).id;
-  stmt.free();
-  return id;
+  const result = await db.query('SELECT id FROM students WHERE roll = $1', [roll]);
+  return result.rows[0].id as number;
 }
 
 beforeAll(async () => {
@@ -38,8 +34,8 @@ beforeAll(async () => {
   await createStudent('ACT006', 'Activation Test Six');
 }, 15000);
 
-afterAll(() => {
-  closeDb();
+afterAll(async () => {
+  await closeDb();
 });
 
 describe('POST /api/activation/start', () => {
@@ -80,11 +76,8 @@ describe('POST /api/activation/verify-otp', () => {
     await request(app).post('/api/activation/start').send({ roll: 'ACT003' });
 
     const db = getDb();
-    const sid = getStudentId('ACT003');
-    const stmt = db.prepare('UPDATE activation_otps SET expires_at = ? WHERE student_id = ? AND is_used = 0');
-    stmt.bind([new Date(Date.now() - 60000).toISOString(), sid]);
-    stmt.run();
-    stmt.free();
+    const sid = await getStudentId('ACT003');
+    await db.query('UPDATE activation_otps SET expires_at = $1 WHERE student_id = $2 AND is_used = 0', [new Date(Date.now() - 60000).toISOString(), sid]);
 
     const res = await request(app).post('/api/activation/verify-otp').send({ roll: 'ACT003', otp: '123456' });
     expect(res.status).toBe(422);

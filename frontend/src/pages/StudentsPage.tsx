@@ -21,6 +21,8 @@ export default function StudentsPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [createRoll, setCreateRoll] = useState('');
   const [createName, setCreateName] = useState('');
+  const [createBranch, setCreateBranch] = useState('');
+  const [createSection, setCreateSection] = useState('');
   const [createError, setCreateError] = useState('');
 
   useEffect(() => {
@@ -41,10 +43,12 @@ export default function StudentsPage() {
     e.preventDefault();
     setCreateError('');
     try {
-      await studentsApi.create(createRoll, createName);
+      await studentsApi.create(createRoll, createName, createBranch || undefined, createSection || undefined);
       setShowCreate(false);
       setCreateRoll('');
       setCreateName('');
+      setCreateBranch('');
+      setCreateSection('');
       studentsApi.list(page, 20, statusFilter).then((res) => setStudents(res.data));
     } catch (err: unknown) {
       setCreateError((err as { message?: string })?.message || 'Failed to create student');
@@ -93,7 +97,7 @@ export default function StudentsPage() {
         </div>
       )}
 
-      {showCreate && (
+          {showCreate && (
         <form onSubmit={handleCreate} style={{ padding: '20px', background: '#fff', borderRadius: '8px', border: '1px solid #e5e7eb', marginBottom: '24px' }}>
           <h3 style={{ marginBottom: '16px', fontSize: '16px' }}>New Student</h3>
           {createError && (
@@ -104,6 +108,8 @@ export default function StudentsPage() {
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
             <input placeholder="Roll Number" value={createRoll} onChange={(e) => setCreateRoll(e.target.value.toUpperCase())} required style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '4px', fontSize: '14px', flex: 1, minWidth: '150px' }} />
             <input placeholder="Full Name" value={createName} onChange={(e) => setCreateName(e.target.value)} required style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '4px', fontSize: '14px', flex: 1, minWidth: '200px' }} />
+            <input placeholder="Branch (e.g. CSE)" value={createBranch} onChange={(e) => setCreateBranch(e.target.value)} style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '4px', fontSize: '14px', flex: 1, minWidth: '120px' }} />
+            <input placeholder="Section (e.g. A)" value={createSection} onChange={(e) => setCreateSection(e.target.value.toUpperCase())} style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '4px', fontSize: '14px', flex: 0, minWidth: '80px', maxWidth: '100px' }} />
             <button type="submit" style={{ padding: '8px 16px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '14px', cursor: 'pointer' }}>
               Create
             </button>
@@ -129,6 +135,8 @@ export default function StudentsPage() {
             <tr style={{ borderBottom: '1px solid #e5e7eb', textAlign: 'left' }}>
               <th style={{ padding: '8px 12px', color: '#6b7280', fontWeight: 500 }}>Roll</th>
               <th style={{ padding: '8px 12px', color: '#6b7280', fontWeight: 500 }}>Name</th>
+              <th style={{ padding: '8px 12px', color: '#6b7280', fontWeight: 500 }}>Branch</th>
+              <th style={{ padding: '8px 12px', color: '#6b7280', fontWeight: 500 }}>Section</th>
               <th style={{ padding: '8px 12px', color: '#6b7280', fontWeight: 500 }}>Email</th>
               <th style={{ padding: '8px 12px', color: '#6b7280', fontWeight: 500 }}>Status</th>
               <th style={{ padding: '8px 12px', color: '#6b7280', fontWeight: 500 }}>Created</th>
@@ -143,6 +151,8 @@ export default function StudentsPage() {
                 <tr key={s.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
                   <td style={{ padding: '8px 12px', fontWeight: 500 }}>{s.roll}</td>
                   <td style={{ padding: '8px 12px' }}>{s.name}</td>
+                  <td style={{ padding: '8px 12px', color: '#6b7280' }}>{s.branch || '-'}</td>
+                  <td style={{ padding: '8px 12px', color: '#6b7280' }}>{s.section || '-'}</td>
                   <td style={{ padding: '8px 12px', color: '#6b7280' }}>{s.email || '-'}</td>
                   <td style={{ padding: '8px 12px' }}>
                     <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 500, background: `${STATUS_COLORS[s.status]}20`, color: STATUS_COLORS[s.status] }}>

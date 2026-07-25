@@ -49,6 +49,11 @@ This is the **8Hour Workspace Attendance System** — NOT a hostel meal attendan
 | Meal time window | Workspace hours |
 | Duplicate meal | Double entry/exit prevention |
 
+## Testing Notes
+
+- Tests persist state to `backend/data/test-workspace.db`. Delete this file before running tests to get a clean run.
+- The 12 `domain.integration.test.ts` failures (409 → 201 cascade) are caused by stale DB state, not code regressions.
+
 ## Verification Checklist
 
 Before completing any task:

@@ -32,18 +32,16 @@ function signToken(userId: number, role: string): string {
   return jwt.sign(payload, config.jwt.secret);
 }
 
-export function authenticate(loginId: string, password: string, ip?: string) {
+export async function authenticate(loginId: string, password: string, ip?: string) {
   const email = loginId;
 
   const db = getDb();
-  const stmt = db.prepare('SELECT * FROM users WHERE email = ?');
-  stmt.bind([email]);
-  const hasRow = stmt.step();
-  const user = hasRow ? (stmt.getAsObject() as unknown as UserRow) : ({} as Record<string, never>);
-  stmt.free();
+  const result = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+  const hasRow = result.rows.length > 0;
+  const user = hasRow ? (result.rows[0] as UserRow) : ({} as Record<string, never>);
 
   if (!hasRow || !('id' in user)) {
-    logAudit({
+    await logAudit({
       actorType: 'system',
       actorId: null,
       action: 'LOGIN_FAILED',
@@ -57,7 +55,7 @@ export function authenticate(loginId: string, password: string, ip?: string) {
 
   const valid = bcrypt.compareSync(password, user.password_hash);
   if (!valid) {
-    logAudit({
+    await logAudit({
       actorType: 'system',
       actorId: null,
       action: 'LOGIN_FAILED',
@@ -70,7 +68,7 @@ export function authenticate(loginId: string, password: string, ip?: string) {
   }
 
   if (user.status !== 'active') {
-    logAudit({
+    await logAudit({
       actorType: user.role_id as 'faculty' | 'admin' | 'student',
       actorId: user.id,
       action: 'LOGIN_FAILED',
@@ -84,7 +82,7 @@ export function authenticate(loginId: string, password: string, ip?: string) {
 
   const token = signToken(user.id, user.role_id);
 
-  logAudit({
+  await logAudit({
     actorType: user.role_id as 'faculty' | 'admin' | 'student',
     actorId: user.id,
     action: 'LOGIN',
@@ -99,13 +97,11 @@ export function authenticate(loginId: string, password: string, ip?: string) {
   };
 }
 
-export function getCurrentUser(userId: number) {
+export async function getCurrentUser(userId: number) {
   const db = getDb();
-  const stmt = db.prepare('SELECT id, email, name, role_id, status, created_at FROM users WHERE id = ?');
-  stmt.bind([userId]);
-  const hasRow = stmt.step();
-  const user = hasRow ? (stmt.getAsObject() as unknown as UserRow) : ({} as Record<string, never>);
-  stmt.free();
+  const result = await db.query('SELECT id, email, name, role_id, status, created_at FROM users WHERE id = $1', [userId]);
+  const hasRow = result.rows.length > 0;
+  const user = hasRow ? (result.rows[0] as UserRow) : ({} as Record<string, never>);
 
   if (!hasRow || !('id' in user)) {
     throw new UnauthorizedError('INVALID_TOKEN', 'User not found');
@@ -115,8 +111,8 @@ export function getCurrentUser(userId: number) {
   return { id: user.id, name: user.name, role: user.role_id, email: user.email, status: user.status, createdAt };
 }
 
-export function logLogout(userId: number, role: string, ip?: string): void {
-  logAudit({
+export async function logLogout(userId: number, role: string, ip?: string): Promise<void> {
+  await logAudit({
     actorType: role as 'faculty' | 'admin' | 'student',
     actorId: userId,
     action: 'LOGOUT',
@@ -126,8 +122,8 @@ export function logLogout(userId: number, role: string, ip?: string): void {
   });
 }
 
-export function logPermissionDenied(userId: number, role: string, action: string, ip?: string): void {
-  logAudit({
+export async function logPermissionDenied(userId: number, role: string, action: string, ip?: string): Promise<void> {
+  await logAudit({
     actorType: role as 'faculty' | 'admin' | 'student',
     actorId: userId,
     action: 'PERMISSION_DENIED',

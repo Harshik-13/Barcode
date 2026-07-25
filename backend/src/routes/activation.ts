@@ -1,61 +1,69 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { startActivation, verifyOtp, setPassword, resendOtp, checkActivationStatus } from '../services/activation';
-import { rateLimiter } from '../middleware/rateLimiter';
 import { validateBody } from '../utils/validation';
 
 const router = Router();
 
-const rollValidation = [
-  { field: 'roll', type: 'string' as const, required: true, min: 1, max: 50 },
-];
+router.post('/activation/start',
+  validateBody([
+    { field: 'roll', type: 'string', required: true, min: 1, max: 50 },
+  ]),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const result = await startActivation(req.body.roll, req.ip as string);
+      res.json({ data: result });
+    } catch (err) { next(err); }
+  }
+);
 
-const otpValidation = [
-  { field: 'roll', type: 'string' as const, required: true, min: 1, max: 50 },
-  { field: 'otp', type: 'string' as const, required: true, min: 6, max: 6 },
-];
+router.post('/activation/verify-otp',
+  validateBody([
+    { field: 'roll', type: 'string', required: true, min: 1, max: 50 },
+    { field: 'otp', type: 'string', required: true, min: 6, max: 6 },
+  ]),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const result = await verifyOtp(req.body.roll, req.body.otp, req.ip as string);
+      res.json({ data: result });
+    } catch (err) { next(err); }
+  }
+);
 
-const passwordValidation = [
-  { field: 'activationToken', type: 'string' as const, required: true, min: 1 },
-  { field: 'password', type: 'string' as const, required: true, min: 8, max: 128 },
-];
+router.post('/activation/set-password',
+  validateBody([
+    { field: 'activationToken', type: 'string', required: true },
+    { field: 'password', type: 'string', required: true, min: 8 },
+  ]),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const result = await setPassword(req.body.activationToken, req.body.password, req.ip as string);
+      res.json({ data: result });
+    } catch (err) { next(err); }
+  }
+);
 
-router.post('/activation/start', rateLimiter, validateBody(rollValidation), (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const ip = (req.headers['x-forwarded-for'] as string) ?? req.ip;
-    const result = startActivation(req.body.roll, ip);
-    res.json({ data: result });
-  } catch (err) { next(err); }
-});
+router.post('/activation/resend-otp',
+  validateBody([
+    { field: 'roll', type: 'string', required: true, min: 1, max: 50 },
+  ]),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const result = await resendOtp(req.body.roll, req.ip as string);
+      res.json({ data: result });
+    } catch (err) { next(err); }
+  }
+);
 
-router.post('/activation/resend-otp', rateLimiter, validateBody(rollValidation), (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const ip = (req.headers['x-forwarded-for'] as string) ?? req.ip;
-    const result = resendOtp(req.body.roll, ip);
-    res.json({ data: result });
-  } catch (err) { next(err); }
-});
-
-router.post('/activation/verify-otp', rateLimiter, validateBody(otpValidation), (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const ip = (req.headers['x-forwarded-for'] as string) ?? req.ip;
-    const result = verifyOtp(req.body.roll, req.body.otp, ip);
-    res.json({ data: result });
-  } catch (err) { next(err); }
-});
-
-router.post('/activation/set-password', rateLimiter, validateBody(passwordValidation), (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const ip = (req.headers['x-forwarded-for'] as string) ?? req.ip;
-    const result = setPassword(req.body.activationToken, req.body.password, ip);
-    res.json({ data: result });
-  } catch (err) { next(err); }
-});
-
-router.post('/activation/status', rateLimiter, validateBody(rollValidation), (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const result = checkActivationStatus(req.body.roll);
-    res.json({ data: result });
-  } catch (err) { next(err); }
-});
+router.post('/activation/status',
+  validateBody([
+    { field: 'roll', type: 'string', required: true, min: 1, max: 50 },
+  ]),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const result = await checkActivationStatus(req.body.roll);
+      res.json({ data: result });
+    } catch (err) { next(err); }
+  }
+);
 
 export default router;

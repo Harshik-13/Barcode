@@ -1,84 +1,63 @@
-import { initDb, getDb, saveDb, closeDb } from './index';
+import { initDb, getDb, closeDb } from './index';
 import { logger } from '../utils/logger';
 
 export async function migrate(options?: { skipClose?: boolean }): Promise<void> {
   await initDb();
   const db = getDb();
 
-  db.run('PRAGMA foreign_keys = ON');
-
-  db.run(`
+  // 1. Roles Table
+  await db.query(`
     CREATE TABLE IF NOT EXISTS roles (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL UNIQUE
     )
   `);
 
-  db.run(`
+  // 2. Users Table
+  await db.query(`
     CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       email TEXT UNIQUE NOT NULL,
       name TEXT NOT NULL,
-      password_hash TEXT NOT NULL,
+      password_hash TEXT,
       role_id TEXT NOT NULL REFERENCES roles(id),
-      status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'suspended', 'deactivated')),
-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      status TEXT NOT NULL DEFAULT 'invited' CHECK (status IN ('invited', 'active', 'suspended', 'deactivated')),
+      created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
     )
   `);
 
-  db.run(`
+  // 3. Students Table
+  await db.query(`
     CREATE TABLE IF NOT EXISTS students (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       roll TEXT UNIQUE NOT NULL,
       name TEXT NOT NULL,
       email TEXT,
+      branch TEXT,
+      section TEXT,
       status TEXT NOT NULL DEFAULT 'invited' CHECK (status IN ('invited', 'enrolled', 'suspended', 'departed')),
-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
     )
   `);
 
-  const schemaStmt = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='students'");
-  if (schemaStmt.step()) {
-    const row = schemaStmt.getAsObject() as { sql: string };
-    if (row.sql && !row.sql.includes('\'invited\'')) {
-      db.run('PRAGMA foreign_keys = OFF');
-      db.run('BEGIN TRANSACTION');
-      db.run('ALTER TABLE students RENAME TO students_old');
-      db.run(`
-        CREATE TABLE students (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          roll TEXT UNIQUE NOT NULL,
-          name TEXT NOT NULL,
-          email TEXT,
-          status TEXT NOT NULL DEFAULT 'invited' CHECK (status IN ('invited', 'enrolled', 'suspended', 'departed')),
-          created_at TEXT NOT NULL DEFAULT (datetime('now'))
-        )
-      `);
-      db.run('INSERT INTO students (id, roll, name, email, status, created_at) SELECT id, roll, name, email, status, created_at FROM students_old');
-      db.run('DROP TABLE students_old');
-      db.run('COMMIT');
-      db.run('PRAGMA foreign_keys = ON');
-      logger.info('Migrated students table to support invited status');
-    }
-  }
-  schemaStmt.free();
-
-  db.run(`
+  // 4. Categories Table
+  await db.query(`
     CREATE TABLE IF NOT EXISTS categories (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       name TEXT NOT NULL,
       description TEXT,
       status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'archived')),
-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
     )
   `);
 
-  db.run(`
+  // 5. Workspace Sessions Table
+  await db.query(`
     CREATE TABLE IF NOT EXISTS workspace_sessions (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       student_id INTEGER NOT NULL REFERENCES students(id),
-      entry_time TEXT NOT NULL,
-      exit_time TEXT,
+      entry_time TIMESTAMP WITH TIME ZONE NOT NULL,
+      exit_time TIMESTAMP WITH TIME ZONE,
       entry_recorder_id INTEGER NOT NULL REFERENCES users(id),
       exit_recorder_id INTEGER REFERENCES users(id),
       category_id INTEGER REFERENCES categories(id),
@@ -88,31 +67,48 @@ export async function migrate(options?: { skipClose?: boolean }): Promise<void> 
       is_manual_exit INTEGER NOT NULL DEFAULT 0,
       manual_exit_reason TEXT,
       override_reason TEXT,
-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
     )
   `);
 
-  db.run(`CREATE INDEX IF NOT EXISTS idx_sessions_student_status ON workspace_sessions(student_id, status)`);
-  db.run(`CREATE INDEX IF NOT EXISTS idx_sessions_entry_time ON workspace_sessions(entry_time)`);
-  db.run(`CREATE INDEX IF NOT EXISTS idx_sessions_status ON workspace_sessions(status)`);
+  await db.query(`CREATE INDEX IF NOT EXISTS idx_sessions_student_status ON workspace_sessions(student_id, status)`);
+  await db.query(`CREATE INDEX IF NOT EXISTS idx_sessions_entry_time ON workspace_sessions(entry_time)`);
+  await db.query(`CREATE INDEX IF NOT EXISTS idx_sessions_status ON workspace_sessions(status)`);
 
-  db.run(`
+  // 6. Notifications Table
+  await db.query(`
     CREATE TABLE IF NOT EXISTS notifications (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       student_id INTEGER NOT NULL REFERENCES students(id),
       session_id INTEGER REFERENCES workspace_sessions(id),
-      type TEXT NOT NULL CHECK (type IN ('entry', 'exit', 'reminder')),
+      type TEXT NOT NULL CHECK (type IN ('entry', 'exit', 'reminder', 'completed', 'auto_completed', 'status_change', 'broadcast')),
       message TEXT NOT NULL,
       is_read INTEGER NOT NULL DEFAULT 0,
-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
     )
   `);
 
-  db.run(`CREATE INDEX IF NOT EXISTS idx_notifications_student ON notifications(student_id, is_read)`);
+  await db.query(`CREATE INDEX IF NOT EXISTS idx_notifications_student ON notifications(student_id, is_read)`);
 
-  db.run(`
+  // 7. Faculty Notifications Table
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS faculty_notifications (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id),
+      session_id INTEGER REFERENCES workspace_sessions(id),
+      type TEXT NOT NULL DEFAULT 'review' CHECK (type IN ('review', 'info')),
+      message TEXT NOT NULL,
+      is_read INTEGER NOT NULL DEFAULT 0,
+      created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  await db.query(`CREATE INDEX IF NOT EXISTS idx_faculty_notifications_user ON faculty_notifications(user_id, is_read)`);
+
+  // 8. Activity Logs Table
+  await db.query(`
     CREATE TABLE IF NOT EXISTS activity_logs (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       actor_type TEXT NOT NULL CHECK (actor_type IN ('student', 'faculty', 'admin', 'system')),
       actor_id INTEGER,
       action TEXT NOT NULL,
@@ -120,34 +116,69 @@ export async function migrate(options?: { skipClose?: boolean }): Promise<void> 
       entity_id INTEGER,
       details TEXT,
       ip_address TEXT,
-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
     )
   `);
 
-  db.run(`CREATE INDEX IF NOT EXISTS idx_activity_logs_entity ON activity_logs(entity_type, entity_id)`);
-  db.run(`CREATE INDEX IF NOT EXISTS idx_activity_logs_created ON activity_logs(created_at)`);
+  await db.query(`CREATE INDEX IF NOT EXISTS idx_activity_logs_entity ON activity_logs(entity_type, entity_id)`);
+  await db.query(`CREATE INDEX IF NOT EXISTS idx_activity_logs_created ON activity_logs(created_at)`);
 
-  db.run(`
+  // 9. Activation OTPs Table
+  await db.query(`
     CREATE TABLE IF NOT EXISTS activation_otps (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       student_id INTEGER NOT NULL REFERENCES students(id),
       otp_hash TEXT NOT NULL,
       attempts INTEGER NOT NULL DEFAULT 0,
       max_attempts INTEGER NOT NULL DEFAULT 5,
-      expires_at TEXT NOT NULL,
+      expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
       is_used INTEGER NOT NULL DEFAULT 0,
-      verified_at TEXT,
+      verified_at TIMESTAMP WITH TIME ZONE,
       activation_token TEXT,
-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
     )
   `);
 
-  db.run(`CREATE INDEX IF NOT EXISTS idx_activation_otps_student ON activation_otps(student_id, is_used)`);
+  await db.query(`CREATE INDEX IF NOT EXISTS idx_activation_otps_student ON activation_otps(student_id, is_used)`);
 
-  saveDb();
+  // 10. Faculty Activation OTPs Table
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS faculty_activation_otps (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id),
+      otp_hash TEXT NOT NULL,
+      attempts INTEGER NOT NULL DEFAULT 0,
+      max_attempts INTEGER NOT NULL DEFAULT 5,
+      expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+      is_used INTEGER NOT NULL DEFAULT 0,
+      verified_at TIMESTAMP WITH TIME ZONE,
+      activation_token TEXT,
+      created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  await db.query(`CREATE INDEX IF NOT EXISTS idx_faculty_activation_otps_user ON faculty_activation_otps(user_id, is_used)`);
+
+  // 11. Push Subscriptions Table
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS push_subscriptions (
+      id SERIAL PRIMARY KEY,
+      student_id INTEGER NOT NULL REFERENCES students(id),
+      endpoint TEXT NOT NULL UNIQUE,
+      p256dh TEXT NOT NULL,
+      auth TEXT NOT NULL,
+      user_agent TEXT,
+      created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      last_seen TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      active INTEGER NOT NULL DEFAULT 1
+    )
+  `);
+
+  await db.query(`CREATE INDEX IF NOT EXISTS idx_push_subscriptions_student ON push_subscriptions(student_id, active)`);
+
   logger.info('Migration completed successfully');
   if (!options?.skipClose) {
-    closeDb();
+    await closeDb();
   }
 }
 

@@ -9,7 +9,7 @@ export const config = {
   env: process.env.NODE_ENV ?? 'development',
   port: parseInt(process.env.PORT ?? '8080', 10),
   database: {
-    path: process.env.DATABASE_PATH ?? './data/workspace.db',
+    url: process.env.DATABASE_URL ?? 'postgresql://postgres:Harshik@13@localhost:5432/workspace',
   },
   jwt: {
     secret: process.env.JWT_SECRET ?? 'dev-secret-change-in-production',
@@ -38,6 +38,11 @@ export const config = {
   },
   log: {
     level: process.env.LOG_LEVEL ?? 'info',
+  },
+  push: {
+    vapidPublicKey: process.env.VAPID_PUBLIC_KEY ?? '',
+    vapidPrivateKey: process.env.VAPID_PRIVATE_KEY ?? '',
+    vapidSubject: process.env.VAPID_SUBJECT ?? 'mailto:admin@8hour-workspace.com',
   },
 } as const;
 

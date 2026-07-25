@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { AppError } from '../utils/errors';
 import { logger } from '../utils/logger';
+import { isDev } from '../config';
 
 export function errorHandler(
   err: Error,
@@ -13,6 +14,7 @@ export function errorHandler(
       error: err.errorCode,
       message: err.message,
       ...(err.details ? { details: err.details } : {}),
+      ...(isDev ? { stack: err.stack } : {}),
     });
     return;
   }
@@ -27,5 +29,6 @@ export function errorHandler(
   res.status(500).json({
     error: 'INTERNAL_ERROR',
     message: 'An unexpected error occurred',
+    ...(isDev ? { stack: err.stack } : {}),
   });
 }

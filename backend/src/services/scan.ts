@@ -41,7 +41,7 @@ function parseBarcode(barcode: string): { type: 'roll' | 'id'; value: string } {
   return { type: 'roll', value: cleaned };
 }
 
-export function processScan(barcode: unknown, recorderId: number, actorRole: string, ip?: string): ScanResponse {
+export async function processScan(barcode: unknown, recorderId: number, actorRole: string, ip?: string): Promise<ScanResponse> {
   if (!isValidBarcode(barcode)) {
     logAudit({ actorType: actorRole as 'admin' | 'faculty', actorId: recorderId, action: 'SCAN_REJECTED', entityType: 'SCAN', entityId: null, details: { reason: 'invalid_barcode', barcode: String(barcode) }, ipAddress: ip });
     return { code: 'INVALID_BARCODE', message: 'The scanned barcode is not valid' };
@@ -50,7 +50,7 @@ export function processScan(barcode: unknown, recorderId: number, actorRole: str
   let student: { id: number; name: string; roll: string; status: string };
   try {
     const parsed = parseBarcode(barcode);
-    const found = lookupStudent(parsed.value);
+    const found = await lookupStudent(parsed.value);
     student = { id: found.id, name: found.name, roll: found.roll, status: found.status };
   } catch (err) {
     if (err instanceof NotFoundError) {
@@ -65,23 +65,20 @@ export function processScan(barcode: unknown, recorderId: number, actorRole: str
     return { code: 'ACCOUNT_INACTIVE', message: `Student account is ${student.status}` };
   }
 
-  const existing = getActiveSessionForStudent(student.id);
+  const existing = await getActiveSessionForStudent(student.id);
 
   if (!existing) {
     const now = new Date().toISOString();
     const db = getDb();
 
-    db.run('BEGIN TRANSACTION');
+    await db.query('BEGIN');
     try {
-      const stmt = db.prepare("INSERT INTO workspace_sessions (student_id, entry_time, entry_recorder_id, status) VALUES (?, ?, ?, 'active')");
-      stmt.run([student.id, now, recorderId]);
-      stmt.free();
-
-      const sessionId = db.exec('SELECT last_insert_rowid() as id')[0].values[0][0] as number;
-      db.run('COMMIT');
+      const insertResult = await db.query("INSERT INTO workspace_sessions (student_id, entry_time, entry_recorder_id, status) VALUES ($1, $2, $3, 'active') RETURNING id", [student.id, now, recorderId]);
+      const sessionId = insertResult.rows[0].id as number;
+      await db.query('COMMIT');
 
       logAudit({ actorType: actorRole as 'admin' | 'faculty', actorId: recorderId, action: 'SCAN_ENTRY', entityType: 'SESSION', entityId: sessionId, details: { studentId: student.id, barcode }, ipAddress: ip });
-      createNotification(student.id, sessionId, 'entry', `Entry recorded at ${new Date().toLocaleTimeString()}`);
+      createNotification(student.id, sessionId, 'entry', 'Entry recorded for your work session');
 
       return {
         code: 'SUCCESS_ENTRY',
@@ -95,7 +92,7 @@ export function processScan(barcode: unknown, recorderId: number, actorRole: str
         sessionStatus: 'active',
       };
     } catch (err) {
-      db.run('ROLLBACK');
+      await db.query('ROLLBACK');
       throw err;
     }
   }
@@ -114,12 +111,10 @@ export function processScan(barcode: unknown, recorderId: number, actorRole: str
     const now = new Date().toISOString();
     const db = getDb();
 
-    db.run('BEGIN TRANSACTION');
+    await db.query('BEGIN');
     try {
-      const updateStmt = db.prepare("UPDATE workspace_sessions SET exit_time = ?, exit_recorder_id = ?, status = 'awaiting_summary' WHERE id = ?");
-      updateStmt.run([now, recorderId, existing.id]);
-      updateStmt.free();
-      db.run('COMMIT');
+      await db.query("UPDATE workspace_sessions SET exit_time = $1, exit_recorder_id = $2, status = 'awaiting_summary' WHERE id = $3", [now, recorderId, existing.id]);
+      await db.query('COMMIT');
 
       logAudit({ actorType: actorRole as 'admin' | 'faculty', actorId: recorderId, action: 'SCAN_EXIT', entityType: 'SESSION', entityId: existing.id, details: { studentId: student.id, barcode }, ipAddress: ip });
       createNotification(student.id, existing.id, 'exit', 'Session exited — please submit your work summary');
@@ -136,7 +131,7 @@ export function processScan(barcode: unknown, recorderId: number, actorRole: str
         sessionStatus: 'awaiting_summary',
       };
     } catch (err) {
-      db.run('ROLLBACK');
+      await db.query('ROLLBACK');
       throw err;
     }
   }

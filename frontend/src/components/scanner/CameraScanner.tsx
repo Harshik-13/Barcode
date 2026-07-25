@@ -1,4 +1,5 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
+import type { Html5Qrcode } from 'html5-qrcode';
 
 interface CameraScannerProps {
   onScan: (barcode: string) => void;
@@ -9,7 +10,7 @@ interface CameraScannerProps {
 export default function CameraScanner({ onScan, onError, enabled }: CameraScannerProps) {
   const scannerRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<'loading' | 'scanning' | 'permission-denied' | 'no-camera' | 'unsupported' | 'paused'>('loading');
-  const [html5QrCode, setHtml5QrCode] = useState<any>(null);
+  const [html5QrCode, setHtml5QrCode] = useState<Html5Qrcode | null>(null);
   const lastScanRef = useRef<string>('');
   const scanTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -67,11 +68,12 @@ export default function CameraScanner({ onScan, onError, enabled }: CameraScanne
       await scanner.start({ facingMode: 'environment' }, config, qrCodeSuccessCallback, () => { });
       setHtml5QrCode(scanner);
       setStatus('scanning');
-    } catch (err: any) {
-      if (err?.toString()?.includes('NotAllowedError') || err?.toString()?.includes('Permission')) {
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.toString() : String(err);
+      if (msg.includes('NotAllowedError') || msg.includes('Permission')) {
         setStatus('permission-denied');
         onError?.('Camera permission denied. Please allow camera access in your browser settings.');
-      } else if (err?.toString()?.includes('NotFoundError')) {
+      } else if (msg.includes('NotFoundError')) {
         setStatus('no-camera');
         onError?.('No camera found on this device.');
       } else {

@@ -23,6 +23,10 @@ export const NOTIFICATION_TYPE = {
   ENTRY: 'entry',
   EXIT: 'exit',
   REMINDER: 'reminder',
+  COMPLETED: 'completed',
+  AUTO_COMPLETED: 'auto_completed',
+  STATUS_CHANGE: 'status_change',
+  BROADCAST: 'broadcast',
 } as const;
 
 export const ACTOR_TYPE = {

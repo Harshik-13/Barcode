@@ -15,10 +15,7 @@ export default function ActivityLogsPage() {
     setLoading(true);
     setError('');
 
-    const params: Record<string, string | number | undefined> = { page, limit: 20 };
-    if (actorTypeFilter) params.actorType = actorTypeFilter;
-
-    activityLogsApi.list(params as any)
+    activityLogsApi.list({ page, limit: 20, actorType: actorTypeFilter })
       .then((res) => {
         setLogs(res.data);
         setTotal(res.pagination.total);

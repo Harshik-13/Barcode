@@ -1,24 +1,37 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { requireAuth, requireRole } from '../middleware/auth';
 import { processScan } from '../services/scan';
+import { scanLimiter } from '../middleware/rateLimiter';
 import { validateBody } from '../utils/validation';
 
 const router = Router();
 
 router.post('/scan',
+  scanLimiter,
   requireAuth,
-  requireRole('faculty', 'admin'),
+  requireRole('admin', 'faculty'),
   validateBody([
-    { field: 'barcode', type: 'string', required: true, min: 1, max: 100 },
+    { field: 'barcode', type: 'string', required: true },
   ]),
-  (req: Request, res: Response, next: NextFunction) => {
+  async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const result = processScan(req.body.barcode, req.user!.userId, req.user!.role, req.ip as string);
-
-      if (result.code === 'SUCCESS_ENTRY' || result.code === 'SUCCESS_EXIT') {
-        res.json({ data: result });
+      const barcode = req.body.barcode;
+      const result = await processScan(barcode, req.user!.userId, req.user!.role, req.ip as string);
+      const statusMap: Record<string, number> = {
+        'SUCCESS_ENTRY': 200,
+        'SUCCESS_EXIT': 200,
+        'INVALID_BARCODE': 400,
+        'STUDENT_NOT_FOUND': 422,
+        'ACCOUNT_INACTIVE': 422,
+        'SUMMARY_REQUIRED': 422,
+        'DUPLICATE_SCAN': 409,
+        'INVALID_SESSION_STATE': 409,
+      };
+      const status = statusMap[result.code] ?? 500;
+      if (status >= 400) {
+        res.status(status).json({ error: result.code });
       } else {
-        res.status(422).json({ error: result.code, message: result.message, details: 'details' in result ? result.details : undefined });
+        res.status(status).json({ data: result });
       }
     } catch (err) { next(err); }
   }
