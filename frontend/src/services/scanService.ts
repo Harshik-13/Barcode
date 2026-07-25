@@ -43,9 +43,16 @@ export async function submitScan(barcode: string): Promise<ScanResult> {
       return { success: true, data: body.data };
     }
 
-    if (res.status === 422) {
-      const body = await res.json();
-      return { success: false, data: body };
+    if (res.status >= 400 && res.status < 500) {
+      const body = await res.json().catch(() => ({}));
+      return {
+        success: false,
+        data: {
+          error: body.error || 'SERVER_ERROR',
+          message: body.message || 'Request failed',
+          details: body.details,
+        },
+      };
     }
 
     if (res.status === 401 || res.status === 403) {

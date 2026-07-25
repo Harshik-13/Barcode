@@ -22,6 +22,7 @@ export interface SessionWithDetails extends WorkspaceSession {
   studentRoll?: string;
   studentName?: string;
   categoryName?: string;
+  durationSeconds?: number | null;
 }
 
 export const authApi = {
@@ -73,6 +74,10 @@ export const studentsApi = {
 };
 
 export const sessionsApi = {
+  stats: (studentId: number) =>
+    api<DataResponse<SessionStats>>(`/api/sessions/stats/${studentId}`),
+  review: (id: number, status: 'approved' | 'rejected', feedback?: string) =>
+    api<DataResponse<SessionWithDetails>>(`/api/sessions/${id}/review`, { method: 'POST', body: { status, feedback } }),
   list: (params?: { page?: number; limit?: number; studentId?: number; status?: string; dateFrom?: string; dateTo?: string }) => {
     const searchParams = new URLSearchParams();
     if (params) {
@@ -207,6 +212,15 @@ export const dashboardApi = {
   stats: () =>
     api<DataResponse<DashboardStats>>('/api/dashboard/stats'),
 };
+
+export interface SessionStats {
+  totalSessions: number;
+  totalDurationSeconds: number;
+  averageDurationSeconds: number;
+  sessionsByCategory: Array<{ categoryId: number | null; categoryName: string | null; count: number }>;
+  sessionsByMonth: Array<{ month: string; count: number }>;
+  currentStreak: number;
+}
 
 export interface LiveSessionInfo {
   id: number;

@@ -25,7 +25,7 @@ router.get('/notifications/unread-count', requireAuth, async (req: Request, res:
 router.patch('/notifications/:id/read', requireAuth, async (req: Request, res: Response, next: NextFunction) => {
   try {
     await markAsRead(parseInt(req.params.id as string, 10), req.user!.userId);
-    res.json({ message: 'Marked as read' });
+    res.json({ data: { success: true } });
   } catch (err) { next(err); }
 });
 
@@ -62,7 +62,7 @@ router.get('/faculty-notifications', requireAuth, requireRole('faculty', 'admin'
 router.patch('/faculty-notifications/:id/read', requireAuth, requireRole('faculty', 'admin'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     await markFacultyNotificationRead(parseInt(req.params.id as string, 10), req.user!.userId);
-    res.json({ message: 'Marked as read' });
+    res.json({ data: { success: true } });
   } catch (err) { next(err); }
 });
 

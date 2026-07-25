@@ -29,7 +29,9 @@ router.post('/scan',
       };
       const status = statusMap[result.code] ?? 500;
       if (status >= 400) {
-        res.status(status).json({ error: result.code });
+        const response: Record<string, unknown> = { error: result.code, message: (result as { message: string }).message };
+        if ('details' in result && result.details) response.details = result.details;
+        res.status(status).json(response);
       } else {
         res.status(status).json({ data: result });
       }

@@ -91,9 +91,18 @@ export async function authenticate(loginId: string, password: string, ip?: strin
     ipAddress: ip,
   });
 
+  let studentId: number | undefined;
+  if (user.role_id === 'student') {
+    const db = getDb();
+    const stuResult = await db.query('SELECT id FROM students WHERE email = $1', [user.email]);
+    if (stuResult.rows.length > 0) {
+      studentId = (stuResult.rows[0] as { id: number }).id;
+    }
+  }
+
   return {
     token,
-    user: { id: user.id, name: user.name, role: user.role_id, email: user.email },
+    user: { id: user.id, name: user.name, role: user.role_id, email: user.email, studentId },
   };
 }
 
@@ -108,7 +117,15 @@ export async function getCurrentUser(userId: number) {
   }
 
   const createdAt = (user as any).created_at;
-  return { id: user.id, name: user.name, role: user.role_id, email: user.email, status: user.status, createdAt };
+  let studentId: number | undefined;
+  if (user.role_id === 'student') {
+    const db = getDb();
+    const stuResult = await db.query('SELECT id FROM students WHERE email = $1', [user.email]);
+    if (stuResult.rows.length > 0) {
+      studentId = (stuResult.rows[0] as { id: number }).id;
+    }
+  }
+  return { id: user.id, name: user.name, role: user.role_id, email: user.email, status: user.status, createdAt, studentId };
 }
 
 export async function logLogout(userId: number, role: string, ip?: string): Promise<void> {

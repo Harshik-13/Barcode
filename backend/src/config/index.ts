@@ -61,4 +61,7 @@ export function validateEnv(): void {
   if (isProd && (!process.env.SMTP_USER || !process.env.SMTP_PASS)) {
     throw new Error('Missing required SMTP credentials. Set SMTP_USER and SMTP_PASS.');
   }
+  if (isProd && (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY)) {
+    throw new Error('Missing required VAPID keys for push notifications. Set VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY.');
+  }
 }

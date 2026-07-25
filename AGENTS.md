@@ -51,8 +51,14 @@ This is the **8Hour Workspace Attendance System** — NOT a hostel meal attendan
 
 ## Testing Notes
 
-- Tests persist state to `backend/data/test-workspace.db`. Delete this file before running tests to get a clean run.
-- The 12 `domain.integration.test.ts` failures (409 → 201 cascade) are caused by stale DB state, not code regressions.
+- Tests use PostgreSQL database `workspace_test` (configured in `vitest.config.ts` via `DATABASE_URL`).
+- The test suite is **idempotent** — all 160 tests pass whether run once or repeatedly.
+- Each test file cleans up its own test-specific data in `beforeAll`:
+  - `tests/scan.integration.test.ts` — deletes `workspace_sessions`, `notifications`, `activity_logs`, `faculty_notifications`
+  - `tests/domain.integration.test.ts` — deletes `workspace_sessions`, `notifications`, `activity_logs`, test-created students
+  - `tests/domain-extended.integration.test.ts` — deletes `workspace_sessions`, `notifications`, `activity_logs`, `faculty_notifications`, test-created faculty users
+- Seeded data (students, categories, users) is preserved and reused across test files.
+- Run `node scripts/create-test-db.js` from `backend/` to create the test database if missing.
 
 ## Verification Checklist
 

@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import { config } from '../config';
 import { UnauthorizedError, ForbiddenError } from '../utils/errors';
 import { logPermissionDenied } from '../services/auth';
+import { getDb } from '../db';
 
 export interface AuthPayload {
   userId: number;
@@ -66,4 +67,40 @@ export function requireOwnership(getOwnerId: (req: Request) => number) {
 
     next();
   };
+}
+
+export async function requireOwnStudentResource(req: Request, _res: Response, next: NextFunction): Promise<void> {
+  if (!req.user) {
+    next(new UnauthorizedError('MISSING_TOKEN', 'Authentication token is required'));
+    return;
+  }
+
+  if (req.user.role !== 'student') {
+    next();
+    return;
+  }
+
+  const resourceId = parseInt(req.params.studentId || req.params.id, 10);
+  if (isNaN(resourceId)) {
+    next(new ForbiddenError('Invalid resource identifier'));
+    return;
+  }
+
+  try {
+    const db = getDb();
+    const result = await db.query(
+      'SELECT s.id FROM students s JOIN users u ON s.email = u.email WHERE u.id = $1',
+      [req.user.userId]
+    );
+
+    if (result.rows.length === 0 || (result.rows[0] as { id: number }).id !== resourceId) {
+      logPermissionDenied(req.user.userId, req.user.role, req.path);
+      next(new ForbiddenError('You do not own this resource'));
+      return;
+    }
+
+    next();
+  } catch {
+    next(new ForbiddenError('Could not verify resource ownership'));
+  }
 }

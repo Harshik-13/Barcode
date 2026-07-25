@@ -1,5 +1,4 @@
-import { useEffect, useRef, useCallback, useState } from 'react';
-import type { Html5Qrcode } from 'html5-qrcode';
+import { useEffect, useRef, useState, useCallback } from 'react';
 
 interface CameraScannerProps {
   onScan: (barcode: string) => void;
@@ -10,93 +9,133 @@ interface CameraScannerProps {
 export default function CameraScanner({ onScan, onError, enabled }: CameraScannerProps) {
   const scannerRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<'loading' | 'scanning' | 'permission-denied' | 'no-camera' | 'unsupported' | 'paused'>('loading');
-  const [html5QrCode, setHtml5QrCode] = useState<Html5Qrcode | null>(null);
+  const scannerInstanceRef = useRef<{ stop: () => Promise<void>; pause: () => void; resume: () => void } | null>(null);
   const lastScanRef = useRef<string>('');
   const scanTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mountedRef = useRef(true);
+  const onScanRef = useRef(onScan);
+  const onErrorRef = useRef(onError);
+  onScanRef.current = onScan;
+  onErrorRef.current = onError;
 
-  const stop = useCallback(() => {
-    if (html5QrCode) {
+  const stop = useCallback(async () => {
+    if (scannerInstanceRef.current) {
       try {
-        html5QrCode.stop();
-      } catch { }
+        await scannerInstanceRef.current.stop();
+      } catch { /* ignore */ }
+      scannerInstanceRef.current = null;
     }
-  }, [html5QrCode]);
-
-  const start = useCallback(async () => {
-    if (!enabled) return;
-
-    const { Html5Qrcode } = await import('html5-qrcode');
-
-    if (!scannerRef.current) return;
-
-    const scannerId = scannerRef.current.id || 'qr-reader';
-    if (!scannerRef.current.id) scannerRef.current.id = scannerId;
-
-    const scanner = new Html5Qrcode(scannerId);
-
-    const qrCodeSuccessCallback = (decodedText: string) => {
-      if (decodedText === lastScanRef.current) return;
-      lastScanRef.current = decodedText;
-      onScan(decodedText);
-
-      scanner.pause();
-      setStatus('paused');
-
-      if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current);
-      scanTimeoutRef.current = setTimeout(() => {
-        lastScanRef.current = '';
-        scanner.resume();
-        setStatus('scanning');
-      }, 2000);
-    };
-
-    const config = {
-      fps: 30,
-      qrbox: { width: 400, height: 200 },
-      formatsToSupport: [
-        0,  // QR_CODE
-        1,  // CODE_128
-        2,  // CODE_39
-        3,  // EAN_13
-        4,  // EAN_8
-        5,  // UPC_A
-        6,  // UPC_E
-      ],
-    };
-
-    try {
-      await scanner.start({ facingMode: 'environment' }, config, qrCodeSuccessCallback, () => { });
-      setHtml5QrCode(scanner);
-      setStatus('scanning');
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.toString() : String(err);
-      if (msg.includes('NotAllowedError') || msg.includes('Permission')) {
-        setStatus('permission-denied');
-        onError?.('Camera permission denied. Please allow camera access in your browser settings.');
-      } else if (msg.includes('NotFoundError')) {
-        setStatus('no-camera');
-        onError?.('No camera found on this device.');
-      } else {
-        setStatus('unsupported');
-        onError?.('Camera is not supported on this browser or device.');
-      }
-    }
-  }, [enabled, onScan, onError]);
-
-  const resume = useCallback(() => {
-    if (html5QrCode) {
-      html5QrCode.resume();
-      setStatus('scanning');
-    }
-  }, [html5QrCode]);
+  }, []);
 
   useEffect(() => {
-    start();
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (!enabled || !scannerInstanceRef.current) return;
+      if (document.hidden) {
+        scannerInstanceRef.current.pause();
+      } else {
+        try { scannerInstanceRef.current.resume(); } catch { /* may already be running */ }
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [enabled]);
+
+  useEffect(() => {
+    if (!enabled) {
+      stop();
+      setStatus('paused');
+      return;
+    }
+
+    let cancelled = false;
+
+    const startScanner = async () => {
+      if (!scannerRef.current || !mountedRef.current) return;
+
+      setStatus('loading');
+
+      const { Html5Qrcode } = await import('html5-qrcode');
+
+      if (!mountedRef.current || cancelled || !enabled) return;
+
+      const scannerId = scannerRef.current.id || 'qr-reader';
+      if (!scannerRef.current.id) scannerRef.current.id = scannerId;
+
+      const scanner = new Html5Qrcode(scannerId);
+
+      const qrCodeSuccessCallback = (decodedText: string) => {
+        if (decodedText === lastScanRef.current) return;
+        lastScanRef.current = decodedText;
+        onScanRef.current(decodedText);
+
+        scanner.pause();
+        setStatus('paused');
+
+        if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current);
+        scanTimeoutRef.current = setTimeout(() => {
+          lastScanRef.current = '';
+          scanner.resume();
+          if (mountedRef.current) setStatus('scanning');
+        }, 2000);
+      };
+
+      const config = {
+        fps: 30,
+        qrbox: { width: 400, height: 200 },
+        formatsToSupport: [
+          0,  // QR_CODE
+          1,  // CODE_128
+          2,  // CODE_39
+          3,  // EAN_13
+          4,  // EAN_8
+          5,  // UPC_A
+          6,  // UPC_E
+        ],
+      };
+
+      try {
+        await scanner.start({ facingMode: 'environment' }, config, qrCodeSuccessCallback, () => { });
+        if (!mountedRef.current || cancelled) {
+          await scanner.stop().catch(() => {});
+          return;
+        }
+        scannerInstanceRef.current = scanner;
+        setStatus('scanning');
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.toString() : String(err);
+        if (msg.includes('NotAllowedError') || msg.includes('Permission')) {
+          if (mountedRef.current) setStatus('permission-denied');
+          onErrorRef.current?.('Camera permission denied. Please allow camera access in your browser settings.');
+        } else if (msg.includes('NotFoundError')) {
+          if (mountedRef.current) setStatus('no-camera');
+          onErrorRef.current?.('No camera found on this device.');
+        } else {
+          if (mountedRef.current) setStatus('unsupported');
+          onErrorRef.current?.('Camera is not supported on this browser or device.');
+        }
+      }
+    };
+
+    startScanner();
+
     return () => {
+      cancelled = true;
       stop();
       if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current);
     };
-  }, [enabled]);
+  }, [enabled, stop]);
+
+  const resume = useCallback(() => {
+    if (scannerInstanceRef.current) {
+      scannerInstanceRef.current.resume();
+      setStatus('scanning');
+    }
+  }, []);
 
   return (
     <div className="camera-scanner">

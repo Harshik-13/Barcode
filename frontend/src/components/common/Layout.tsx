@@ -2,6 +2,7 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../store/AuthContext';
 import { useState, useEffect } from 'react';
 import { notificationsApi } from '../../services/apiService';
+import { usePushNotifications } from '../../hooks/usePushNotifications';
 
 const NAV_ITEMS: Record<string, Array<{ label: string; path: string }>> = {
   student: [
@@ -46,6 +47,14 @@ export function Layout() {
   const navItems = user ? NAV_ITEMS[user.role] || [] : [];
   const [unreadCount, setUnreadCount] = useState(0);
 
+  const { isSupported, permission, subscription, subscribe } = usePushNotifications();
+
+  useEffect(() => {
+    if (!user || user.role !== 'student') return;
+    if (!isSupported || permission === 'denied' || subscription) return;
+    subscribe();
+  }, [user, isSupported, permission, subscription, subscribe]);
+
   useEffect(() => {
     if (!user || user.role !== 'student') return;
     const fetchCount = () => {
@@ -54,7 +63,7 @@ export function Layout() {
         .catch(() => {});
     };
     fetchCount();
-    const interval = setInterval(fetchCount, 30000);
+    const interval = setInterval(fetchCount, 5000);
     return () => clearInterval(interval);
   }, [user]);
 

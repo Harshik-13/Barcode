@@ -14,6 +14,13 @@ const studentLogin = () => request(app).post('/api/auth/login').send({ email: 's
 beforeAll(async () => {
   await initDb();
 
+  const db = getDb();
+  await db.query('DELETE FROM faculty_notifications');
+  await db.query('DELETE FROM notifications');
+  await db.query('DELETE FROM activity_logs');
+  await db.query('DELETE FROM workspace_sessions');
+  await db.query('DELETE FROM users WHERE email IN ($1, $2)', ['newfaculty@test.com', 'updated@test.com']);
+
   const adminRes = await adminLogin();
   adminToken = adminRes.body.token;
 

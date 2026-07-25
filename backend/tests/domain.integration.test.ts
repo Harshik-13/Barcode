@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
-import { initDb, closeDb } from '../src/db';
+import { initDb, getDb, closeDb } from '../src/db';
 import app from '../src/app';
 
 let adminToken: string;
@@ -13,6 +13,12 @@ const studentLogin = () => request(app).post('/api/auth/login').send({ email: 's
 
 beforeAll(async () => {
   await initDb();
+
+  const db = getDb();
+  await db.query('DELETE FROM notifications');
+  await db.query('DELETE FROM activity_logs');
+  await db.query('DELETE FROM workspace_sessions');
+  await db.query('DELETE FROM students WHERE roll = $1', ['STU005']);
 
   const adminRes = await adminLogin();
   adminToken = adminRes.body.token;

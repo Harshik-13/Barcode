@@ -78,17 +78,16 @@ export interface PushSubscriptionInfo {
 }
 
 export async function getVapidPublicKey(): Promise<string> {
-  const res = await api<{ data: { publicKey: string } }>('/api/push/vapid-key');
+  const res = await api<{ data: { publicKey: string } }>('/api/push/vapid-public-key');
   return res.data.publicKey;
 }
 
 export async function subscribeToPush(subscription: PushSubscriptionInfo): Promise<void> {
-  await api('/api/push/subscriptions', { method: 'POST', body: subscription });
+  await api('/api/push/subscribe', { method: 'POST', body: subscription });
 }
 
 export async function unsubscribeFromPush(endpoint: string): Promise<void> {
-  const encodedEndpoint = encodeURIComponent(endpoint);
-  await api(`/api/push/subscriptions/${encodedEndpoint}`, { method: 'DELETE' });
+  await api('/api/push/unsubscribe', { method: 'POST', body: { endpoint } });
 }
 
 export async function getPushSubscriptions(): Promise<PushSubscriptionInfo[]> {

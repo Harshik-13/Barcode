@@ -71,6 +71,7 @@ export interface WorkspaceSession {
   studentId: number;
   entryTime: string;
   exitTime: string | null;
+  durationSeconds: number | null;
   entryRecorderId: number;
   exitRecorderId: number | null;
   categoryId: number | null;
@@ -133,5 +134,6 @@ export interface AuthResponse {
     name: string;
     role: RoleName;
     email: string;
+    studentId?: number;
   };
 }

@@ -1,5 +1,5 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { requireAuth, requireRole } from '../middleware/auth';
+import { requireAuth, requireRole, requireOwnStudentResource } from '../middleware/auth';
 import { listStudents, getStudent, lookupStudent, searchStudents, createStudent, updateStudent, suspendStudent, departStudent, getStudentHistory } from '../services/student';
 import { adminLimiter } from '../middleware/rateLimiter';
 import { validateBody } from '../utils/validation';
@@ -40,14 +40,14 @@ router.get('/students/search', requireAuth, async (req: Request, res: Response, 
   } catch (err) { next(err); }
 });
 
-router.get('/students/:id', requireAuth, async (req: Request, res: Response, next: NextFunction) => {
+router.get('/students/:id', requireAuth, requireOwnStudentResource, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const student = await getStudent(parseInt(req.params.id as string, 10));
     res.json({ data: student });
   } catch (err) { next(err); }
 });
 
-router.get('/students/:id/history', requireAuth, async (req: Request, res: Response, next: NextFunction) => {
+router.get('/students/:id/history', requireAuth, requireOwnStudentResource, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { page, limit } = parsePagination(req.query as Record<string, unknown>);
     const result = await getStudentHistory(parseInt(req.params.id as string, 10), page, limit);

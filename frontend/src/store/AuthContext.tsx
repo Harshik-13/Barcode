@@ -7,6 +7,7 @@ interface User {
   name: string;
   email: string;
   role: RoleName;
+  studentId?: number;
 }
 
 interface AuthContextValue {
@@ -62,9 +63,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setToken(saved.token);
       setUser(saved.user);
 
-      api<{ id: number; name: string; email: string; role: RoleName }>('/api/auth/me')
+      api<{ id: number; name: string; email: string; role: RoleName; studentId?: number }>('/api/auth/me')
         .then((userData) => {
-          const freshUser: User = { id: userData.id, name: userData.name, email: userData.email, role: userData.role };
+          const freshUser: User = { id: userData.id, name: userData.name, email: userData.email, role: userData.role, studentId: userData.studentId };
           setUser(freshUser);
           saveToStorage(saved.token!, freshUser);
         })

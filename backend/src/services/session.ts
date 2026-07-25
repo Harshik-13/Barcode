@@ -29,12 +29,18 @@ const VALID_TRANSITIONS: Record<string, string[]> = {
   archived: [],
 };
 
+function computeDurationSeconds(entryTime: string, exitTime: string | null): number | null {
+  if (!exitTime) return null;
+  return Math.round((new Date(exitTime).getTime() - new Date(entryTime).getTime()) / 1000);
+}
+
 function rowToSession(row: SessionRow) {
   return {
     id: row.id,
     studentId: row.student_id,
     entryTime: row.entry_time,
     exitTime: row.exit_time,
+    durationSeconds: computeDurationSeconds(row.entry_time, row.exit_time),
     entryRecorderId: row.entry_recorder_id,
     exitRecorderId: row.exit_recorder_id,
     categoryId: row.category_id,
@@ -60,7 +66,9 @@ async function transition(sessionId: number, targetStatus: string, validFrom: st
   await db.query('BEGIN');
   let rolledBack = false;
   try {
-    const session = await getSessionRow(db, sessionId);
+    const lockResult = await db.query('SELECT * FROM workspace_sessions WHERE id = $1 FOR UPDATE', [sessionId]);
+    if (lockResult.rows.length === 0) { await db.query('ROLLBACK'); rolledBack = true; throw new NotFoundError('Session'); }
+    const session = lockResult.rows[0] as SessionRow;
 
     if (!validFrom.includes(session.status)) {
       await db.query('ROLLBACK');
@@ -89,7 +97,12 @@ async function transition(sessionId: number, targetStatus: string, validFrom: st
 
     updateParams.push(sessionId);
     const updateSql = `UPDATE workspace_sessions SET ${setClauses.join(', ')} WHERE id = $${paramIndex}`;
-    await db.query(updateSql, updateParams);
+    const updateResult = await db.query(updateSql, updateParams);
+    if ((updateResult as any).rowCount === 0) {
+      await db.query('ROLLBACK');
+      rolledBack = true;
+      throw new ConflictError('RACE_CONDITION', 'Session was modified concurrently — please retry');
+    }
 
     await db.query('COMMIT');
     return await getSessionById(sessionId);
@@ -113,6 +126,7 @@ function rowToSessionDetails(row: Record<string, unknown>) {
     studentId: row.student_id,
     entryTime: row.entry_time,
     exitTime: row.exit_time,
+    durationSeconds: computeDurationSeconds(row.entry_time as string, row.exit_time as string | null),
     entryRecorderId: row.entry_recorder_id,
     exitRecorderId: row.exit_recorder_id,
     categoryId: row.category_id,
@@ -189,6 +203,8 @@ export async function createSession(studentId: number, entryRecorderId: number, 
 export async function startSession(id: number, recorderId: number, actorRole: string, ip?: string) {
   const session = await transition(id, 'active', ['created'], { entry_recorder_id: recorderId });
   logAudit({ actorType: actorRole as 'admin' | 'faculty', actorId: recorderId, action: 'SESSION_STARTED', entityType: 'SESSION', entityId: id, details: {}, ipAddress: ip });
+  const startedSession = await getSessionById(id);
+  createNotification(startedSession.studentId, id, 'entry', 'Your work session has started');
   return session;
 }
 
@@ -202,6 +218,8 @@ export async function exitSession(id: number, exitRecorderId: number, categoryId
   });
 
   logAudit({ actorType: actorRole as 'admin' | 'faculty', actorId: exitRecorderId, action: 'SESSION_EXITED', entityType: 'SESSION', entityId: id, details: { exitTime: now, categoryId }, ipAddress: ip });
+  const exitedSession = await getSessionById(id);
+  createNotification(exitedSession.studentId, id, 'exit', 'Your work session has been exited — please submit your summary');
   return session;
 }
 
@@ -218,6 +236,8 @@ export async function manualExitSession(id: number, exitRecorderId: number, cate
   });
 
   logAudit({ actorType: actorRole as 'admin' | 'faculty', actorId: exitRecorderId, action: 'SESSION_MANUAL_EXIT', entityType: 'SESSION', entityId: id, details: { reason, categoryId }, ipAddress: ip });
+  const exitedSession = await getSessionById(id);
+  createNotification(exitedSession.studentId, id, 'exit', `Your session was exited manually: ${reason}`);
   return session;
 }
 
@@ -306,6 +326,20 @@ export async function overrideSession(id: number, actorId: number, role: string,
   }
 }
 
+export async function reviewSession(id: number, reviewerId: number, status: 'approved' | 'rejected', feedback: string | undefined, actorRole: string, ip?: string) {
+  const db = getDb();
+  const session = await getSessionRow(db, id);
+
+  if (session.status !== 'completed') {
+    throw new ConflictError('INVALID_TRANSITION', `Cannot review session in status '${session.status}'`);
+  }
+
+  logAudit({ actorType: actorRole as 'admin' | 'faculty', actorId: reviewerId, action: status === 'approved' ? 'SESSION_REVIEW_APPROVED' : 'SESSION_REVIEW_REJECTED', entityType: 'SESSION', entityId: id, details: { feedback }, ipAddress: ip });
+  createNotification(session.student_id, id, status === 'approved' ? 'completed' : 'reminder', status === 'approved' ? 'Your work summary has been reviewed and approved' : `Your work summary needs revision: ${feedback || 'No feedback provided'}`);
+
+  return await getSessionById(id);
+}
+
 export async function autoCompleteSessions() {
   const db = getDb();
   const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
@@ -322,4 +356,62 @@ export async function autoCompleteSessions() {
   }
 
   return { autoCompleted: rows.length };
+}
+
+export async function getStudentStats(studentId: number) {
+  const db = getDb();
+
+  const totalResult = await db.query("SELECT COUNT(*) as total FROM workspace_sessions WHERE student_id = $1 AND status IN ('completed', 'archived')", [studentId]);
+  const totalSessions = parseInt(totalResult.rows[0].total, 10);
+
+  const durationResult = await db.query("SELECT COALESCE(SUM(EXTRACT(EPOCH FROM (exit_time - entry_time))), 0) as total_duration FROM workspace_sessions WHERE student_id = $1 AND exit_time IS NOT NULL AND status IN ('completed', 'archived')", [studentId]);
+  const totalDurationSeconds = parseInt(durationResult.rows[0].total_duration, 10);
+
+  const categoryResult = await db.query("SELECT c.name, c.id, COUNT(*) as count FROM workspace_sessions ws LEFT JOIN categories c ON ws.category_id = c.id WHERE ws.student_id = $1 AND ws.status IN ('completed', 'archived') GROUP BY c.id, c.name ORDER BY count DESC", [studentId]);
+  const sessionsByCategory: Array<{ categoryId: number | null; categoryName: string | null; count: number }> = (categoryResult.rows as Array<{ id: number | null; name: string | null; count: number }>).map(r => ({ categoryId: r.id, categoryName: r.name, count: parseInt(String(r.count), 10) }));
+
+  const monthlyResult = await db.query("SELECT TO_CHAR(entry_time, 'YYYY-MM') as month, COUNT(*) as count FROM workspace_sessions WHERE student_id = $1 AND status IN ('completed', 'archived') AND entry_time >= NOW() - INTERVAL '6 months' GROUP BY month ORDER BY month ASC", [studentId]);
+  const sessionsByMonth: Array<{ month: string; count: number }> = (monthlyResult.rows as Array<{ month: string; count: number }>).map(r => ({ month: r.month, count: parseInt(String(r.count), 10) }));
+
+  const streakResult = await db.query("SELECT DISTINCT DATE(entry_time) as session_date FROM workspace_sessions WHERE student_id = $1 AND status IN ('completed', 'archived') ORDER BY session_date DESC", [studentId]);
+  const sessionDates: string[] = (streakResult.rows as Array<{ session_date: string }>).map(r => r.session_date);
+
+  let currentStreak = 0;
+  if (sessionDates.length > 0) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    let checkDate = new Date(today);
+    for (const dateStr of sessionDates) {
+      const sessionDate = new Date(dateStr);
+      sessionDate.setHours(0, 0, 0, 0);
+      const diffDays = Math.round((checkDate.getTime() - sessionDate.getTime()) / (1000 * 60 * 60 * 24));
+      if (diffDays === 0) { currentStreak++; checkDate = new Date(sessionDate.getTime() - 24 * 60 * 60 * 1000); }
+      else if (diffDays === 1) { currentStreak++; checkDate = sessionDate; }
+      else break;
+    }
+  }
+
+  return {
+    totalSessions,
+    totalDurationSeconds,
+    averageDurationSeconds: totalSessions > 0 ? Math.round(totalDurationSeconds / totalSessions) : 0,
+    sessionsByCategory,
+    sessionsByMonth,
+    currentStreak,
+  };
+}
+
+export async function getStudentHistory(studentId: number, page = 1, limit = 20) {
+  const db = getDb();
+  const offset = (page - 1) * limit;
+
+  const countResult = await db.query('SELECT COUNT(*) as total FROM workspace_sessions WHERE student_id = $1', [studentId]);
+  const total = parseInt(countResult.rows[0].total, 10);
+
+  const result = await db.query('SELECT ws.*, c.name as category_name FROM workspace_sessions ws LEFT JOIN categories c ON ws.category_id = c.id WHERE ws.student_id = $1 ORDER BY ws.entry_time DESC LIMIT $2 OFFSET $3', [studentId, limit, offset]);
+  const rows = result.rows as Array<Record<string, unknown>>;
+
+  const sessions = rows.map(rowToSessionDetails);
+
+  return { sessions, total, page, limit, totalPages: Math.ceil(total / limit) };
 }

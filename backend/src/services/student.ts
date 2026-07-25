@@ -70,7 +70,7 @@ export async function lookupStudent(query: string) {
 export async function searchStudents(searchTerm: string) {
   const db = getDb();
   const pattern = `%${searchTerm}%`;
-  const result = await db.query('SELECT * FROM students WHERE name ILIKE $1 OR roll ILIKE $2 OR email ILIKE $3', [pattern, pattern, pattern]);
+  const result = await db.query('SELECT * FROM students WHERE name ILIKE $1 OR roll ILIKE $2 OR email ILIKE $3 LIMIT 20', [pattern, pattern, pattern]);
   return (result.rows as StudentRow[]).map(rowToStudent);
 }
 

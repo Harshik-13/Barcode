@@ -1,6 +1,6 @@
 import webpush from 'web-push';
 import { getDb } from '../db';
-import { config } from '../config';
+import { config, isProd } from '../config';
 import { logger } from '../utils/logger';
 
 let vapidKeys: { publicKey: string; privateKey: string } | null = null;
@@ -8,6 +8,9 @@ let vapidKeys: { publicKey: string; privateKey: string } | null = null;
 export function getVapidKeys(): { publicKey: string; privateKey: string } {
   if (!vapidKeys) {
     if (!config.push.vapidPublicKey || !config.push.vapidPrivateKey) {
+      if (isProd) {
+        throw new Error('VAPID keys are required in production. Set VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY in your .env file.');
+      }
       const keys = webpush.generateVAPIDKeys();
       vapidKeys = { publicKey: keys.publicKey, privateKey: keys.privateKey };
       logger.warn('VAPID keys not configured in env, generated ephemeral keys. Push subscriptions will be invalid after restart.');

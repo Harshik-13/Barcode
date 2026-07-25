@@ -84,6 +84,25 @@ SMTP_FROM="Barcode Attendance <8hattendance@gmail.com>"
 
 On startup, the server runs `transporter.verify()` and logs `Gmail SMTP initialized successfully.` if credentials are valid. Invalid credentials will terminate startup with a clear error.
 
+### Push Notification Setup (VAPID)
+
+For push notifications (entry/exit alerts), generate VAPID keys:
+
+```bash
+cd backend
+node -e "const w=require('web-push');const k=w.generateVAPIDKeys();console.log('VAPID_PUBLIC_KEY='+k.publicKey);console.log('VAPID_PRIVATE_KEY='+k.privateKey)"
+```
+
+Then add to `backend/.env`:
+
+```env
+VAPID_PUBLIC_KEY=<your-public-key>
+VAPID_PRIVATE_KEY=<your-private-key>
+VAPID_SUBJECT=mailto:admin@8hour-workspace.com
+```
+
+In development, if VAPID keys are omitted, ephemeral keys are generated on startup (subscriptions invalidate after restart). Production requires configured keys.
+
 ### Run Tests
 
 ```bash

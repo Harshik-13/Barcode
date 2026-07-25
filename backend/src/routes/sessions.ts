@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { requireAuth, requireRole } from '../middleware/auth';
-import { getSessionById, listSessions, createSession, startSession, exitSession, manualExitSession, completeSession, archiveSession, getLiveSessionCount, getLiveStudents, overrideSession, getActiveSessionForStudent } from '../services/session';
+import { requireAuth, requireRole, requireOwnStudentResource } from '../middleware/auth';
+import { getSessionById, listSessions, createSession, startSession, exitSession, manualExitSession, completeSession, archiveSession, getLiveSessionCount, getLiveStudents, overrideSession, getActiveSessionForStudent, getStudentStats, reviewSession } from '../services/session';
 import { adminLimiter } from '../middleware/rateLimiter';
 import { parsePagination } from '../utils/pagination';
 import { validateBody } from '../utils/validation';
@@ -21,18 +21,44 @@ router.get('/sessions/stats/live', requireAuth, requireRole('admin', 'faculty'),
   } catch (err) { next(err); }
 });
 
-router.get('/sessions/active/:studentId', requireAuth, async (req: Request, res: Response, next: NextFunction) => {
+router.get('/sessions/active/:studentId', requireAuth, requireOwnStudentResource, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const session = await getActiveSessionForStudent(parseInt(req.params.studentId as string, 10));
     res.json({ data: session });
   } catch (err) { next(err); }
 });
 
+router.get('/sessions/stats/:studentId', requireAuth, requireOwnStudentResource, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const stats = await getStudentStats(parseInt(req.params.studentId as string, 10));
+    res.json({ data: stats });
+  } catch (err) { next(err); }
+});
+
 router.get('/sessions', requireAuth, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { page, limit } = parsePagination(req.query as Record<string, unknown>);
+    let studentId = req.query.studentId ? parseInt(req.query.studentId as string, 10) : undefined;
+
+    if (req.user!.role === 'student') {
+      if (studentId !== undefined) {
+        const db = getDb();
+        const ownResult = await db.query('SELECT s.id FROM students s JOIN users u ON s.email = u.email WHERE u.id = $1', [req.user!.userId]);
+        if (ownResult.rows.length === 0 || (ownResult.rows[0] as { id: number }).id !== studentId) {
+          res.status(403).json({ error: 'INSUFFICIENT_PERMISSIONS', message: 'You do not own this resource' });
+          return;
+        }
+      } else {
+        const db = getDb();
+        const ownResult = await db.query('SELECT s.id FROM students s JOIN users u ON s.email = u.email WHERE u.id = $1', [req.user!.userId]);
+        if (ownResult.rows.length > 0) {
+          studentId = (ownResult.rows[0] as { id: number }).id;
+        }
+      }
+    }
+
     const filters = {
-      studentId: req.query.studentId ? parseInt(req.query.studentId as string, 10) : undefined,
+      studentId,
       status: req.query.status as string | undefined,
       dateFrom: req.query.dateFrom as string | undefined,
       dateTo: req.query.dateTo as string | undefined,
@@ -45,6 +71,14 @@ router.get('/sessions', requireAuth, async (req: Request, res: Response, next: N
 router.get('/sessions/:id', requireAuth, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const session = await getSessionById(parseInt(req.params.id as string, 10));
+    if (req.user!.role === 'student' && session.studentId !== req.user!.userId) {
+      const db = getDb();
+      const ownResult = await db.query('SELECT s.id FROM students s JOIN users u ON s.email = u.email WHERE u.id = $1', [req.user!.userId]);
+      if (ownResult.rows.length === 0 || (ownResult.rows[0] as { id: number }).id !== session.studentId) {
+        res.status(403).json({ error: 'INSUFFICIENT_PERMISSIONS', message: 'You do not own this resource' });
+        return;
+      }
+    }
     res.json({ data: session });
   } catch (err) { next(err); }
 });
@@ -129,6 +163,26 @@ router.patch('/sessions/:id/archive',
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const session = await archiveSession(parseInt(req.params.id as string, 10), req.user!.userId, req.body.reason, req.user!.role, req.ip as string);
+      res.json({ data: session });
+    } catch (err) { next(err); }
+  }
+);
+
+router.post('/sessions/:id/review',
+  adminLimiter,
+  requireAuth,
+  requireRole('admin', 'faculty'),
+  validateBody([
+    { field: 'status', type: 'string', required: true },
+    { field: 'feedback', type: 'string', required: false, max: 500 },
+  ]),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      if (!['approved', 'rejected'].includes(req.body.status)) {
+        res.status(400).json({ error: 'VALIDATION_ERROR', message: 'status must be approved or rejected' });
+        return;
+      }
+      const session = await reviewSession(parseInt(req.params.id as string, 10), req.user!.userId, req.body.status, req.body.feedback, req.user!.role, req.ip as string);
       res.json({ data: session });
     } catch (err) { next(err); }
   }

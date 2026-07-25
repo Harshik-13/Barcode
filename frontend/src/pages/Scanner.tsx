@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '../store/AuthContext';
 import CameraScanner from '../components/scanner/CameraScanner';
 import { useScanner } from '../hooks/useScanner';
+import { sessionsApi } from '../services/apiService';
 
 function playBeep(type: 'success' | 'error' | 'duplicate') {
   try {
@@ -44,6 +45,12 @@ export default function Scanner() {
   const { lastResult, queueSize, isProcessing, handleScan, retryQueued, dismissResult, refreshQueueSize } = useScanner();
   const prevResultRef = useRef<string | null>(null);
 
+  const [showForceExit, setShowForceExit] = useState(false);
+  const [forceExitSessionId, setForceExitSessionId] = useState<number | null>(null);
+  const [forceExitStudentName, setForceExitStudentName] = useState('');
+  const [forceExitReason, setForceExitReason] = useState('');
+  const [forceExitSubmitting, setForceExitSubmitting] = useState(false);
+
   const handleScanWithFeedback = useCallback(async (barcode: string) => {
     await handleScan(barcode);
   }, [handleScan]);
@@ -64,6 +71,32 @@ export default function Scanner() {
     }
   }, [lastResult]);
 
+  const handleForceExitOpen = useCallback(() => {
+    if (!lastResult || lastResult.success) return;
+    const { details, message } = lastResult.data;
+    const sessionId = (details?.sessionId as number) || 0;
+    const studentName = message.includes('already been scanned') ? '' : '';
+    if (!sessionId) return;
+    setForceExitSessionId(sessionId);
+    setForceExitStudentName(studentName);
+    setForceExitReason('');
+    setShowForceExit(true);
+  }, [lastResult]);
+
+  const handleForceExitSubmit = useCallback(async () => {
+    if (!forceExitSessionId || !forceExitReason.trim()) return;
+    setForceExitSubmitting(true);
+    try {
+      await sessionsApi.manualExit(forceExitSessionId, forceExitReason.trim());
+      setShowForceExit(false);
+      dismissResult();
+    } catch (err: unknown) {
+      alert((err as { message?: string })?.message || 'Failed to terminate session');
+    } finally {
+      setForceExitSubmitting(false);
+    }
+  }, [forceExitSessionId, forceExitReason, dismissResult]);
+
   return (
     <div className="scanner-page" style={{ maxWidth: '500px', margin: '0 auto' }}>
       <div className="scanner-header" style={{ marginBottom: '16px' }}>
@@ -72,7 +105,7 @@ export default function Scanner() {
       </div>
 
       <div className="scanner-body">
-        <CameraScanner onScan={handleScanWithFeedback} onError={(msg) => console.error(msg)} enabled={!isProcessing} />
+        <CameraScanner onScan={handleScanWithFeedback} onError={(msg) => console.error(msg)} enabled={!isProcessing && !showForceExit} />
 
         {!navigator.onLine && (
           <div style={{ padding: '12px', background: '#fef3c7', border: '1px solid #fde68a', borderRadius: '6px', marginTop: '12px', fontSize: '13px', color: '#92400e' }}>
@@ -131,6 +164,22 @@ export default function Scanner() {
                 <p style={{ textAlign: 'center', fontSize: '14px', color: '#dc2626', margin: '0 0 12px' }}>
                   {lastResult.data.message}
                 </p>
+                {(lastResult.data.error === 'SUMMARY_REQUIRED' || lastResult.data.error === 'DUPLICATE_SCAN') && lastResult.data.details?.sessionId && (
+                  <div style={{ textAlign: 'center', marginTop: '8px' }}>
+                    <button onClick={handleForceExitOpen} style={{
+                      padding: '8px 20px',
+                      background: '#dc2626',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '13px',
+                      fontWeight: 500,
+                      cursor: 'pointer',
+                    }}>
+                      Force Exit Session
+                    </button>
+                  </div>
+                )}
               </>
             )}
             <div style={{ textAlign: 'center', marginTop: '12px' }}>
@@ -154,6 +203,34 @@ export default function Scanner() {
           </div>
         )}
       </div>
+
+      {/* Force Exit Dialog */}
+      {showForceExit && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+          <div style={{ padding: '24px', background: '#fff', borderRadius: '8px', width: '90%', maxWidth: '400px' }}>
+            <h3 style={{ fontSize: '18px', margin: '0 0 4px' }}>Force Exit Session</h3>
+            <p style={{ fontSize: '14px', color: '#6b7280', margin: '0 0 16px' }}>
+              This will manually exit the student's current session requiring a summary later.
+            </p>
+            <textarea
+              placeholder="Reason for force exit..."
+              value={forceExitReason}
+              onChange={(e) => setForceExitReason(e.target.value)}
+              rows={3}
+              style={{ width: '100%', padding: '10px', border: '1px solid #e5e7eb', borderRadius: '6px', fontSize: '14px', resize: 'vertical', boxSizing: 'border-box', marginBottom: '16px' }}
+            />
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+              <button onClick={() => setShowForceExit(false)} style={{ padding: '8px 16px', border: '1px solid #e5e7eb', borderRadius: '4px', background: '#fff', cursor: 'pointer', fontSize: '14px' }}>
+                Cancel
+              </button>
+              <button onClick={handleForceExitSubmit} disabled={forceExitSubmitting || !forceExitReason.trim()}
+                style={{ padding: '8px 16px', background: forceExitSubmitting || !forceExitReason.trim() ? '#9ca3af' : '#dc2626', color: '#fff', border: 'none', borderRadius: '4px', cursor: forceExitSubmitting || !forceExitReason.trim() ? 'not-allowed' : 'pointer', fontSize: '14px' }}>
+                {forceExitSubmitting ? 'Processing...' : 'Force Exit'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

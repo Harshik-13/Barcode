@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { requireAuth } from '../middleware/auth';
-import { getVapidPublicKey, createPushSubscription, deactivatePushSubscription } from '../services/push';
+import { getVapidPublicKey, createPushSubscription, deactivatePushSubscription, getPushSubscriptions } from '../services/push';
 import { validateBody } from '../utils/validation';
 
 const router = Router();
@@ -8,6 +8,16 @@ const router = Router();
 router.get('/push/vapid-public-key', (_req: Request, res: Response) => {
   res.json({ data: { publicKey: getVapidPublicKey() } });
 });
+
+router.get('/push/subscriptions',
+  requireAuth,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const subs = await getPushSubscriptions(req.user!.userId);
+      res.json({ data: subs.map(s => ({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth }, userAgent: s.userAgent })) });
+    } catch (err) { next(err); }
+  }
+);
 
 router.post('/push/subscribe',
   requireAuth,
