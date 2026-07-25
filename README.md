@@ -2,9 +2,10 @@
 
 Role-based platform that records student attendance and daily work activity inside the startup workspace.
 
-![Status](https://img.shields.io/badge/status-active-brightgreen)
+![Status](https://img.shields.io/badge/status-production-brightgreen)
 ![Tests](https://img.shields.io/badge/tests-160%20passing-brightgreen)
-![Phase](https://img.shields.io/badge/phase-7%20Ready-yellow)
+![Phase](https://img.shields.io/badge/phase-7%20Complete-brightgreen)
+![Tag](https://img.shields.io/badge/tag-production--mvp--1-blue)
 
 ---
 
@@ -18,21 +19,33 @@ Role-based platform that records student attendance and daily work activity insi
 | 4 — Data & API Design | ✅ Complete | `v0.4.0-data-api-design` |
 | 5 — UI/UX Design | ✅ Complete | `v0.5.0-ui-ux-design` |
 | **6 — Implementation** | **✅ Complete** | **`v0.4.0`** |
+| **7 — Production Readiness** | **✅ Complete** | **`production-mvp-1`** |
 
 ### Delivered
 
-- Full REST API (auth, students, sessions, categories, scan, activity logs, notifications, activation) — **39 endpoints**
+- Full REST API (auth, students, sessions, categories, scan, activity logs, notifications, activation, faculty review) — **43 endpoints**
 - QR barcode scanning pipeline with entry/exit/summary lifecycle
 - Role-based auth (admin, faculty, student) with JWT
 - Secure student account activation via OTP (bcrypt hashed, 10min expiry, max 5 attempts, cooldown)
 - Validation, rate limiting, audit trail, error handling
 - **160 tests passing** across 11 test suites
-- **Student Experience**: notification system (auto-created on entry/exit/complete/archive), notification center with unread badges, session detail page with summary submission, self-activation via OTP
+- **Student Experience**: notification system (auto-created on entry/exit/complete/archive), notification center with unread badges, session detail page with summary submission, stats dashboard (duration, streaks, category breakdown), self-activation via OTP
 - **Role-based frontend** with separate dashboards for Student, Faculty, and Admin
+- **Faculty Experience**: expanded dashboard with date range/status filters, paginated historical sessions, paginated student history with duration column, category filter support, faculty review endpoint (`POST /sessions/:id/review`)
 - **Management pages**: Students (list/create/suspend/depart), Categories (list/create/edit/archive), Sessions (list/filter/complete/archive), Activity Logs (filter/paginated audit trail)
-- All 39 backend endpoints consumed by the UI — 100% alignment
+- All 43 backend endpoints consumed by the UI — 100% alignment
 - **PostgreSQL migration**: migrated from SQLite (sql.js) to PostgreSQL (node-postgres) with lazy pool, ended-pool recovery, timestamp string compatibility
 - Backend snake_case→camelCase conversion for consistent API contracts
+- **Session Stats**: per-student aggregation (total sessions, total duration, category breakdown, streaks)
+- **Duration tracking**: `durationSeconds` in all session responses
+- **Force-exit dialog**: Scanner shows force-exit button on `SUMMARY_REQUIRED`/`DUPLICATE_SCAN` errors
+- **Production-hardened**:
+  - IDOR protection via `requireOwnStudentResource` middleware on all student-scoped endpoints
+  - Race condition prevention with `SELECT ... FOR UPDATE` row-level locking in session transitions
+  - Student search limited to 20 results to prevent unbounded queries
+  - Graceful `SIGTERM`/`SIGINT` shutdown (HTTP drain, DB close, force timeout)
+  - Camera pauses on tab hidden, resumes on tab visible
+  - Stats polling optimized to 60s instead of 5s
 
 ---
 

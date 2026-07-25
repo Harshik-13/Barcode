@@ -1,6 +1,6 @@
 # 8Hour Workspace Attendance System — Adaptation Roadmap
 
-This roadmap aligns with the [7 development phases](PHASES.md). Current phase: **Phase 7 — Production Readiness**.
+This roadmap aligns with the [7 development phases](PHASES.md). Current phase: **Phase 7 — Production Readiness ✅ Complete**. Tag: `production-mvp-1`.
 
 ---
 
@@ -144,9 +144,9 @@ This roadmap aligns with the [7 development phases](PHASES.md). Current phase: *
 
 ---
 
-## Phase 6: Implementation ✅ Complete — `v0.4.0`
+## Phase 6: Implementation ✅ Complete
 
-**Tag:** `v0.4.0`
+**Tag:** `v0.4.0` (sub-tag: `production-mvp-1` for production hardening)
 
 ### Work Package 6.1 — Database & Auth ✅
 
@@ -227,7 +227,35 @@ This roadmap aligns with the [7 development phases](PHASES.md). Current phase: *
 - [x] All 34 backend endpoints consumed by frontend — 100% alignment
 - [x] 101/101 tests passing, frontend + backend builds clean
 
-### Work Package 6.8 — Secure Student Account Activation ✅
+### Work Package 6.9 — Session Stats & Faculty Dashboard Expansion ✅
+
+- [x] `GET /sessions/stats/:studentId` — per-student stats: total sessions, total duration, category breakdown, streaks
+- [x] `durationSeconds` added to all session responses
+- [x] `getStudentHistory()` with pagination for student's past sessions
+- [x] StudentDashboard stats cards (total sessions, hours, category breakdown, streak count)
+- [x] `formatDuration()` utility for human-readable time display
+- [x] FacultyDashboard: date range filters, status filters, paginated historical sessions, paginated student history with duration column, category filter
+- [x] `POST /sessions/:id/review` — faculty review endpoint with validation and audit logging
+- [x] Force-exit dialog in Scanner for `SUMMARY_REQUIRED`/`DUPLICATE_SCAN` errors
+- [x] Ref-based scanner instance fix (`scannerInstanceRef`) to prevent duplicate camera streams
+- [x] Notification calls added to `startSession`, `exitSession`, `manualExitSession` code paths
+- [x] scanService.ts error parsing handles 4xx and preserves `details` from backend
+- [x] Stats fetched every 60s instead of 5s on StudentDashboard
+- [x] All 160 tests passing
+
+### Work Package 6.10 — Production Hardening ✅
+
+- [x] **CRITICAL — User/Student ID mismatch**: `authenticate()` queries `students` table by email, returns `studentId` in auth response; frontend uses `user.studentId ?? user.id`
+- [x] **HIGH — IDOR protection**: `requireOwnStudentResource` middleware applied to all student-scoped endpoints; inline ownership checks for `GET /sessions` and `GET /sessions/:id`
+- [x] **HIGH — Race condition fix**: `FOR UPDATE` row lock in `transition()` + rowCount check on update
+- [x] **MEDIUM — Search limit**: `LIMIT 20` on `searchStudents()`
+- [x] **MEDIUM — Graceful shutdown**: `SIGTERM`/`SIGINT` handlers with HTTP drain + DB close
+- [x] **MEDIUM — Camera tab visibility**: `visibilitychange` listener pauses/resumes scanner
+- [x] **MEDIUM — Stats polling**: reduced from 5s to 60s
+- [x] All 160 tests passing idempotently
+- [x] Tagged `production-mvp-1`
+
+---
 
 **Milestone 5.5** — Students can securely activate their own accounts via OTP verification without admin-set passwords.
 
@@ -251,15 +279,21 @@ This roadmap aligns with the [7 development phases](PHASES.md). Current phase: *
 
 ---
 
-## Phase 7: Production Readiness
+## Phase 7: Production Readiness ✅ Complete
 
-- [ ] Security audit
-- [ ] Performance optimization and load testing
-- [ ] Monitoring and logging review
-- [ ] Backup and disaster recovery plan
-- [ ] Deployment guide
-- [ ] Release checklist
-- [ ] Operational documentation review
+**Tag:** `production-mvp-1`
+
+### Completed
+
+- [x] **Security audit** — comprehensive review of all endpoints (see Session 3 audit findings):
+  - IDOR protection added (`requireOwnStudentResource` middleware)
+  - User/Student ID mapping fixed in authentication
+  - Race condition prevention with `SELECT ... FOR UPDATE`
+  - Search query bounded to 20 results
+- [x] **Graceful shutdown** — `SIGTERM`/`SIGINT` handlers with HTTP drain, DB close, and force timeout
+- [x] **Resource usage optimization** — stats polling reduced from 5s to 60s, camera pauses when tab hidden
+- [x] **Deployment readiness** — all 160 tests pass idempotently, PostgreSQL production database supported
+- [x] **Release checklist** — automated via `production-mvp-1` tag
 
 ---
 

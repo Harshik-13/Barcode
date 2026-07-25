@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [production-mvp-1] — 2026-07-25
+
+### Added
+
+- **Session Statistics Endpoint** (`GET /sessions/stats/:studentId`) — total sessions, total duration, category breakdown, streak calculation
+- **Duration tracking** — `durationSeconds` field in all session responses for real-time elapsed time display
+- **Paginated Student History** (`getStudentHistory()`) with `page`, `limit`, `total`, `totalPages`
+- **Faculty Review Endpoint** (`POST /sessions/:id/review`) — faculty can approve/reject sessions with feedback, includes audit logging
+- **Notification calls** in `startSession`, `exitSession`, `manualExitSession` (formerly only in scan route)
+- **Force-exit dialog** in Scanner — "Force Exit" button appears on `SUMMARY_REQUIRED`/`DUPLICATE_SCAN` errors, calls `manualExit` with reason
+- **Camera tab-visibility handling** — pauses scanner when tab hidden, resumes when visible
+
+### Changed
+
+- **StudentDashboard** — stats cards with `formatDuration()`, paginated history table, stats fetched every 60s instead of 5s
+- **FacultyDashboard** — date range/status filters, paginated historical sessions, paginated student history with duration column, category filter support
+- **Scanner.tsx** — replaced state-based scanner instance with ref-based `scannerInstanceRef` + `mountedRef` guard to prevent duplicate camera streams
+- **scanService.ts error parsing** — now handles all 4xx status codes and preserves `details` from backend
+- **Backend scan route errors** — responses now include `message` and `details` for force-exit dialog
+
+### Security
+
+- **CRITICAL — User/Student ID mismatch resolved**: `authenticate()` now queries `SELECT id FROM students WHERE email = $1` for student users; returns `studentId` in auth response; frontend `AuthContext` updated to use `user.studentId ?? user.id`
+- **HIGH — IDOR protection**: new `requireOwnStudentResource` middleware resolves student ownership via email join; applied to `GET /students/:id`, `GET /students/:id/history`, `GET /sessions/active/:studentId`, `GET /sessions/stats/:studentId`; inline checks for `GET /sessions` and `GET /sessions/:id`
+- **HIGH — Race condition fix**: `transition()` now uses `SELECT ... FOR UPDATE` row lock + checks `rowCount` on update to prevent concurrent transitions from overwriting each other
+- **MEDIUM — Search limit**: `searchStudents()` limited to 20 rows to prevent unbounded queries
+- **MEDIUM — Graceful shutdown**: `SIGTERM`/`SIGINT` handlers call `closeDb()` before exit
+- **MEDIUM — Stats polling frequency**: reduced from 5s to 60s to reduce server load
+
 ## [0.4.0] — 2026-07-24
 
 ### Added

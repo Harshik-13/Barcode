@@ -70,6 +70,8 @@ Assume every endpoint is potentially attackable. Every implementation must consi
 - **Replay protection** — QR codes are time-bound (HMAC + timestep)
 - **Duplicate scan prevention** — Prevent double entry/exit
 - **Concurrent request handling** — Handle race conditions (e.g., double-tap scan)
+- **IDOR prevention** — Enforce resource ownership
+- **Race conditions** — Use transactions for critical paths
 - **Audit logging** — Log all state-changing actions
 - **Sensitive data exposure** — Never expose secrets, tokens, or PII
 - **IDOR prevention** — Enforce resource ownership

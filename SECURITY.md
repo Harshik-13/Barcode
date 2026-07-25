@@ -4,7 +4,7 @@
 
 | Version | Supported |
 |---------|-----------|
-| Latest release | ✅ |
+| `production-mvp-1` | ✅ |
 
 ---
 

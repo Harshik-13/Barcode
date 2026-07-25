@@ -9,8 +9,8 @@ Role-based platform that records student attendance and daily work activity insi
 ## Locked Architecture
 
 - **Frontend**: Single React Progressive Web App (PWA)
-- **Backend**: Single REST API (Node.js + Express + SQLite)
-- **Database**: Single relational database (SQLite)
+- **Backend**: Single REST API (Node.js + Express + PostgreSQL)
+- **Database**: Single relational database (PostgreSQL 15+)
 - **Authentication**: Single authentication system (Google OAuth + JWT)
 - **Authorization**: Role-based access control
 
@@ -159,9 +159,9 @@ The project is adapted from **Campus Passport**, a QR-code-based hostel meal att
 
 ---
 
-## API Endpoints (Implemented — Milestone 5.5)
+## API Endpoints (Implemented — Production MVP 1)
 
-All endpoints are mounted under `/api` prefix. All **39 endpoints** are consumed by the frontend UI — 100% alignment.
+All endpoints are mounted under `/api` prefix. All **43 endpoints** are consumed by the frontend UI — 100% alignment.
 
 ### Auth
 | Method | Endpoint | Auth | Role | Frontend |
@@ -181,12 +181,17 @@ All endpoints are mounted under `/api` prefix. All **39 endpoints** are consumed
 | GET | `/api/sessions` | Bearer | All | Sessions page (all) / Student dashboard (filtered) |
 | GET | `/api/sessions/:id` | Bearer | All | Session detail page |
 | GET | `/api/sessions/active/:studentId` | Bearer | All | Student dashboard current session |
+| GET | `/api/sessions/stats/:studentId` | Bearer | All | Student dashboard — stats cards |
+| GET | `/api/sessions/live` | Bearer | All | Live occupancy count + students |
+| GET | `/api/sessions/stats/live` | Bearer | Admin/Faculty | Live occupancy (separate route) |
 | POST | `/api/sessions` | Bearer | Faculty/Admin | (reserved for manual creation) |
 | PATCH | `/api/sessions/:id/start` | Bearer | Faculty/Admin | (reserved) |
 | PATCH | `/api/sessions/:id/exit` | Bearer | Faculty/Admin | (reserved) |
-| PATCH | `/api/sessions/:id/manual-exit` | Bearer | Faculty/Admin | (reserved) |
+| PATCH | `/api/sessions/:id/manual-exit` | Bearer | Faculty/Admin | Scanner force-exit dialog |
 | PATCH | `/api/sessions/:id/complete` | Bearer | Faculty/Admin/Student* | Sessions page + Session detail page (student own sessions) |
 | PATCH | `/api/sessions/:id/archive` | Bearer | Admin | Sessions page — archive button |
+| POST | `/api/sessions/:id/review` | Bearer | Admin/Faculty | Faculty review (approve/reject) |
+| PATCH | `/api/sessions/:id/override` | Bearer | Admin | Sessions page — override button |
 
 *Students can only complete their own sessions (ownership check via `requireOwnership`).
 
@@ -194,14 +199,14 @@ All endpoints are mounted under `/api` prefix. All **39 endpoints** are consumed
 | Method | Endpoint | Auth | Role | Frontend |
 |--------|----------|------|------|----------|
 | GET | `/api/students` | Bearer | All | Students page — paginated list with status filter |
-| GET | `/api/students/:id` | Bearer | All | (reserved for detail view) |
-| GET | `/api/students/:id/history` | Bearer | All | Student dashboard — recent sessions |
+| GET | `/api/students/:id` | Bearer | All | Student detail (IDOR-protected) |
+| GET | `/api/students/:id/history` | Bearer | All | Student dashboard — paginated session history (IDOR-protected) |
 | POST | `/api/students` | Bearer | Admin | Students page — create form |
 | PUT | `/api/students/:id` | Bearer | Admin | (reserved) |
 | PATCH | `/api/students/:id/suspend` | Bearer | Admin | Students page — suspend button |
 | PATCH | `/api/students/:id/depart` | Bearer | Admin | Students page — depart button |
 | GET | `/api/students/lookup` | Bearer | All | (reserved for search) |
-| GET | `/api/students/search` | Bearer | All | (reserved for search) |
+| GET | `/api/students/search` | Bearer | All | Student search (limited to 20 results) |
 
 ### Categories
 | Method | Endpoint | Auth | Role | Frontend |
@@ -243,7 +248,7 @@ All endpoints are mounted under `/api` prefix. All **39 endpoints** are consumed
 
 ### Response Format
 
-All endpoints return camelCase JSON properties. The backend converts SQLite snake_case column names to camelCase at the service layer:
+All endpoints return camelCase JSON properties. The backend converts PostgreSQL snake_case column names to camelCase at the service layer:
 
 | Snake case (DB) | Camel case (API) |
 |-----------------|------------------|
@@ -256,7 +261,7 @@ All endpoints return camelCase JSON properties. The backend converts SQLite snak
 
 ---
 
-## Database Schema (Target)
+## Database Schema (PostgreSQL — Production)
 
 ```sql
 -- Roles
@@ -267,66 +272,112 @@ CREATE TABLE roles (
 
 -- Users (faculty + admin accounts)
 CREATE TABLE users (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  id SERIAL PRIMARY KEY,
   email TEXT UNIQUE NOT NULL,
   name TEXT,
   role_id TEXT NOT NULL REFERENCES roles(id),
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  password_hash TEXT NOT NULL,
+  is_active INTEGER DEFAULT 1,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Students (workspace participants)
 CREATE TABLE students (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  id SERIAL PRIMARY KEY,
   roll TEXT UNIQUE NOT NULL,
   name TEXT,
   email TEXT UNIQUE,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  status TEXT DEFAULT 'active' CHECK (status IN ('active', 'suspended', 'departed')),
+  branch TEXT,
+  section TEXT,
+  password_hash TEXT,
+  is_activated INTEGER DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Work categories
 CREATE TABLE categories (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  id SERIAL PRIMARY KEY,
   name TEXT NOT NULL UNIQUE,
   description TEXT,
   is_active INTEGER DEFAULT 1,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Workspace sessions (core entity)
 CREATE TABLE workspace_sessions (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  id SERIAL PRIMARY KEY,
   student_id INTEGER NOT NULL REFERENCES students(id),
   scanned_by INTEGER REFERENCES users(id),
+  exit_recorder_id INTEGER REFERENCES users(id),
   category_id INTEGER REFERENCES categories(id),
-  entry_time DATETIME NOT NULL,
-  exit_time DATETIME,
-  status TEXT NOT NULL DEFAULT 'pending'
-    CHECK (status IN ('pending', 'active', 'completed')),
+  entry_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  exit_time TIMESTAMP,
+  status TEXT NOT NULL DEFAULT 'active'
+    CHECK (status IN ('active', 'awaiting_summary', 'completed', 'archived')),
   summary TEXT,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  completion_reason TEXT DEFAULT 'NORMAL'
+    CHECK (completion_reason IN ('NORMAL', 'AUTO_COMPLETED', 'MANUAL_EXIT', 'ADMIN_OVERRIDE')),
+  is_manual_exit INTEGER DEFAULT 0,
+  manual_exit_reason TEXT,
+  override_reason TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Notifications
 CREATE TABLE notifications (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  id SERIAL PRIMARY KEY,
   student_id INTEGER NOT NULL REFERENCES students(id),
   session_id INTEGER REFERENCES workspace_sessions(id),
-  type TEXT NOT NULL CHECK (type IN ('entry', 'exit', 'reminder')),
+  type TEXT NOT NULL CHECK (type IN ('entry', 'exit', 'reminder', 'summary_required', 'session_completed', 'session_archived')),
   message TEXT,
   read INTEGER DEFAULT 0,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Activity log (audit trail)
 CREATE TABLE activity_logs (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  id SERIAL PRIMARY KEY,
   user_id INTEGER REFERENCES users(id),
   action TEXT NOT NULL,
   resource_type TEXT,
   resource_id INTEGER,
   details TEXT,
   ip_address TEXT,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Push subscriptions
+CREATE TABLE push_subscriptions (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id),
+  endpoint TEXT NOT NULL,
+  p256dh TEXT NOT NULL,
+  auth TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Faculty notifications
+CREATE TABLE faculty_notifications (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id),
+  message TEXT NOT NULL,
+  type TEXT NOT NULL,
+  read INTEGER DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Activation OTPs
+CREATE TABLE activation_otps (
+  id SERIAL PRIMARY KEY,
+  student_id INTEGER NOT NULL REFERENCES students(id),
+  otp_hash TEXT NOT NULL,
+  activation_token TEXT,
+  attempts INTEGER DEFAULT 0,
+  max_attempts INTEGER DEFAULT 5,
+  expires_at TIMESTAMP NOT NULL,
+  used INTEGER DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 ```
 
@@ -342,3 +393,13 @@ CREATE TABLE activity_logs (
 6. **Offline-first** — Faculty app caches student roster and can queue scans for sync.
 7. **Notification system** — Notifications are auto-created server-side on entry/exit/complete/archive via `createNotification()`. Students poll for unread count every 30s and view full history in the notification center.
 8. **Student account activation** — Admin creates students without passwords. Students self-activate via OTP sent to their derived college email (`roll@vnrvjiet.in`). OTP is bcrypt-hashed, has 10min expiry, max 5 attempts, and 30s resend cooldown. Password is set only after OTP verification via a cryptographic activation token.
+
+9. **IDOR protection** — `requireOwnStudentResource` middleware resolves the calling user's student record via `JOIN students s ON s.email = u.email` and rejects if the resource `studentId`/`id` param does not match. Applied to all student-scoped endpoints.
+
+10. **Race condition prevention** — Session state transitions use `SELECT ... FOR UPDATE` row-level locking inside transactions. The UPDATE checks `rowCount === 0` to detect concurrent modifications and returns a `RACE_CONDITION` error.
+
+11. **Search bounded** — Student search queries are limited to 20 results to prevent unbounded queries on large datasets.
+
+12. **Graceful shutdown** — `SIGTERM`/`SIGINT` handlers close the HTTP server, clear maintenance intervals, close database connections, and force-exit after 10s timeout.
+
+13. **Camera lifecycle** — Camera scanner pauses when browser tab is hidden (`visibilitychange`) and resumes when visible, preventing unnecessary camera resource usage.

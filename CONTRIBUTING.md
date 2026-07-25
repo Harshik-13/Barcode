@@ -93,6 +93,7 @@ Closes PROJ-123
 - Node.js 20 LTS
 - npm 10+
 - Git
+- PostgreSQL 15+ (running on `localhost:5432`)
 
 ### Setup
 
@@ -101,18 +102,22 @@ Closes PROJ-123
 git clone <repo-url>
 cd attendance
 
+# Create databases
+node backend/scripts/create-db.js
+node backend/scripts/create-test-db.js
+
 # Backend
 cd backend
 npm install
 cp .env.example .env
-npm run migrate
-npm run dev
+npm run build
+npm run dev     # starts on port 8080 (auto migrate + seed)
 
 # Frontend
 cd frontend
 npm install
 cp .env.example .env
-npm run dev
+npm run dev     # starts on port 5173
 ```
 
 ---

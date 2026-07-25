@@ -60,6 +60,15 @@ This is the **8Hour Workspace Attendance System** — NOT a hostel meal attendan
 - Seeded data (students, categories, users) is preserved and reused across test files.
 - Run `node scripts/create-test-db.js` from `backend/` to create the test database if missing.
 
+## Production Hardening Notes
+
+- IDOR protection middleware (`requireOwnStudentResource`) must be applied to all student-scoped endpoints
+- Session transitions must use `SELECT ... FOR UPDATE` row locking to prevent race conditions
+- All search endpoints must have a `LIMIT` clause (max 20 results)
+- Camera scanner must handle tab visibility changes (`visibilitychange` event)
+- Graceful shutdown handlers (`SIGTERM`/`SIGINT`) must close HTTP server and DB connections
+- Stats polling intervals should be reasonable (no less than 60s)
+
 ## Verification Checklist
 
 Before completing any task:
@@ -68,4 +77,7 @@ Before completing any task:
 - [ ] Is input validated server-side?
 - [ ] Are hostel/meal terms removed?
 - [ ] Are race conditions handled?
+- [ ] Is IDOR protection applied where needed?
+- [ ] Are search queries bounded?
+- [ ] Are camera/scanner lifecycle events handled?
 - [ ] Are tests passing?
