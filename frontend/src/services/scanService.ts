@@ -45,7 +45,7 @@ export async function submitScan(barcode: string): Promise<ScanResult> {
       return {
         success: false,
         data: {
-          error: (apiErr.error as ScanResultCode) || 'SERVER_ERROR',
+          error: (apiErr.error as Exclude<ScanResultCode, 'SUCCESS_ENTRY' | 'SUCCESS_EXIT'>) || 'SERVER_ERROR',
           message: apiErr.message || 'Request failed',
           details: apiErr.details,
         },
