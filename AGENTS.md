@@ -6,13 +6,12 @@ This file documents conventions and instructions for AI agents working on the 8H
 
 This is the **8Hour Workspace Attendance System** — NOT a hostel meal attendance system. The domain is workspace attendance for startup environments.
 
-**Status: ReadyVersion-1.0** — All development phases complete. System is production-ready and running. New features should follow existing patterns and maintain backward compatibility.
+**Status: ReadyVersion-1.1** — All development phases complete. System is production-ready and running. New features should follow existing patterns and maintain backward compatibility.
 
 ## Source of Truth
 
 - `ARCHITECTURE.md` — Locked architecture, domain model, workflows
 - `PRINCIPLES.md` — Engineering principles, security, definition of done
-- `ROADMAP.md` — Implementation phases and migration plan
 - `AGENTS.md` — This file: agent conventions
 
 ## Key Directives

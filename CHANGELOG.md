@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [ReadyVersion-1.1] — 2026-07-26
+
+### Fixed
+
+- **CRITICAL — Scan network error**: `submitScan` in `scanService.ts` was using `fetch('/api/scan', ...)` with a relative URL, making it dependent on the Vite dev proxy. Replaced with the centralized `api()` client from `api.ts` which uses `VITE_API_BASE_URL` for absolute URLs and inherits retry logic (2 retries on `TypeError`) and shared auth token management.
+
+### Removed
+
+- **Stale design docs and legacy code**: Removed `docs/` (67 design-phase artifacts), `passport/` (68 legacy files), `PHASES.md`, and `ROADMAP.md` from the repo.
+
+### Changed
+
+- **Installation guide**: `create-db.js`/`create-test-db.js` now read `DATABASE_URL` from env instead of hardcoded password. Quick Start steps fixed to run scripts from `backend/`. Added frontend `.env` setup step.
+
 ## [ReadyVersion-1.0] — 2026-07-26
 
 ### Added
