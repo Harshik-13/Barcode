@@ -28,23 +28,27 @@ Role-based platform that records student attendance and daily work activity insi
 ### Prerequisites
 
 - **PostgreSQL 15+** running on `localhost:5432`
-- Databases: `workspace` (main) and `workspace_test` (tests)
+- **Node.js 18+**
+
+### Backend Setup
 
 ```bash
-# Create databases
-node backend/scripts/create-db.js
-node backend/scripts/create-test-db.js
-
-# Backend
 cd backend
+cp .env.example .env        # edit DATABASE_URL if your PG password differs
 npm install
+node scripts/create-db.js   # creates 'workspace' database
+node scripts/create-test-db.js  # creates 'workspace_test' database
 npm run build
-npm run dev     # starts on port 8080 (auto migrate + seed)
+npm run dev                 # starts on port 8080 (auto migrate + seed)
+```
 
-# Frontend
+### Frontend Setup
+
+```bash
 cd frontend
+cp .env.example .env
 npm install
-npm run dev     # starts on port 5173
+npm run dev                 # starts on port 5173
 ```
 
 ### Default Credentials
@@ -105,7 +109,6 @@ npm test    # 160 tests across 11 test suites
 │       ├── services/  # API client
 │       └── store/     # Auth context
 ├── shared/            # Shared types, constants, validators
-└── docs/              # Documentation
 ```
 
 ---
@@ -117,24 +120,23 @@ npm test    # 160 tests across 11 test suites
 | `ARCHITECTURE.md` | System architecture and domain model |
 | `PRINCIPLES.md` | Engineering principles and security |
 | `AGENTS.md` | Conventions for AI agents |
-| `docs/` | Detailed design, API contracts, UI/UX specs |
 
 ---
 
 ## Environment Variables
 
-Copy `.env.example` to `backend/.env`:
+Copy `backend/.env.example` to `backend/.env` and edit:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `DATABASE_URL` | `postgresql://postgres:pass@localhost:5432/workspace` | Main database |
-| `JWT_SECRET` | `dev-secret-change-in-production` | Token signing key |
+| `DATABASE_URL` | `postgresql://postgres:password@localhost:5432/workspace` | Main database |
+| `JWT_SECRET` | `change-me-in-production` | Token signing key |
 | `JWT_EXPIRY_HOURS` | `12` | Token lifetime |
+| `CORS_ORIGINS` | `http://localhost:5173` | Allowed origins |
 | `SMTP_HOST` | `smtp.gmail.com` | Email server |
 | `SMTP_USER` | — | Gmail address |
 | `SMTP_PASS` | — | Gmail app password |
-| `FRONTEND_URL` | `http://localhost:5173` | Frontend origin (for reset links) |
 | `VAPID_PUBLIC_KEY` | — | Push notification public key |
 | `VAPID_PRIVATE_KEY` | — | Push notification private key |
-| `CORS_ORIGINS` | `http://localhost:5173` | Allowed origins |
+| `FRONTEND_URL` | `http://localhost:5173` | Frontend origin (for reset links) |
 | `STUDENT_EMAIL_DOMAIN` | `@vnrvjiet.in` | Student email domain |

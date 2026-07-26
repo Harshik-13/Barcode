@@ -1,12 +1,24 @@
 const { Client } = require('pg');
-const c = new Client({ connectionString: 'postgresql://postgres:Harshik@13@localhost:5432/postgres' });
-c.connect().then(() => {
-  return c.query("SELECT 1 FROM pg_database WHERE datname = 'workspace'");
-}).then(r => {
-  if (r.rows.length === 0) {
-    return c.query('CREATE DATABASE workspace');
+
+const DEFAULT_URL = 'postgresql://postgres:password@localhost:5432/postgres';
+const connectionString = process.env.DATABASE_URL || DEFAULT_URL;
+
+const adminConnString = connectionString.replace(/\/[^/]*$/, '/postgres');
+
+async function main() {
+  const client = new Client({ connectionString: adminConnString });
+  await client.connect();
+  const res = await client.query("SELECT 1 FROM pg_database WHERE datname = 'workspace'");
+  if (res.rows.length === 0) {
+    await client.query('CREATE DATABASE workspace');
+    console.log('Created database \'workspace\'');
+  } else {
+    console.log('Database \'workspace\' already exists');
   }
-}).then(() => {
-  console.log('ready');
-  return c.end();
-}).catch(e => console.log(e.message));
+  await client.end();
+}
+
+main().catch(err => {
+  console.error(err.message);
+  process.exit(1);
+});
