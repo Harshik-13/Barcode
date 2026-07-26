@@ -1,9 +1,17 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { requireAuth } from '../middleware/auth';
 import { getVapidPublicKey, createPushSubscription, deactivatePushSubscription, getPushSubscriptions } from '../services/push';
+import { resolveStudentId } from '../services/student';
 import { validateBody } from '../utils/validation';
 
 const router = Router();
+
+async function getStudentId(req: Request): Promise<number | null> {
+  if (req.user!.role === 'student') {
+    return resolveStudentId(req.user!.userId);
+  }
+  return null;
+}
 
 router.get('/push/vapid-public-key', (_req: Request, res: Response) => {
   res.json({ data: { publicKey: getVapidPublicKey() } });
@@ -13,7 +21,12 @@ router.get('/push/subscriptions',
   requireAuth,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const subs = await getPushSubscriptions(req.user!.userId);
+      const studentId = await getStudentId(req);
+      if (studentId === null) {
+        res.json({ data: [] });
+        return;
+      }
+      const subs = await getPushSubscriptions(studentId);
       res.json({ data: subs.map(s => ({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth }, userAgent: s.userAgent })) });
     } catch (err) { next(err); }
   }
@@ -26,12 +39,18 @@ router.post('/push/subscribe',
   ]),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
+      const studentId = await getStudentId(req);
+      if (studentId === null) {
+        res.status(403).json({ error: 'INSUFFICIENT_PERMISSIONS', message: 'Only students can subscribe to push notifications' });
+        return;
+      }
+
       if (!req.body.keys || typeof req.body.keys !== 'object' || !req.body.keys.p256dh || !req.body.keys.auth) {
         res.status(400).json({ error: 'VALIDATION_ERROR', message: 'keys object with p256dh and auth is required' });
         return;
       }
       const sub = await createPushSubscription(
-        req.user!.userId,
+        studentId,
         req.body.endpoint,
         req.body.keys.p256dh,
         req.body.keys.auth,
@@ -49,7 +68,12 @@ router.post('/push/unsubscribe',
   ]),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      await deactivatePushSubscription(req.user!.userId, req.body.endpoint);
+      const studentId = await getStudentId(req);
+      if (studentId === null) {
+        res.json({ message: 'Unsubscribed successfully' });
+        return;
+      }
+      await deactivatePushSubscription(studentId, req.body.endpoint);
       res.json({ message: 'Unsubscribed successfully' });
     } catch (err) { next(err); }
   }
