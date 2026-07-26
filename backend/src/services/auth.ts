@@ -12,20 +12,24 @@ interface UserRow {
   password_hash: string;
   role_id: string;
   status: string;
+  password_changed_at: string | null;
 }
 
 interface TokenPayload {
   sub: number;
   type: string;
+  pca: number;
   iat: number;
   exp: number;
 }
 
-function signToken(userId: number, role: string): string {
+function signToken(userId: number, role: string, passwordChangedAt: Date | string): string {
   const now = Math.floor(Date.now() / 1000);
+  const pcaDate = typeof passwordChangedAt === 'string' ? new Date(passwordChangedAt) : passwordChangedAt;
   const payload: TokenPayload = {
     sub: userId,
     type: role,
+    pca: Math.floor(pcaDate.getTime() / 1000),
     iat: now,
     exp: now + config.jwt.expiryHours * 3600,
   };
@@ -80,7 +84,8 @@ export async function authenticate(loginId: string, password: string, ip?: strin
     throw new ForbiddenError('Your account is not active');
   }
 
-  const token = signToken(user.id, user.role_id);
+  const pca = user.password_changed_at ?? new Date().toISOString();
+  const token = signToken(user.id, user.role_id, pca);
 
   await logAudit({
     actorType: user.role_id as 'faculty' | 'admin' | 'student',

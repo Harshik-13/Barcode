@@ -18,6 +18,8 @@ import activationRoutes from './routes/activation';
 import facultyRoutes from './routes/faculty';
 import facultyActivationRoutes from './routes/facultyActivation';
 import dashboardRoutes from './routes/dashboard';
+import profileRoutes from './routes/profile';
+import studentImportRoutes from './routes/studentImport';
 
 const app = express();
 
@@ -40,6 +42,8 @@ app.use('/api', activationRoutes);
 app.use('/api', facultyRoutes);
 app.use('/api', facultyActivationRoutes);
 app.use('/api', dashboardRoutes);
+app.use('/api', profileRoutes);
+app.use('/api', studentImportRoutes);
 
 app.use((_req, res) => {
   res.status(404).json({ error: 'NOT_FOUND', message: 'Route not found' });

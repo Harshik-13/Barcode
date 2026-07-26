@@ -27,6 +27,14 @@ node_modules/
 .DS_Store
 Thumbs.db
 
+# Uploads
+uploads/
+
 # Logs
 *.log
 logs/
+
+# typescript
+*.tsbuildinfo
+
+backend/data/imports/*.xlsx

@@ -1,7 +1,8 @@
-import { api } from './api';
+import { api, getAuthToken } from './api';
+import { env } from '../utils/env';
 import type {
   Student, Category, WorkspaceSession, ActivityLog,
-  AuthResponse,
+  AuthResponse, ProfileData,
 } from '@workspace/shared';
 
 export interface DataResponse<T> {
@@ -22,7 +23,7 @@ export interface SessionWithDetails extends WorkspaceSession {
   studentRoll?: string;
   studentName?: string;
   categoryName?: string;
-  durationSeconds?: number | null;
+  durationSeconds: number | null;
 }
 
 export const authApi = {
@@ -50,9 +51,10 @@ export const categoriesApi = {
 };
 
 export const studentsApi = {
-  list: (page = 1, limit = 20, status?: string) => {
+  list: (page = 1, limit = 20, status?: string, search?: string) => {
     const params = new URLSearchParams({ page: String(page), limit: String(limit) });
     if (status) params.set('status', status);
+    if (search) params.set('q', search);
     return api<PaginatedDataResponse<Student>>(`/api/students?${params}`);
   },
   lookup: (q: string) =>
@@ -104,6 +106,8 @@ export const sessionsApi = {
     api<DataResponse<SessionWithDetails>>(`/api/sessions/${id}/manual-exit`, { method: 'PATCH', body: { reason, categoryId } }),
   complete: (id: number, summary: string) =>
     api<DataResponse<SessionWithDetails>>(`/api/sessions/${id}/complete`, { method: 'PATCH', body: { summary } }),
+  updateCategory: (id: number, categoryId: number) =>
+    api<DataResponse<SessionWithDetails>>(`/api/sessions/${id}/category`, { method: 'PATCH', body: { categoryId } }),
   archive: (id: number, reason?: string) =>
     api<DataResponse<SessionWithDetails>>(`/api/sessions/${id}/archive`, { method: 'PATCH', body: { reason } }),
 };
@@ -247,6 +251,38 @@ export interface CategoryUsage {
   deletionAllowed: boolean;
   blockedReason: string | null;
 }
+
+export const profileApi = {
+  get: () =>
+    api<DataResponse<ProfileData>>('/api/profile'),
+  update: (data: { name?: string; hostel?: string | null; branch?: string | null; section?: string | null }) =>
+    api<DataResponse<ProfileData>>('/api/profile', { method: 'PATCH', body: data }),
+  pictureUrl: (userId: number) =>
+    `${env.apiBaseUrl}/api/profile/picture/${userId}`,
+  uploadPicture: async (file: File): Promise<{ profilePicture: string }> => {
+    const formData = new FormData();
+    formData.append('picture', file);
+    const token = getAuthToken();
+    const response = await fetch(`${env.apiBaseUrl}/api/profile/picture`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ error: 'NETWORK_ERROR', message: 'Upload failed' }));
+      throw err;
+    }
+    return response.json().then(r => r.data);
+  },
+  removePicture: async (): Promise<void> => {
+    await api('/api/profile/picture', { method: 'DELETE' });
+  },
+  changePassword: (currentPassword: string, newPassword: string, confirmPassword: string) =>
+    api<{ message: string }>('/api/profile/change-password', {
+      method: 'PATCH',
+      body: { currentPassword, newPassword, confirmPassword },
+    }),
+};
 
 export const facultyActivationApi = {
   start: (email: string) =>

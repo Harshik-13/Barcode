@@ -37,9 +37,15 @@ export const ACTOR_TYPE = {
 } as const;
 
 export const STUDENT_STATUS = {
+  INVITED: 'invited',
   ENROLLED: 'enrolled',
   SUSPENDED: 'suspended',
   DEPARTED: 'departed',
+} as const;
+
+export const STUDENT_SOURCE = {
+  MANUAL: 'manual',
+  EXCEL_IMPORT: 'excel_import',
 } as const;
 
 export const FACULTY_STATUS = {
@@ -94,6 +100,33 @@ export const SCAN_RESULT = {
 } as const;
 
 export type ScanResultCode = typeof SCAN_RESULT[keyof typeof SCAN_RESULT];
+
+export const BRANCHES = [
+  'CSE', 'ECE', 'EEE', 'MECH', 'CIVIL', 'IT', 'AI&ML', 'CS&IT',
+  'AIML', 'DST', 'CSD', 'CST', 'CSBS', 'IOT', 'BCT',
+] as const;
+
+export const SECTIONS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'] as const;
+
+export const HOSTELS = [
+  'BH1', 'BH2', 'BH3', 'BH4', 'BH5',
+  'GH1', 'GH2', 'GH3', 'GH4', 'GH5',
+] as const;
+
+export const PROFILE_PICTURE = {
+  MAX_SIZE_BYTES: 2 * 1024 * 1024,
+  ALLOWED_MIME_TYPES: ['image/jpeg', 'image/png', 'image/webp'],
+  ALLOWED_EXTENSIONS: ['.jpg', '.jpeg', '.png', '.webp'],
+  UPLOAD_DIR: 'uploads/profiles',
+} as const;
+
+export const IMPORT = {
+  MAX_SIZE_BYTES: 10 * 1024 * 1024,
+  ALLOWED_MIME_TYPES: ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
+  ALLOWED_EXTENSIONS: ['.xlsx'],
+  MAX_BATCH_SIZE: 500,
+  MAX_ROWS: 5000,
+} as const;
 
 export const GRACE_PERIOD_MINUTES = 30;
 export const AUTO_COMPLETE_CHECK_INTERVAL_MINUTES = 5;

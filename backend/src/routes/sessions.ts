@@ -1,7 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { requireAuth, requireRole, requireOwnStudentResource } from '../middleware/auth';
 import { getDb } from '../db';
-import { getSessionById, listSessions, createSession, startSession, exitSession, manualExitSession, completeSession, archiveSession, getLiveSessionCount, getLiveStudents, overrideSession, getActiveSessionForStudent, getStudentStats, reviewSession } from '../services/session';
+import { getSessionById, listSessions, createSession, startSession, exitSession, manualExitSession, completeSession, archiveSession, getLiveSessionCount, getLiveStudents, overrideSession, getActiveSessionForStudent, getStudentStats, reviewSession, updateSessionCategory } from '../services/session';
 import { adminLimiter } from '../middleware/rateLimiter';
 import { parsePagination } from '../utils/pagination';
 import { validateBody } from '../utils/validation';
@@ -142,16 +142,63 @@ router.patch('/sessions/:id/manual-exit',
   }
 );
 
+router.patch('/sessions/:id/category',
+  requireAuth,
+  validateBody([
+    { field: 'categoryId', type: 'number', required: true },
+  ]),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const sessionId = parseInt(req.params.id as string, 10);
+      const categoryId = req.body.categoryId as number;
+
+      if (req.user!.role === 'student') {
+        const db = getDb();
+        const ownResult = await db.query('SELECT s.id FROM students s JOIN users u ON s.email = u.email WHERE u.id = $1', [req.user!.userId]);
+        if (ownResult.rows.length === 0) {
+          res.status(403).json({ error: 'INSUFFICIENT_PERMISSIONS', message: 'You do not own this resource' });
+          return;
+        }
+        const studentId = (ownResult.rows[0] as { id: number }).id;
+        const existing = await getSessionById(sessionId);
+        if (existing.studentId !== studentId) {
+          res.status(403).json({ error: 'INSUFFICIENT_PERMISSIONS', message: 'You do not own this resource' });
+          return;
+        }
+      }
+
+      const session = await updateSessionCategory(sessionId, categoryId, req.user!.userId);
+      res.json({ data: session });
+    } catch (err) { next(err); }
+  }
+);
+
 router.patch('/sessions/:id/complete',
   adminLimiter,
   requireAuth,
-  requireRole('admin', 'faculty'),
   validateBody([
     { field: 'summary', type: 'string', required: true, min: 1, max: 2000 },
   ]),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const session = await completeSession(parseInt(req.params.id as string, 10), req.user!.userId, req.body.summary, req.user!.role, req.ip as string);
+      const sessionId = parseInt(req.params.id as string, 10);
+
+      if (req.user!.role === 'student') {
+        const db = getDb();
+        const ownResult = await db.query('SELECT s.id FROM students s JOIN users u ON s.email = u.email WHERE u.id = $1', [req.user!.userId]);
+        if (ownResult.rows.length === 0) {
+          res.status(403).json({ error: 'INSUFFICIENT_PERMISSIONS', message: 'You do not own this resource' });
+          return;
+        }
+        const studentId = (ownResult.rows[0] as { id: number }).id;
+        const existing = await getSessionById(sessionId);
+        if (existing.studentId !== studentId) {
+          res.status(403).json({ error: 'INSUFFICIENT_PERMISSIONS', message: 'You do not own this resource' });
+          return;
+        }
+      }
+
+      const session = await completeSession(sessionId, req.user!.userId, req.body.summary, req.user!.role, req.ip as string);
       res.json({ data: session });
     } catch (err) { next(err); }
   }

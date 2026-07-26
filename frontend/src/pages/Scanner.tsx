@@ -99,7 +99,7 @@ export default function Scanner() {
 
   return (
     <div className="scanner-page" style={{ maxWidth: '500px', margin: '0 auto' }}>
-      <div className="scanner-header" style={{ marginBottom: '16px' }}>
+      <div className="scanner-header" style={{ marginBottom: '12px' }}>
         <h1 style={{ fontSize: '20px', marginBottom: '4px' }}>Attendance Scanner</h1>
         {user && <p style={{ color: '#6b7280', fontSize: '13px', margin: 0 }}>Scanned by: {user.name} ({user.role})</p>}
       </div>
@@ -125,8 +125,8 @@ export default function Scanner() {
 
         {lastResult && (
           <div style={{
-            marginTop: '16px',
-            padding: '20px',
+            marginTop: '12px',
+            padding: '16px',
             borderRadius: '10px',
             border: '2px solid',
             borderColor: lastResult.success ? '#10b981' : '#ef4444',
@@ -206,8 +206,8 @@ export default function Scanner() {
 
       {/* Force Exit Dialog */}
       {showForceExit && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-          <div style={{ padding: '24px', background: '#fff', borderRadius: '8px', width: '90%', maxWidth: '400px' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '16px' }}>
+          <div style={{ padding: '20px', background: '#fff', borderRadius: '8px', width: '100%', maxWidth: '400px' }}>
             <h3 style={{ fontSize: '18px', margin: '0 0 4px' }}>Force Exit Session</h3>
             <p style={{ fontSize: '14px', color: '#6b7280', margin: '0 0 16px' }}>
               This will manually exit the student's current session requiring a summary later.

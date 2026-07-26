@@ -66,7 +66,7 @@ export default function SessionDetailPage() {
     return <div style={{ padding: '16px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#dc2626' }}>{error || 'Session not found'}</div>;
   }
 
-  const isOwner = user?.role === 'student' && session.studentId === user?.id;
+  const isOwner = user?.role === 'student' && session.studentId === (user?.studentId ?? user?.id);
   const canSubmit = (user?.role === 'student' && isOwner || user?.role === 'faculty' || user?.role === 'admin') && session.status === 'awaiting_summary';
 
   return (

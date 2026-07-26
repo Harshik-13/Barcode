@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../store/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { sessionsApi, notificationsApi } from '../services/apiService';
+import { sessionsApi, notificationsApi, categoriesApi } from '../services/apiService';
 import type { SessionWithDetails, NotificationItem, SessionStats } from '../services/apiService';
+import type { Category } from '@workspace/shared';
 import type { SessionStatus } from '@workspace/shared';
 
 const STATUS_LABELS: Record<SessionStatus, string> = {
@@ -41,19 +42,20 @@ export default function StudentDashboard() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [stats, setStats] = useState<SessionStats | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [categoryLoading, setCategoryLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const studentId = user?.studentId ?? user?.id;
-
   const fetchData = useCallback(() => {
     if (!user) return;
+    const sid = user.studentId ?? user.id;
     setError('');
 
     Promise.all([
-      sessionsApi.getActive(studentId).catch(() => ({ data: null })),
-      sessionsApi.list({ studentId, limit: 10, page: historyPage }).catch(() => ({ data: [], pagination: { page: 1, limit: 10, total: 0, totalPages: 0 } })),
-      sessionsApi.list({ studentId, status: 'awaiting_summary', limit: 20 }).catch(() => ({ data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } })),
+      sessionsApi.getActive(sid).catch(() => ({ data: null })),
+      sessionsApi.list({ studentId: sid, limit: 10, page: historyPage }).catch(() => ({ data: [], pagination: { page: 1, limit: 10, total: 0, totalPages: 0 } })),
+      sessionsApi.list({ studentId: sid, status: 'awaiting_summary', limit: 20 }).catch(() => ({ data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } })),
       notificationsApi.list(1, 5).catch(() => ({ data: [], pagination: { page: 1, limit: 5, total: 0, totalPages: 0 } })),
       notificationsApi.unreadCount().catch(() => ({ data: { count: 0 } })),
     ])
@@ -68,12 +70,13 @@ export default function StudentDashboard() {
       })
       .catch(() => setError('Failed to load dashboard'))
       .finally(() => setLoading(false));
-  }, [user, studentId, historyPage]);
+  }, [user, historyPage]);
 
   const fetchStats = useCallback(() => {
     if (!user) return;
-    sessionsApi.stats(studentId).then(r => setStats(r.data)).catch(() => {});
-  }, [user, studentId]);
+    const sid = user.studentId ?? user.id;
+    sessionsApi.stats(sid).then(r => setStats(r.data)).catch(() => {});
+  }, [user]);
 
   useEffect(() => {
     if (!user) return;
@@ -93,6 +96,25 @@ export default function StudentDashboard() {
     const interval = setInterval(fetchStats, 60000);
     return () => clearInterval(interval);
   }, [fetchStats, user]);
+
+  useEffect(() => {
+    if (!activeSession || activeSession.categoryId !== null) return;
+    categoriesApi.list('active').then(r => setCategories(r.data)).catch(() => {});
+  }, [activeSession]);
+
+  async function handleSelectCategory(categoryId: number) {
+    if (!activeSession) return;
+    setCategoryLoading(true);
+    try {
+      await sessionsApi.updateCategory(activeSession.id, categoryId);
+      setActiveSession(null);
+      fetchData();
+    } catch {
+      setError('Failed to set category');
+    } finally {
+      setCategoryLoading(false);
+    }
+  }
 
   if (loading) {
     return <div style={{ textAlign: 'center', padding: '48px', color: '#6b7280' }}>Loading your dashboard...</div>;
@@ -116,7 +138,7 @@ export default function StudentDashboard() {
         </div>
       )}
 
-      <div style={{ display: 'grid', gap: '20px', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))' }}>
+      <div className="resp-grid-student" style={{ display: 'grid', gap: '20px', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))' }}>
         <div style={{ padding: '20px', background: '#fff', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
           <h2 style={{ fontSize: '18px', marginBottom: '12px' }}>Current Session</h2>
           {activeSession ? (
@@ -129,7 +151,25 @@ export default function StudentDashboard() {
               </div>
               <div style={{ marginBottom: '4px' }}><span style={{ color: '#6b7280', fontSize: '14px' }}>Entry </span><span style={{ fontSize: '14px' }}>{new Date(activeSession.entryTime).toLocaleString()}</span></div>
               {activeSession.exitTime && <div style={{ marginBottom: '4px' }}><span style={{ color: '#6b7280', fontSize: '14px' }}>Exit </span><span style={{ fontSize: '14px' }}>{new Date(activeSession.exitTime).toLocaleString()}</span></div>}
-              {activeSession.categoryName && <div style={{ marginBottom: '4px' }}><span style={{ color: '#6b7280', fontSize: '14px' }}>Category </span><span style={{ fontSize: '14px' }}>{activeSession.categoryName}</span></div>}
+              {activeSession.categoryName
+                ? <div style={{ marginBottom: '4px' }}><span style={{ color: '#6b7280', fontSize: '14px' }}>Category </span><span style={{ fontSize: '14px' }}>{activeSession.categoryName}</span></div>
+                : (
+                  <div style={{ marginBottom: '4px' }}>
+                    <span style={{ color: '#6b7280', fontSize: '14px' }}>Category </span>
+                    <select
+                      value=""
+                      disabled={categoryLoading}
+                      onChange={(e) => { const val = parseInt(e.target.value, 10); if (val) handleSelectCategory(val); }}
+                      style={{ fontSize: '13px', padding: '4px 8px', borderRadius: '4px', border: '1px solid #d1d5db' }}
+                    >
+                      <option value="">Select category...</option>
+                      {categories.map((c) => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
+                    {categoryLoading && <span style={{ marginLeft: '8px', fontSize: '12px', color: '#6b7280' }}>Saving...</span>}
+                  </div>
+                )}
               {activeSession.status === 'active' && (
                 <div style={{ marginBottom: '4px' }}><span style={{ color: '#6b7280', fontSize: '14px' }}>Duration </span><span style={{ fontSize: '14px', fontWeight: 500 }}>{formatDuration(Math.round((Date.now() - new Date(activeSession.entryTime).getTime()) / 1000))}</span></div>
               )}
@@ -190,7 +230,7 @@ export default function StudentDashboard() {
           <p style={{ color: '#9ca3af', fontSize: '14px' }}>No sessions yet</p>
         ) : (
           <>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+            <div className="resp-table-wrap"><table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid #e5e7eb', textAlign: 'left' }}>
                   <th style={{ padding: '8px 12px', color: '#6b7280', fontWeight: 500 }}>Date</th>
@@ -219,7 +259,7 @@ export default function StudentDashboard() {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
             {historyTotalPages > 1 && (
               <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '16px' }}>
                 <button disabled={historyPage <= 1} onClick={() => setHistoryPage(historyPage - 1)} style={{ padding: '6px 12px', border: '1px solid #e5e7eb', borderRadius: '4px', background: '#fff', cursor: historyPage <= 1 ? 'default' : 'pointer', opacity: historyPage <= 1 ? 0.5 : 1 }}>

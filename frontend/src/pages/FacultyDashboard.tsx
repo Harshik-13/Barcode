@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../store/AuthContext';
 import { sessionsApi, sessionsStatsApi, studentsApi, categoriesApi } from '../services/apiService';
-import type { SessionWithDetails, Category } from '../services/apiService';
+import type { SessionWithDetails } from '../services/apiService';
+import type { Category } from '@workspace/shared';
 
 const STATUS_LABELS: Record<string, string> = {
   created: 'Created',
@@ -176,14 +177,14 @@ export default function FacultyDashboard() {
         <StatCard label="Today's Sessions" value={todaySessions.length} color="#8b5cf6" />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px', marginBottom: '24px' }}>
+      <div className="resp-grid-two-col" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px', marginBottom: '24px' }}>
         <div style={{ padding: '20px', background: '#fff', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
           <h2 style={{ fontSize: '16px', marginBottom: '12px' }}>Students Inside</h2>
           {liveStudents.length === 0 ? (
             <p style={{ color: '#9ca3af', fontSize: '14px' }}>No students currently inside</p>
           ) : (
             <div style={{ maxHeight: '240px', overflowY: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+              <div className="resp-table-wrap compact"><table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                 <thead><tr style={{ borderBottom: '1px solid #e5e7eb', textAlign: 'left' }}>
                   <th style={{ padding: '6px 8px', color: '#6b7280', fontWeight: 500 }}>Student</th>
                   <th style={{ padding: '6px 8px', color: '#6b7280', fontWeight: 500 }}>Roll</th>
@@ -198,13 +199,14 @@ export default function FacultyDashboard() {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </table></div>
             </div>
           )}
         </div>
 
-        <div style={{ padding: '20px', background: '#fff', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
+          <div style={{ padding: '20px', background: '#fff', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
           <h2 style={{ fontSize: '16px', marginBottom: '12px' }}>Student Search</h2>
+          
           <input
             placeholder="Search by name, roll, or email..."
             value={searchQuery}
@@ -246,7 +248,7 @@ export default function FacultyDashboard() {
             <p style={{ color: '#9ca3af', fontSize: '13px' }}>No session history</p>
           ) : (
             <>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+              <div className="resp-table-wrap compact"><table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                 <thead><tr style={{ borderBottom: '1px solid #e5e7eb', textAlign: 'left' }}>
                   <th style={{ padding: '6px 8px', color: '#6b7280', fontWeight: 500 }}>Entry</th>
                   <th style={{ padding: '6px 8px', color: '#6b7280', fontWeight: 500 }}>Exit</th>
@@ -269,7 +271,7 @@ export default function FacultyDashboard() {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </table></div>
               {studentHistoryTotalPages > 1 && (
                 <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '12px' }}>
                   <button disabled={studentHistoryPage <= 1} onClick={() => handleStudentHistoryPage(studentHistoryPage - 1)}
@@ -321,7 +323,7 @@ export default function FacultyDashboard() {
           <p style={{ color: '#9ca3af', fontSize: '14px' }}>No sessions match the filters</p>
         ) : (
           <>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+            <div className="resp-table-wrap"><table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid #e5e7eb', textAlign: 'left' }}>
                   <th style={{ padding: '8px 12px', color: '#6b7280', fontWeight: 500 }}>Student</th>
@@ -350,7 +352,7 @@ export default function FacultyDashboard() {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
             {filterTotalPages > 1 && (
               <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '12px' }}>
                 <button disabled={filterPage <= 1} onClick={() => setFilterPage(filterPage - 1)}
@@ -377,7 +379,7 @@ export default function FacultyDashboard() {
         {activeSessions.length === 0 ? (
           <p style={{ color: '#9ca3af', fontSize: '14px' }}>No active sessions</p>
         ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+          <div className="resp-table-wrap compact"><table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid #e5e7eb', textAlign: 'left' }}>
                 <th style={{ padding: '8px 12px', color: '#6b7280', fontWeight: 500 }}>Student</th>
@@ -399,8 +401,8 @@ export default function FacultyDashboard() {
                   </td>
                 </tr>
               ))}
-            </tbody>
-          </table>
+              </tbody>
+          </table></div>
         )}
       </div>
     </div>

@@ -39,8 +39,8 @@ export default function ActivityLogsPage() {
         </div>
       )}
 
-      <div style={{ marginBottom: '16px' }}>
-        <label style={{ fontSize: '14px', color: '#6b7280', marginRight: '8px' }}>Actor Type Filter:</label>
+      <div className="resp-stack@mobile" style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <label style={{ fontSize: '14px', color: '#6b7280', whiteSpace: 'nowrap' }}>Actor Type Filter:</label>
         <select value={actorTypeFilter || ''} onChange={(e) => { setActorTypeFilter(e.target.value || undefined); setPage(1); }} style={{ padding: '6px 12px', border: '1px solid #e5e7eb', borderRadius: '4px', fontSize: '14px' }}>
           <option value="">All</option>
           <option value="student">Student</option>
@@ -48,11 +48,11 @@ export default function ActivityLogsPage() {
           <option value="admin">Admin</option>
           <option value="system">System</option>
         </select>
-        <span style={{ marginLeft: '12px', fontSize: '14px', color: '#6b7280' }}>{total} log(s)</span>
+        <span style={{ fontSize: '14px', color: '#6b7280' }}>{total} log(s)</span>
       </div>
 
       <div style={{ padding: '20px', background: '#fff', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+        <div className="resp-table-wrap"><table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
           <thead>
             <tr style={{ borderBottom: '1px solid #e5e7eb', textAlign: 'left' }}>
               <th style={{ padding: '8px 12px', color: '#6b7280', fontWeight: 500 }}>Time</th>
@@ -86,7 +86,7 @@ export default function ActivityLogsPage() {
               ))
             )}
           </tbody>
-        </table>
+            </table></div>
 
         {totalPages > 1 && (
           <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '16px' }}>

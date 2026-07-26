@@ -55,3 +55,24 @@ export async function sendOtpEmail(toEmail: string, otp: string): Promise<void> 
     throw err;
   }
 }
+
+export async function sendPasswordResetEmail(toEmail: string, resetLink: string): Promise<void> {
+  if (!transport || isTest) {
+    logger.info(`[EMAIL] To: ${toEmail} — Password reset link: ${resetLink}`);
+    return;
+  }
+
+  try {
+    await transport.sendMail({
+      from: config.email.from,
+      to: toEmail,
+      subject: 'Reset Your 8Hour Workspace Password',
+      text: `You requested a password reset.\n\nClick the link below to reset your password. This link expires in 15 minutes.\n\n${resetLink}\n\nIf you did not request this, please ignore this email.`,
+      html: `<p>You requested a password reset.</p><p>Click the link below to reset your password. This link expires in <strong>15 minutes</strong>.</p><p><a href="${resetLink}">${resetLink}</a></p><p>If you did not request this, please ignore this email.</p>`,
+    });
+    logger.info(`Password reset email sent to ${toEmail}`);
+  } catch (err) {
+    logger.error(`Failed to send password reset email to ${toEmail}`, { error: (err as Error).message });
+    throw err;
+  }
+}

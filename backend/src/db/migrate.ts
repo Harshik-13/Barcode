@@ -176,6 +176,34 @@ export async function migrate(options?: { skipClose?: boolean }): Promise<void> 
 
   await db.query(`CREATE INDEX IF NOT EXISTS idx_push_subscriptions_student ON push_subscriptions(student_id, active)`);
 
+  // 12. Add hostel to students (idempotent)
+  try { await db.query(`ALTER TABLE students ADD COLUMN hostel TEXT`); } catch { /* column already exists */ }
+
+  // 13. Add profile_picture to users (idempotent)
+  try { await db.query(`ALTER TABLE users ADD COLUMN profile_picture TEXT`); } catch { /* column already exists */ }
+
+  // 14. Add source to students (idempotent)
+  try { await db.query(`ALTER TABLE students ADD COLUMN source TEXT NOT NULL DEFAULT 'manual'`); } catch { /* column already exists */ }
+  try { await db.query(`ALTER TABLE students DROP CONSTRAINT IF EXISTS students_source_check`); } catch { /* ignore */ }
+  try { await db.query(`ALTER TABLE students ADD CONSTRAINT students_source_check CHECK (source IN ('manual', 'excel_import'))`); } catch { /* ignore */ }
+
+  // 15. Add password_changed_at to users (idempotent)
+  try { await db.query(`ALTER TABLE users ADD COLUMN password_changed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP`); } catch { /* column already exists */ }
+
+  // 16. Password Reset Tokens Table
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS password_reset_tokens (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id),
+      token_hash TEXT NOT NULL,
+      expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+      used_at TIMESTAMP WITH TIME ZONE,
+      created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  await db.query(`CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_hash ON password_reset_tokens(token_hash)`);
+
   logger.info('Migration completed successfully');
   if (!options?.skipClose) {
     await closeDb();

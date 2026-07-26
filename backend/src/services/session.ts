@@ -1,5 +1,5 @@
 import { getDb } from '../db';
-import { NotFoundError, ConflictError } from '../utils/errors';
+import { NotFoundError, ConflictError, BusinessRuleError } from '../utils/errors';
 import { logAudit } from './audit';
 import { getStudent } from './student';
 import { createNotification, notifyFacultyNewCompletion } from './notification';
@@ -338,6 +338,41 @@ export async function reviewSession(id: number, reviewerId: number, status: 'app
   createNotification(session.student_id, id, status === 'approved' ? 'completed' : 'reminder', status === 'approved' ? 'Your work summary has been reviewed and approved' : `Your work summary needs revision: ${feedback || 'No feedback provided'}`);
 
   return await getSessionById(id);
+}
+
+export async function updateSessionCategory(sessionId: number, categoryId: number, userId: number): Promise<ReturnType<typeof rowToSession>> {
+  const db = getDb();
+
+  const catResult = await db.query('SELECT id, status FROM categories WHERE id = $1', [categoryId]);
+  if (catResult.rows.length === 0) throw new NotFoundError('Category');
+  if ((catResult.rows[0] as { status: string }).status !== 'active') {
+    throw new BusinessRuleError('CATEGORY_NOT_ACTIVE', 'Selected category is not active');
+  }
+
+  const lockResult = await db.query('SELECT * FROM workspace_sessions WHERE id = $1 FOR UPDATE', [sessionId]);
+  if (lockResult.rows.length === 0) throw new NotFoundError('Session');
+  const session = lockResult.rows[0] as SessionRow;
+
+  if (session.status !== 'active') {
+    throw new BusinessRuleError('INVALID_STATE', `Cannot set category on session in status '${session.status}'`);
+  }
+
+  if (session.category_id !== null) {
+    throw new BusinessRuleError('CATEGORY_ALREADY_SET', 'Category is already set for this session and cannot be changed');
+  }
+
+  await db.query('BEGIN');
+  try {
+    await db.query('UPDATE workspace_sessions SET category_id = $1 WHERE id = $2', [categoryId, sessionId]);
+    await db.query('COMMIT');
+  } catch (err) {
+    await db.query('ROLLBACK');
+    throw err;
+  }
+
+  logAudit({ actorType: 'student', actorId: userId, action: 'SESSION_CATEGORY_SET', entityType: 'SESSION', entityId: sessionId, details: { categoryId }, ipAddress: undefined });
+
+  return await getSessionById(sessionId);
 }
 
 export async function autoCompleteSessions() {

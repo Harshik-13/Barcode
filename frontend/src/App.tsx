@@ -21,6 +21,9 @@ const NotFound = lazy(() => import('./pages/NotFound'));
 const ActivatePage = lazy(() => import('./pages/ActivatePage'));
 const FacultyManagementPage = lazy(() => import('./pages/FacultyManagementPage'));
 const FacultyActivatePage = lazy(() => import('./pages/FacultyActivatePage'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage'));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 
 function App() {
   return (
@@ -32,6 +35,8 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/activate" element={<ActivatePage />} />
               <Route path="/faculty/activate" element={<FacultyActivatePage />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/unauthorized" element={<Unauthorized />} />
               <Route path="/forbidden" element={<Forbidden />} />
               <Route element={<ProtectedRoute />}>
@@ -46,6 +51,7 @@ function App() {
                   <Route path="/activity-logs" element={<RoleRoute roles={['admin']}><ActivityLogsPage /></RoleRoute>} />
                   <Route path="/notifications" element={<RoleRoute roles={['student']}><NotificationsPage /></RoleRoute>} />
                   <Route path="/sessions/:id" element={<SessionDetailPage />} />
+                  <Route path="/profile" element={<ProfilePage />} />
                 </Route>
               </Route>
               <Route path="*" element={<NotFound />} />

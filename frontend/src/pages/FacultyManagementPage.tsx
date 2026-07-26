@@ -131,7 +131,7 @@ export default function FacultyManagementPage() {
         </form>
       )}
 
-      <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
+      <div className="resp-stack@mobile" style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
         <input
           placeholder="Search by name or email..."
           value={searchQuery}
@@ -158,7 +158,7 @@ export default function FacultyManagementPage() {
         <div style={{ textAlign: 'center', padding: '48px', color: '#9ca3af' }}>No faculty found</div>
       ) : (
         <div style={{ background: '#fff', borderRadius: '8px', border: '1px solid #e5e7eb', overflow: 'hidden' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+          <div className="resp-table-wrap"><table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid #e5e7eb', textAlign: 'left' }}>
                 <th style={{ padding: '12px', color: '#6b7280', fontWeight: 500 }}>Name</th>
@@ -214,7 +214,7 @@ export default function FacultyManagementPage() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         </div>
       )}
     </div>

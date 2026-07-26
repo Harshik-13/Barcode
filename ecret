@@ -1,0 +1,100 @@
+[35mARCHITECTURE.md[m[36m:[m[32m241[m[36m:[m| POST | `/api/activation/set-[1;31mpassword[m` | Global rate limit | None | Activate page — Step 3: create [1;31mpassword[m |
+[35mARCHITECTURE.md[m[36m:[m[32m279[m[36m:[m  [1;31mpassword[m_hash TEXT NOT NULL,
+[35mARCHITECTURE.md[m[36m:[m[32m293[m[36m:[m  [1;31mpassword[m_hash TEXT,
+[35mARCHITECTURE.md[m[36m:[m[32m395[m[36m:[m8. **Student account activation** — Admin creates students without [1;31mpassword[ms. Students self-activate via OTP sent to their derived college email (`roll@vnrvjiet.in`). OTP is bcrypt-hashed, has 10min expiry, max 5 attempts, and 30s resend cooldown. [1;31mPassword[m is set only after OTP verification via a cryptographic activation token.
+[35mCHANGELOG.md[m[36m:[m[32m54[m[36m:[m- `services/activation.ts` — Full activation business logic: start, verify OTP, set [1;31mpassword[m, resend
+[35mCHANGELOG.md[m[36m:[m[32m55[m[36m:[m- 5 endpoints under `/api/activation`: `start`, `verify-otp`, `set-[1;31mpassword[m`, `resend-otp`, `status`
+[35mCHANGELOG.md[m[36m:[m[32m59[m[36m:[m- Frontend `ActivatePage.tsx` — 3-step wizard: Roll → OTP → [1;31mPassword[m
+[35mCHANGELOG.md[m[36m:[m[32m70[m[36m:[m- [1;31mPassword[m set endpoint is gated behind OTP verification — never accessible with roll number alone
+[35mCHANGELOG.md[m[36m:[m[32m71[m[36m:[m- Existing login flow unchanged: admin/faculty/student email+[1;31mpassword[m login continues to work identically
+[35mREADME.md[m[36m:[m[32m79[m[36m:[m| Role | Email | [1;31mPassword[m |
+[35mREADME.md[m[36m:[m[32m87[m[36m:[m1. Generate a [Google App [1;31mPassword[m](https://myaccount.google.com/app[1;31mpassword[ms) for `8hattendance@gmail.com`
+[35mREADME.md[m[36m:[m[32m95[m[36m:[mSMTP_PASS=<your-16-char-app-[1;31mpassword[m>
+[35mREADME.md[m[36m:[m[32m133[m[36m:[m- **Auth**: JWT (email/[1;31mpassword[m)
+[35mROADMAP.md[m[36m:[m[32m260[m[36m:[m**Milestone 5.5** — Students can securely activate their own accounts via OTP verification without admin-set [1;31mpassword[ms.
+[35mROADMAP.md[m[36m:[m[32m264[m[36m:[m- [x] Activation service (`services/activation.ts`) — `startActivation`, `verifyOtp`, `set[1;31mPassword[m`, `resendOtp`, `checkActivationStatus`
+[35mROADMAP.md[m[36m:[m[32m265[m[36m:[m- [x] 5 activation endpoints under `/api/activation` — start, verify-otp, set-[1;31mpassword[m, resend-otp, status
+[35mROADMAP.md[m[36m:[m[32m270[m[36m:[m- [x] [1;31mPassword[m set only after OTP verification (activation token gated)
+[35mROADMAP.md[m[36m:[m[32m271[m[36m:[m- [x] Activation token expires after [1;31mpassword[m set
+[35mROADMAP.md[m[36m:[m[32m273[m[36m:[m- [x] Frontend multi-step activation wizard (`ActivatePage.tsx`) — roll → OTP → [1;31mpassword[m → done
+[35mROADMAP.md[m[36m:[m[32m276[m[36m:[m- [x] Designed for future Forgot [1;31mPassword[m reuse (same OTP framework)
+[35mbackend/.env.example[m[36m:[m[32m3[m[36m:[mDATABASE_URL=postgresql://postgres:[1;31mpassword[m@localhost:5432/workspace
+[35mbackend/.env.example[m[36m:[m[32m11[m[36m:[m# Gmail SMTP (App [1;31mPassword[m required)
+[35mbackend/src/config/index.ts[m[36m:[m[32m36[m[36m:[m    [1;31mpassword[m: process.env.SMTP_PASS ?? '',
+[35mbackend/src/db/migrate.ts[m[36m:[m[32m22[m[36m:[m      [1;31mpassword[m_hash TEXT,
+[35mbackend/src/db/seed.ts[m[36m:[m[32m26[m[36m:[m    "INSERT INTO users (email, name, [1;31mpassword[m_hash, role_id, status) VALUES ('admin@workspace.com', 'System Admin', $1, 'admin', 'active')",
+[35mbackend/src/db/seed.ts[m[36m:[m[32m32[m[36m:[m    "INSERT INTO users (email, name, [1;31mpassword[m_hash, role_id, status) VALUES ('faculty@workspace.com', 'Demo Faculty', $1, 'faculty', 'active')",
+[35mbackend/src/db/seed.ts[m[36m:[m[32m38[m[36m:[m    "INSERT INTO users (email, name, [1;31mpassword[m_hash, role_id, status) VALUES ('student@workspace.com', 'Demo Student', $1, 'student', 'active')",
+[35mbackend/src/routes/activation.ts[m[36m:[m[32m2[m[36m:[mimport { startActivation, verifyOtp, set[1;31mPassword[m, resendOtp, checkActivationStatus } from '../services/activation';
+[35mbackend/src/routes/activation.ts[m[36m:[m[32m32[m[36m:[mrouter.post('/activation/set-[1;31mpassword[m',
+[35mbackend/src/routes/activation.ts[m[36m:[m[32m35[m[36m:[m    { field: '[1;31mpassword[m', type: 'string', required: true, min: 8 },
+[35mbackend/src/routes/activation.ts[m[36m:[m[32m39[m[36m:[m      const result = await set[1;31mPassword[m(req.body.activationToken, req.body.[1;31mpassword[m, req.ip as string);
+[35mbackend/src/routes/auth.ts[m[36m:[m[32m13[m[36m:[m    { field: '[1;31mpassword[m', type: 'string', required: true, min: 1 },
+[35mbackend/src/routes/auth.ts[m[36m:[m[32m17[m[36m:[m      const result = await authenticate(req.body.email, req.body.[1;31mpassword[m, req.ip as string);
+[35mbackend/src/routes/facultyActivation.ts[m[36m:[m[32m2[m[36m:[mimport { startFacultyActivation, verifyFacultyOtp, setFaculty[1;31mPassword[m, checkFacultyActivationStatus, resendFacultyOtp } from '../services/facultyActivation';
+[35mbackend/src/routes/facultyActivation.ts[m[36m:[m[32m32[m[36m:[mrouter.post('/faculty/activation/set-[1;31mpassword[m',
+[35mbackend/src/routes/facultyActivation.ts[m[36m:[m[32m35[m[36m:[m    { field: '[1;31mpassword[m', type: 'string', required: true, min: 8 },
+[35mbackend/src/routes/facultyActivation.ts[m[36m:[m[32m39[m[36m:[m      const result = await setFaculty[1;31mPassword[m(req.body.activationToken, req.body.[1;31mpassword[m, req.ip as string);
+[35mbackend/src/services/activation.ts[m[36m:[m[32m128[m[36m:[mexport async function set[1;31mPassword[m(activationToken: string, [1;31mpassword[m: string, ip?: string) {
+[35mbackend/src/services/activation.ts[m[36m:[m[32m129[m[36m:[m  if (![1;31mpassword[m || [1;31mpassword[m.length < 8) {
+[35mbackend/src/services/activation.ts[m[36m:[m[32m130[m[36m:[m    throw new BusinessRuleError('WEAK_[1;31mPASSWORD[m', '[1;31mPassword[m must be at least 8 characters');
+[35mbackend/src/services/activation.ts[m[36m:[m[32m157[m[36m:[m  const [1;31mpassword[mHash = bcrypt.hashSync([1;31mpassword[m, 12);
+[35mbackend/src/services/activation.ts[m[36m:[m[32m162[m[36m:[m    await db.query('INSERT INTO users (email, name, [1;31mpassword[m_hash, role_id, status) VALUES ($1, $2, $3, $4, $5)', [email, student.name, [1;31mpassword[mHash, 'student', 'active']);
+[35mbackend/src/services/activation.ts[m[36m:[m[32m169[m[36m:[m    return { message: '[1;31mPassword[m set successfully. You can now log in with your college email.' };
+[35mbackend/src/services/auth.ts[m[36m:[m[32m12[m[36m:[m  [1;31mpassword[m_hash: string;
+[35mbackend/src/services/auth.ts[m[36m:[m[32m35[m[36m:[mexport async function authenticate(loginId: string, [1;31mpassword[m: string, ip?: string) {
+[35mbackend/src/services/auth.ts[m[36m:[m[32m53[m[36m:[m    throw new UnauthorizedError('INVALID_CREDENTIALS', 'Invalid email or [1;31mpassword[m');
+[35mbackend/src/services/auth.ts[m[36m:[m[32m56[m[36m:[m  const valid = bcrypt.compareSync([1;31mpassword[m, user.[1;31mpassword[m_hash);
+[35mbackend/src/services/auth.ts[m[36m:[m[32m64[m[36m:[m      details: { reason: 'invalid_[1;31mpassword[m' },
+[35mbackend/src/services/auth.ts[m[36m:[m[32m67[m[36m:[m    throw new UnauthorizedError('INVALID_CREDENTIALS', 'Invalid email or [1;31mpassword[m');
+[35mbackend/src/services/email.ts[m[36m:[m[32m6[m[36m:[m  if (!config.email.user || !config.email.[1;31mpassword[m) {
+[35mbackend/src/services/email.ts[m[36m:[m[32m15[m[36m:[m    auth: { user: config.email.user, pass: config.email.[1;31mpassword[m },
+[35mbackend/src/services/facultyActivation.ts[m[36m:[m[32m117[m[36m:[mexport async function setFaculty[1;31mPassword[m(activationToken: string, [1;31mpassword[m: string, ip?: string) {
+[35mbackend/src/services/facultyActivation.ts[m[36m:[m[32m118[m[36m:[m  if (![1;31mpassword[m || [1;31mpassword[m.length < 8) {
+[35mbackend/src/services/facultyActivation.ts[m[36m:[m[32m119[m[36m:[m    throw new BusinessRuleError('WEAK_[1;31mPASSWORD[m', '[1;31mPassword[m must be at least 8 characters');
+[35mbackend/src/services/facultyActivation.ts[m[36m:[m[32m133[m[36m:[m  const [1;31mpassword[mHash = bcrypt.hashSync([1;31mpassword[m, 12);
+[35mbackend/src/services/facultyActivation.ts[m[36m:[m[32m134[m[36m:[m  await db.query("UPDATE users SET [1;31mpassword[m_hash = $1, status = 'active' WHERE id = $2", [[1;31mpassword[mHash, record.user_id]);
+[35mbackend/src/services/facultyActivation.ts[m[36m:[m[32m140[m[36m:[m  return { message: '[1;31mPassword[m set successfully. You can now log in.' };
+[35mbackend/tests/activation.integration.test.ts[m[36m:[m[32m8[m[36m:[mconst adminLogin = () => request(app).post('/api/auth/login').send({ email: 'admin@workspace.com', [1;31mpassword[m: 'admin123' });
+[35mbackend/tests/activation.integration.test.ts[m[36m:[m[32m96[m[36m:[mdescribe('POST /api/activation/set-[1;31mpassword[m', () => {
+[35mbackend/tests/activation.integration.test.ts[m[36m:[m[32m97[m[36m:[m  it('should reject weak [1;31mpassword[m', async () => {
+[35mbackend/tests/activation.integration.test.ts[m[36m:[m[32m98[m[36m:[m    const res = await request(app).post('/api/activation/set-[1;31mpassword[m').send({ activationToken: 'some-token', [1;31mpassword[m: 'short' });
+[35mbackend/tests/activation.integration.test.ts[m[36m:[m[32m104[m[36m:[m    const res = await request(app).post('/api/activation/set-[1;31mpassword[m').send({ [1;31mpassword[m: 'longenough[1;31mpassword[m' });
+[35mbackend/tests/activation.integration.test.ts[m[36m:[m[32m126[m[36m:[m    const res = await request(app).post('/api/auth/login').send({ email: 'admin@workspace.com', [1;31mpassword[m: 'admin123' });
+[35mbackend/tests/activation.integration.test.ts[m[36m:[m[32m133[m[36m:[m    const res = await request(app).post('/api/auth/login').send({ email: 'faculty@workspace.com', [1;31mpassword[m: 'faculty123' });
+[35mbackend/tests/activation.integration.test.ts[m[36m:[m[32m140[m[36m:[m    const res = await request(app).post('/api/auth/login').send({ email: 'admin@workspace.com', [1;31mpassword[m: 'wrong[1;31mpassword[m' });
+[35mbackend/tests/auth.integration.test.ts[m[36m:[m[32m18[m[36m:[m      .send({ email: 'admin@workspace.com', [1;31mpassword[m: 'admin123' });
+[35mbackend/tests/auth.integration.test.ts[m[36m:[m[32m30[m[36m:[m      .send({ email: 'faculty@workspace.com', [1;31mpassword[m: 'faculty123' });
+[35mbackend/tests/auth.integration.test.ts[m[36m:[m[32m40[m[36m:[m      .send({ email: 'student@workspace.com', [1;31mpassword[m: 'student123' });
+[35mbackend/tests/auth.integration.test.ts[m[36m:[m[32m50[m[36m:[m      .send({ email: 'nonexistent@test.com', [1;31mpassword[m: 'test123' });
+[35mbackend/tests/auth.integration.test.ts[m[36m:[m[32m56[m[36m:[m  it('should reject invalid [1;31mpassword[m', async () => {
+[35mbackend/tests/auth.integration.test.ts[m[36m:[m[32m59[m[36m:[m      .send({ email: 'admin@workspace.com', [1;31mpassword[m: 'wrong[1;31mpassword[m' });
+[35mbackend/tests/auth.integration.test.ts[m[36m:[m[32m68[m[36m:[m      .send({ [1;31mpassword[m: 'admin123' });
+[35mbackend/tests/auth.integration.test.ts[m[36m:[m[32m73[m[36m:[m  it('should reject missing [1;31mpassword[m', async () => {
+[35mbackend/tests/auth.integration.test.ts[m[36m:[m[32m86[m[36m:[m      .send({ email: 'admin@workspace.com', [1;31mpassword[m: 'admin123' });
+[35mbackend/tests/auth.integration.test.ts[m[36m:[m[32m125[m[36m:[m      .send({ email: 'admin@workspace.com', [1;31mpassword[m: 'admin123' });
+[35mbackend/tests/domain-extended.integration.test.ts[m[36m:[m[32m10[m[36m:[mconst adminLogin = () => request(app).post('/api/auth/login').send({ email: 'admin@workspace.com', [1;31mpassword[m: 'admin123' });
+[35mbackend/tests/domain-extended.integration.test.ts[m[36m:[m[32m11[m[36m:[mconst facultyLogin = () => request(app).post('/api/auth/login').send({ email: 'faculty@workspace.com', [1;31mpassword[m: 'faculty123' });
+[35mbackend/tests/domain-extended.integration.test.ts[m[36m:[m[32m12[m[36m:[mconst studentLogin = () => request(app).post('/api/auth/login').send({ email: 'student@workspace.com', [1;31mpassword[m: 'student123' });
+[35mbackend/tests/domain.integration.test.ts[m[36m:[m[32m10[m[36m:[mconst adminLogin = () => request(app).post('/api/auth/login').send({ email: 'admin@workspace.com', [1;31mpassword[m: 'admin123' });
+[35mbackend/tests/domain.integration.test.ts[m[36m:[m[32m11[m[36m:[mconst facultyLogin = () => request(app).post('/api/auth/login').send({ email: 'faculty@workspace.com', [1;31mpassword[m: 'faculty123' });
+[35mbackend/tests/domain.integration.test.ts[m[36m:[m[32m12[m[36m:[mconst studentLogin = () => request(app).post('/api/auth/login').send({ email: 'student@workspace.com', [1;31mpassword[m: 'student123' });
+[35mbackend/tests/scan.integration.test.ts[m[36m:[m[32m19[m[36m:[m  const adminRes = await request(app).post('/api/auth/login').send({ email: 'admin@workspace.com', [1;31mpassword[m: 'admin123' });
+[35mbackend/tests/scan.integration.test.ts[m[36m:[m[32m22[m[36m:[m  const facRes = await request(app).post('/api/auth/login').send({ email: 'faculty@workspace.com', [1;31mpassword[m: 'faculty123' });
+[35mbackend/tests/scan.integration.test.ts[m[36m:[m[32m25[m[36m:[m  const stuRes = await request(app).post('/api/auth/login').send({ email: 'student@workspace.com', [1;31mpassword[m: 'student123' });
+[35mdocs/data-api/api-contracts.md[m[36m:[m[32m12[m[36m:[mAuthenticate a user with email and [1;31mpassword[m.
+[35mdocs/data-api/api-contracts.md[m[36m:[m[32m18[m[36m:[m  "[1;31mpassword[m": "secure[1;31mpassword[m"
+[35mdocs/data-api/api-contracts.md[m[36m:[m[32m39[m[36m:[m  "message": "Invalid email or [1;31mpassword[m"
+[35mdocs/data-api/audit-contracts.md[m[36m:[m[32m96[m[36m:[m| [1;31mPassword[m | Secret | Never |
+[35mdocs/data-api/error-contracts.md[m[36m:[m[32m42[m[36m:[m| INVALID_CREDENTIALS | "Invalid email or [1;31mpassword[m" | Wrong login credentials |
+[35mdocs/data-api/error-contracts.md[m[36m:[m[32m66[m[36m:[m| INVALID_[1;31mPASSWORD[m | "[1;31mPassword[m must be 8-128 characters" | [1;31mPassword[m length violation |
+[35mdocs/data-api/error-contracts.md[m[36m:[m[32m144[m[36m:[m4. **No sensitive data in error messages.** Error messages never include [1;31mpassword[ms, tokens, or personal data beyond what the user provided.
+[35mdocs/data-api/integration-contracts.md[m[36m:[m[32m35[m[36m:[m### [1;31mPassword[m Storage
+[35mdocs/data-api/integration-contracts.md[m[36m:[m[32m43[m[36m:[m### [1;31mPassword[m Validation
+[35mdocs/data-api/integration-contracts.md[m[36m:[m[32m47[m[36m:[m- No [1;31mpassword[m complexity requirements in V1 (future: minimum 1 uppercase, 1 number)
+[35mdocs/data-api/validation-contracts.md[m[36m:[m[32m20[m[36m:[m| [1;31mpassword[m | Required on create, 8-128 chars | INVALID_[1;31mPASSWORD[m |
+[35mdocs/data-api/validation-contracts.md[m[36m:[m[32m29[m[36m:[m| [1;31mpassword[m | Required on create, 8-128 chars | INVALID_[1;31mPASSWORD[m |
+[35mdocs/environment-strategy.md[m[36m:[m[32m21[m[36m:[m| Secret values | Environment variables / secrets manager | JWT secret, DB [1;31mpassword[m, OAuth client secret |
+[35mdocs/logging-error-handling.md[m[36m:[m[32m8[m[36m:[m4. **Never log secrets.** [1;31mPassword[ms, tokens, secrets, and PII must never appear in logs.
+[35mdocs/logging-error-handling.md[m[36m:[m[32m64[m[36m:[m- `[1;31mpassword[m`, `secret`, `token`, `authorization`
+[35mdocs/security-baseline.md[m[36m:[m[32m208[m[36m:[m- [1;31mP

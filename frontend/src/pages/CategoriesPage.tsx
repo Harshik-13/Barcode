@@ -91,10 +91,10 @@ export default function CategoriesPage() {
               {createError}
             </div>
           )}
-          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-            <input placeholder="Category Name" value={createName} onChange={(e) => setCreateName(e.target.value)} required style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '4px', fontSize: '14px', flex: 1, minWidth: '200px' }} />
-            <input placeholder="Description (optional)" value={createDesc} onChange={(e) => setCreateDesc(e.target.value)} style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '4px', fontSize: '14px', flex: 1, minWidth: '250px' }} />
-            <button type="submit" style={{ padding: '8px 16px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '14px', cursor: 'pointer' }}>
+          <div className="resp-stack@mobile" style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            <input placeholder="Category Name" value={createName} onChange={(e) => setCreateName(e.target.value)} required style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '4px', fontSize: '14px', flex: 1, minWidth: '150px' }} />
+            <input placeholder="Description (optional)" value={createDesc} onChange={(e) => setCreateDesc(e.target.value)} style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '4px', fontSize: '14px', flex: 1, minWidth: '150px' }} />
+            <button type="submit" style={{ padding: '8px 16px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '14px', cursor: 'pointer', minHeight: '44px' }}>
               Create
             </button>
           </div>
@@ -102,7 +102,7 @@ export default function CategoriesPage() {
       )}
 
       <div style={{ padding: '20px', background: '#fff', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+        <div className="resp-table-wrap"><table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
           <thead>
             <tr style={{ borderBottom: '1px solid #e5e7eb', textAlign: 'left' }}>
               <th style={{ padding: '8px 12px', color: '#6b7280', fontWeight: 500 }}>Name</th>
@@ -157,7 +157,7 @@ export default function CategoriesPage() {
               ))
             )}
           </tbody>
-        </table>
+        </table></div>
       </div>
     </div>
   );

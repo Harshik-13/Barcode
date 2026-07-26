@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [ReadyVersion-1.0] — 2026-07-26
+
+### Added
+
+- **Change Password** (`PATCH /api/profile/change-password`) — Authenticated users can change their password with bcrypt verification, password policy enforcement (8+ chars, uppercase, lowercase, digit, special), and session invalidation via `password_changed_at` mechanism
+- **Forgot Password** (`POST /api/auth/forgot-password`) — Email-based password reset with SHA-256 hashed tokens, 15-minute expiry, anti-enumeration (always returns same message), and rate limiting
+- **Reset Password** (`POST /api/auth/reset-password`) — Token-based password reset with single-use tokens, atomic transaction (password update + token invalidation + session invalidation), and reuse of `password_changed_at` mechanism
+- **Password Reset Tokens table** — `password_reset_tokens` with bcrypt-free SHA-256 hashing, opportunistic cleanup of stale/used tokens, and automatic invalidation of previous unused tokens on new request
+- **Frontend Security section** — Change Password form in Profile page with show/hide toggle
+- **Forgot Password page** — Email input with consistent response message
+- **Reset Password page** — Token-based form with show/hide password toggle and redirect to login
+- **"Forgot password?" link** on Login page
+
+### Security
+
+- Reset tokens use SHA-256 with `crypto.timingSafeEqual` (constant-time comparison)
+- Existing unused tokens are deleted before creating new ones
+- Expired/used tokens cleaned up opportunistically
+- All existing sessions invalidated on password change/reset via `password_changed_at` JWT claim verification
+
 ## [working-mvp-v-0-1-with-student-side-updation] — 2026-07-26
 
 ### Fixed

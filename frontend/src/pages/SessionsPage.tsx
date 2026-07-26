@@ -81,19 +81,19 @@ export default function SessionsPage() {
         </div>
       )}
 
-      <div style={{ marginBottom: '16px' }}>
-        <label style={{ fontSize: '14px', color: '#6b7280', marginRight: '8px' }}>Status Filter:</label>
+      <div className="resp-stack@mobile" style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <label style={{ fontSize: '14px', color: '#6b7280', whiteSpace: 'nowrap' }}>Status Filter:</label>
         <select value={statusFilter || ''} onChange={(e) => { setStatusFilter(e.target.value || undefined); setPage(1); }} style={{ padding: '6px 12px', border: '1px solid #e5e7eb', borderRadius: '4px', fontSize: '14px' }}>
           <option value="">All</option>
           {Object.entries(STATUS_LABELS).map(([key, label]) => (
             <option key={key} value={key}>{label}</option>
           ))}
         </select>
-        <span style={{ marginLeft: '12px', fontSize: '14px', color: '#6b7280' }}>{total} session(s)</span>
+        <span style={{ fontSize: '14px', color: '#6b7280' }}>{total} session(s)</span>
       </div>
 
       <div style={{ padding: '20px', background: '#fff', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+        <div className="resp-table-wrap"><table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
           <thead>
             <tr style={{ borderBottom: '1px solid #e5e7eb', textAlign: 'left' }}>
               <th style={{ padding: '8px 12px', color: '#6b7280', fontWeight: 500 }}>Student</th>
@@ -140,7 +140,7 @@ export default function SessionsPage() {
               ))
             )}
           </tbody>
-        </table>
+        </table></div>
 
         {totalPages > 1 && (
           <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '16px' }}>
@@ -156,8 +156,8 @@ export default function SessionsPage() {
       </div>
 
       {completingId !== null && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-          <div style={{ padding: '24px', background: '#fff', borderRadius: '8px', width: '90%', maxWidth: '500px' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '16px' }}>
+          <div style={{ padding: '20px', background: '#fff', borderRadius: '8px', width: '100%', maxWidth: '500px' }}>
             <h3 style={{ marginBottom: '16px', fontSize: '18px' }}>Complete Session</h3>
             <textarea
               placeholder="Enter work summary..."

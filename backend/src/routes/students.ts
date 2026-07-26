@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { requireAuth, requireRole, requireOwnStudentResource } from '../middleware/auth';
-import { listStudents, getStudent, lookupStudent, searchStudents, createStudent, updateStudent, suspendStudent, departStudent, getStudentHistory } from '../services/student';
+import { listStudents, getStudent, lookupStudent, searchStudents, adminSearchStudents, createStudent, updateStudent, suspendStudent, departStudent, getStudentHistory } from '../services/student';
 import { adminLimiter } from '../middleware/rateLimiter';
 import { validateBody } from '../utils/validation';
 import { parsePagination } from '../utils/pagination';
@@ -11,7 +11,8 @@ router.get('/students', requireAuth, async (req: Request, res: Response, next: N
   try {
     const { page, limit } = parsePagination(req.query as Record<string, unknown>);
     const status = req.query.status as string | undefined;
-    const result = await listStudents(page, limit, status);
+    const search = req.query.q as string | undefined;
+    const result = await listStudents(page, limit, status, search);
     res.json({ data: result.students, pagination: { page: result.page, limit: result.limit, total: result.total, totalPages: result.totalPages } });
   } catch (err) { next(err); }
 });
@@ -36,6 +37,18 @@ router.get('/students/search', requireAuth, async (req: Request, res: Response, 
       return;
     }
     const students = await searchStudents(q);
+    res.json({ data: students });
+  } catch (err) { next(err); }
+});
+
+router.get('/admin/students/search', requireAuth, requireRole('admin'), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const q = req.query.q as string;
+    if (!q || q.trim().length === 0) {
+      res.status(400).json({ error: 'VALIDATION_ERROR', message: 'Query parameter q is required' });
+      return;
+    }
+    const students = await adminSearchStudents(q.trim());
     res.json({ data: students });
   } catch (err) { next(err); }
 });

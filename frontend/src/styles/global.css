@@ -52,3 +52,136 @@ button:focus {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
+
+/* ── Responsive Utilities ── */
+
+.resp-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.resp-table-wrap table {
+  min-width: 600px;
+}
+.resp-table-wrap.compact table {
+  min-width: auto;
+}
+
+.resp-stack\@mobile {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.resp-grid-auto {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 12px;
+}
+
+.resp-grid-auto-sm {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.resp-nav-overlay {
+  display: none;
+}
+
+/* ── Mobile (≤768px) ── */
+@media (max-width: 768px) {
+  :root {
+    --space-6: 16px;
+    --space-5: 14px;
+  }
+
+  .resp-hide\@mobile {
+    display: none !important;
+  }
+  .resp-show\@mobile {
+    display: revert !important;
+  }
+  .resp-stack\@mobile {
+    flex-direction: column;
+  }
+  .resp-grid-auto {
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 8px;
+  }
+  .resp-grid-auto-sm {
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 8px;
+  }
+  .resp-grid-two-col {
+    grid-template-columns: 1fr !important;
+  }
+  .resp-table-wrap table {
+    min-width: 500px;
+  }
+  .resp-table-wrap.compact table {
+    min-width: 350px;
+  }
+
+  body {
+    font-size: 15px;
+  }
+
+  input, select, textarea, button {
+    font-size: 16px !important;
+  }
+
+  button, a, [role="button"], .touch-target {
+    min-height: 44px;
+  }
+
+  .resp-nav-links {
+    display: none;
+    position: fixed;
+    top: 56px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #fff;
+    flex-direction: column;
+    padding: 16px;
+    gap: 4px;
+    z-index: 999;
+    overflow-y: auto;
+  }
+  .resp-nav-links.open {
+    display: flex;
+  }
+  .resp-nav-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.3);
+    z-index: 998;
+  }
+  .resp-nav-overlay.open {
+    display: block;
+  }
+}
+
+/* ── Tablet (769–1024px) ── */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .resp-grid-auto {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+}
+
+/* ── Small mobile (≤480px) ── */
+@media (max-width: 480px) {
+  .resp-grid-auto {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .resp-grid-student {
+    grid-template-columns: 1fr !important;
+  }
+  .resp-table-wrap table {
+    min-width: 400px;
+  }
+  .resp-table-wrap.compact table {
+    min-width: 300px;
+  }
+}

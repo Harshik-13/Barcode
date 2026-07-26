@@ -19,26 +19,25 @@ function rowToStudent(row: StudentRow) {
   return { id: row.id, roll: row.roll, name: row.name, email: row.email, branch: row.branch, section: row.section, status: row.status, createdAt: row.created_at };
 }
 
-export async function listStudents(page: number, limit: number, status?: string) {
+export async function listStudents(page: number, limit: number, status?: string, search?: string) {
   const db = getDb();
   const offset = (page - 1) * limit;
 
-  let whereClause = '';
+  const conditions: string[] = [];
   const params: Array<string | number> = [];
 
-  if (status === 'invited') {
-    whereClause = ' WHERE status = $1';
-    params.push('invited');
-  } else if (status === 'enrolled') {
-    whereClause = ' WHERE status = $1';
-    params.push('enrolled');
-  } else if (status === 'suspended') {
-    whereClause = ' WHERE status = $1';
-    params.push('suspended');
-  } else if (status === 'departed') {
-    whereClause = ' WHERE status = $1';
-    params.push('departed');
+  if (status === 'invited' || status === 'enrolled' || status === 'suspended' || status === 'departed') {
+    conditions.push(`status = $${params.length + 1}`);
+    params.push(status);
   }
+
+  if (search && search.trim()) {
+    const pattern = `%${search.trim()}%`;
+    conditions.push(`(name ILIKE $${params.length + 1} OR roll ILIKE $${params.length + 2} OR email ILIKE $${params.length + 3})`);
+    params.push(pattern, pattern, pattern);
+  }
+
+  const whereClause = conditions.length > 0 ? ` WHERE ${conditions.join(' AND ')}` : '';
 
   const countResult = await db.query(`SELECT COUNT(*) as total FROM students${whereClause}`, params);
   const total = parseInt(countResult.rows[0].total, 10);
@@ -72,6 +71,32 @@ export async function searchStudents(searchTerm: string) {
   const pattern = `%${searchTerm}%`;
   const result = await db.query('SELECT * FROM students WHERE name ILIKE $1 OR roll ILIKE $2 OR email ILIKE $3 LIMIT 20', [pattern, pattern, pattern]);
   return (result.rows as StudentRow[]).map(rowToStudent);
+}
+
+export async function adminSearchStudents(searchTerm: string) {
+  const db = getDb();
+  const pattern = `%${searchTerm}%`;
+  const result = await db.query(`
+    SELECT s.id, s.roll, s.name, s.email, s.branch, s.section, s.status, s.source, s.created_at,
+      CASE WHEN u.id IS NOT NULL THEN true ELSE false END AS activated
+    FROM students s
+    LEFT JOIN users u ON u.email = s.email AND u.role_id = 'student'
+    WHERE s.name ILIKE $1 OR s.roll ILIKE $2 OR s.email ILIKE $3
+    ORDER BY s.name
+    LIMIT 20
+  `, [pattern, pattern, pattern]);
+  return result.rows.map((row: Record<string, unknown>) => ({
+    id: row.id,
+    roll: row.roll,
+    name: row.name,
+    email: row.email,
+    branch: row.branch,
+    section: row.section,
+    status: row.status,
+    source: row.source,
+    activated: row.activated,
+    createdAt: row.created_at,
+  }));
 }
 
 export async function createStudent(roll: string, name: string, actorId: number, ip?: string, branch?: string, section?: string) {

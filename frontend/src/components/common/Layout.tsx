@@ -1,6 +1,6 @@
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../store/AuthContext';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { notificationsApi } from '../../services/apiService';
 import { usePushNotifications } from '../../hooks/usePushNotifications';
 
@@ -8,11 +8,13 @@ const NAV_ITEMS: Record<string, Array<{ label: string; path: string }>> = {
   student: [
     { label: 'Dashboard', path: '/' },
     { label: 'Notifications', path: '/notifications' },
+    { label: 'Profile', path: '/profile' },
   ],
   faculty: [
     { label: 'Dashboard', path: '/' },
     { label: 'Scanner', path: '/scanner' },
     { label: 'Sessions', path: '/sessions' },
+    { label: 'Profile', path: '/profile' },
   ],
   admin: [
     { label: 'Dashboard', path: '/' },
@@ -22,6 +24,7 @@ const NAV_ITEMS: Record<string, Array<{ label: string; path: string }>> = {
     { label: 'Sessions', path: '/sessions' },
     { label: 'Activity Logs', path: '/activity-logs' },
     { label: 'Scanner', path: '/scanner' },
+    { label: 'Profile', path: '/profile' },
   ],
 };
 
@@ -44,8 +47,14 @@ const linkActive: React.CSSProperties = {
 export function Layout() {
   const { isAuthenticated, user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const navItems = user ? NAV_ITEMS[user.role] || [] : [];
   const [unreadCount, setUnreadCount] = useState(0);
+  const [navOpen, setNavOpen] = useState(false);
+
+  const closeNav = useCallback(() => setNavOpen(false), []);
+
+  useEffect(() => { closeNav(); }, [location.pathname, closeNav]);
 
   const { isSupported, permission, subscription, subscribe } = usePushNotifications();
 
@@ -74,7 +83,7 @@ export function Layout() {
           style={{
             background: '#fff',
             borderBottom: '1px solid #e5e7eb',
-            padding: '0 24px',
+            padding: '0 16px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -82,21 +91,33 @@ export function Layout() {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <strong style={{ marginRight: '16px' }}>8Hour Workspace</strong>
-            <nav style={{ display: 'flex', gap: '4px' }}>
+            <strong style={{ marginRight: '12px', fontSize: '15px', whiteSpace: 'nowrap' }}>8Hour</strong>
+            <nav
+              className={`resp-nav-links${navOpen ? ' open' : ''}`}
+              style={{ display: 'flex', gap: '4px' }}
+            >
               {navItems.map((item) => (
                 <NavLink
                   key={item.path}
                   to={item.path}
                   end={item.path === '/'}
-                  style={({ isActive }) => isActive ? linkActive : linkBase}
+                  onClick={closeNav}
+                  style={({ isActive }) => ({ ...linkBase, ...(isActive ? linkActive : {}) })}
                 >
                   {item.label}
                 </NavLink>
               ))}
             </nav>
+            <button
+              className="resp-hamburger"
+              onClick={() => setNavOpen(!navOpen)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '8px', fontSize: '22px', color: '#6b7280', lineHeight: 1 }}
+              aria-label="Toggle navigation"
+            >
+              {navOpen ? '\u2715' : '\u2630'}
+            </button>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             {user?.role === 'student' && (
               <div onClick={() => navigate('/notifications')} style={{ position: 'relative', cursor: 'pointer', padding: '4px' }}>
                 <span style={{ fontSize: '18px' }}>&#128276;</span>
@@ -107,7 +128,7 @@ export function Layout() {
                 )}
               </div>
             )}
-            <span style={{ color: '#6b7280', fontSize: '14px' }}>
+            <span className="resp-hide@mobile" style={{ color: '#6b7280', fontSize: '14px' }}>
               {user?.name}
               <span style={{ marginLeft: '6px', padding: '2px 6px', borderRadius: '4px', background: '#f3f4f6', fontSize: '12px', color: '#6b7280' }}>
                 {user?.role}
@@ -119,7 +140,7 @@ export function Layout() {
                 background: 'none',
                 border: '1px solid #e5e7eb',
                 borderRadius: '4px',
-                padding: '4px 12px',
+                padding: '6px 12px',
                 cursor: 'pointer',
                 fontSize: '14px',
               }}
@@ -129,9 +150,24 @@ export function Layout() {
           </div>
         </header>
       )}
+      <div className={`resp-nav-overlay${navOpen ? ' open' : ''}`} onClick={closeNav} />
       <main style={{ flex: 1, padding: '24px' }}>
         <Outlet />
       </main>
+      <style>{`
+        .resp-hamburger { display: none; }
+        @media (max-width: 768px) {
+          .resp-hamburger { display: inline-flex !important; }
+          .resp-nav-links { display: none !important; position: fixed; top: 56px; left: 0; right: 0; bottom: 0; background: #fff; flex-direction: column; padding: 16px; gap: 4px; z-index: 999; overflow-y: auto; }
+          .resp-nav-links.open { display: flex !important; }
+          .resp-nav-overlay.open { display: block !important; }
+          header { padding: 0 12px !important; }
+          main { padding: 12px !important; }
+        }
+        @media (max-width: 480px) {
+          .resp-nav-links a { padding: 10px 14px !important; font-size: 15px !important; }
+        }
+      `}</style>
     </div>
   );
 }

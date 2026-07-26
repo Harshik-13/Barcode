@@ -10,6 +10,12 @@ export interface AuthPayload {
   role: string;
 }
 
+interface TokenPayload {
+  sub: number;
+  type: string;
+  pca?: number;
+}
+
 declare global {
   namespace Express {
     interface Request {
@@ -18,7 +24,7 @@ declare global {
   }
 }
 
-export function requireAuth(req: Request, _res: Response, next: NextFunction): void {
+export async function requireAuth(req: Request, _res: Response, next: NextFunction): Promise<void> {
   const header = req.headers.authorization;
   if (!header || !header.startsWith('Bearer ')) {
     next(new UnauthorizedError('MISSING_TOKEN', 'Authentication token is required'));
@@ -27,8 +33,24 @@ export function requireAuth(req: Request, _res: Response, next: NextFunction): v
 
   const token = header.slice(7);
   try {
-    const payload = jwt.verify(token, config.jwt.secret) as unknown as { sub: number; type: string };
+    const payload = jwt.verify(token, config.jwt.secret) as unknown as TokenPayload;
     req.user = { userId: payload.sub, role: payload.type };
+
+    if (payload.pca !== undefined) {
+      const db = getDb();
+      const result = await db.query(
+        'SELECT EXTRACT(EPOCH FROM password_changed_at) AS pca FROM users WHERE id = $1',
+        [payload.sub]
+      );
+      if (result.rows.length > 0) {
+        const dbPca = Math.floor(Number((result.rows[0] as { pca: string }).pca));
+        if (dbPca !== payload.pca) {
+          next(new UnauthorizedError('INVALID_TOKEN', 'Session expired. Please log in again.'));
+          return;
+        }
+      }
+    }
+
     next();
   } catch {
     next(new UnauthorizedError('INVALID_TOKEN', 'The provided token is invalid or expired'));

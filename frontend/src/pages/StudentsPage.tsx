@@ -15,6 +15,8 @@ export default function StudentsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [statusFilter, setStatusFilter] = useState<string | undefined>();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -26,10 +28,15 @@ export default function StudentsPage() {
   const [createError, setCreateError] = useState('');
 
   useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  useEffect(() => {
     setLoading(true);
     setError('');
 
-    studentsApi.list(page, 20, statusFilter)
+    studentsApi.list(page, 20, statusFilter, debouncedSearch || undefined)
       .then((res) => {
         setStudents(res.data);
         setTotal(res.pagination.total);
@@ -37,7 +44,7 @@ export default function StudentsPage() {
       })
       .catch((err) => setError(err?.message || 'Failed to load students'))
       .finally(() => setLoading(false));
-  }, [page, statusFilter]);
+  }, [page, statusFilter, debouncedSearch]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -105,20 +112,26 @@ export default function StudentsPage() {
               {createError}
             </div>
           )}
-          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-            <input placeholder="Roll Number" value={createRoll} onChange={(e) => setCreateRoll(e.target.value.toUpperCase())} required style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '4px', fontSize: '14px', flex: 1, minWidth: '150px' }} />
-            <input placeholder="Full Name" value={createName} onChange={(e) => setCreateName(e.target.value)} required style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '4px', fontSize: '14px', flex: 1, minWidth: '200px' }} />
-            <input placeholder="Branch (e.g. CSE)" value={createBranch} onChange={(e) => setCreateBranch(e.target.value)} style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '4px', fontSize: '14px', flex: 1, minWidth: '120px' }} />
-            <input placeholder="Section (e.g. A)" value={createSection} onChange={(e) => setCreateSection(e.target.value.toUpperCase())} style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '4px', fontSize: '14px', flex: 0, minWidth: '80px', maxWidth: '100px' }} />
-            <button type="submit" style={{ padding: '8px 16px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '14px', cursor: 'pointer' }}>
+          <div className="resp-stack@mobile" style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            <input placeholder="Roll Number" value={createRoll} onChange={(e) => setCreateRoll(e.target.value.toUpperCase())} required style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '4px', fontSize: '14px', flex: 1, minWidth: '120px' }} />
+            <input placeholder="Full Name" value={createName} onChange={(e) => setCreateName(e.target.value)} required style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '4px', fontSize: '14px', flex: 1, minWidth: '150px' }} />
+            <input placeholder="Branch" value={createBranch} onChange={(e) => setCreateBranch(e.target.value)} style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '4px', fontSize: '14px', flex: 1, minWidth: '90px' }} />
+            <input placeholder="Section" value={createSection} onChange={(e) => setCreateSection(e.target.value.toUpperCase())} style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '4px', fontSize: '14px', flex: 0, minWidth: '70px', maxWidth: '90px' }} />
+            <button type="submit" style={{ padding: '8px 16px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '14px', cursor: 'pointer', minHeight: '44px' }}>
               Create
             </button>
           </div>
         </form>
       )}
 
-      <div style={{ marginBottom: '16px' }}>
-        <label style={{ fontSize: '14px', color: '#6b7280', marginRight: '8px' }}>Status Filter:</label>
+      <div className="resp-stack@mobile" style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+        <input
+          placeholder="Search by name, roll, or email..."
+          value={searchQuery}
+          onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
+          style={{ flex: 1, minWidth: '200px', padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '6px', fontSize: '14px' }}
+        />
+        <label style={{ fontSize: '14px', color: '#6b7280', whiteSpace: 'nowrap' }}>Status:</label>
         <select value={statusFilter || ''} onChange={(e) => { setStatusFilter(e.target.value || undefined); setPage(1); }} style={{ padding: '6px 12px', border: '1px solid #e5e7eb', borderRadius: '4px', fontSize: '14px' }}>
           <option value="">All</option>
           <option value="invited">Invited</option>
@@ -126,11 +139,11 @@ export default function StudentsPage() {
           <option value="suspended">Suspended</option>
           <option value="departed">Departed</option>
         </select>
-        <span style={{ marginLeft: '12px', fontSize: '14px', color: '#6b7280' }}>{total} student(s)</span>
+        <span style={{ fontSize: '14px', color: '#6b7280' }}>{total} student(s)</span>
       </div>
 
       <div style={{ padding: '20px', background: '#fff', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+        <div className="resp-table-wrap"><table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
           <thead>
             <tr style={{ borderBottom: '1px solid #e5e7eb', textAlign: 'left' }}>
               <th style={{ padding: '8px 12px', color: '#6b7280', fontWeight: 500 }}>Roll</th>
@@ -172,7 +185,7 @@ export default function StudentsPage() {
               ))
             )}
           </tbody>
-        </table>
+        </table></div>
 
         {totalPages > 1 && (
           <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '16px' }}>

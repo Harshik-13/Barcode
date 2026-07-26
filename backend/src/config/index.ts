@@ -44,6 +44,11 @@ export const config = {
     vapidPrivateKey: process.env.VAPID_PRIVATE_KEY ?? '',
     vapidSubject: process.env.VAPID_SUBJECT ?? 'mailto:admin@8hour-workspace.com',
   },
+  frontendUrl: process.env.FRONTEND_URL ?? 'http://localhost:5173',
+  upload: {
+    profileDir: path.resolve(process.cwd(), 'uploads', 'profiles'),
+    maxFileSize: 2 * 1024 * 1024,
+  },
 } as const;
 
 export const isDev = config.env === 'development';

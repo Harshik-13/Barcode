@@ -38,7 +38,23 @@ export interface Student {
   email: string | null;
   branch: string | null;
   section: string | null;
+  hostel: string | null;
   status: StudentStatus;
+  createdAt: string;
+}
+
+export interface ProfileData {
+  id: number;
+  name: string;
+  email: string;
+  role: RoleName;
+  status: string;
+  studentId?: number;
+  roll?: string;
+  branch?: string | null;
+  section?: string | null;
+  hostel?: string | null;
+  profilePicture?: string | null;
   createdAt: string;
 }
 

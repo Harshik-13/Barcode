@@ -44,8 +44,8 @@ export default function Login() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        minHeight: '100vh',
-        padding: '24px',
+        minHeight: '100dvh',
+        padding: '16px',
       }}
     >
       <form
@@ -53,7 +53,7 @@ export default function Login() {
         style={{
           width: '100%',
           maxWidth: '400px',
-          padding: '32px',
+          padding: '24px 20px',
           background: '#fff',
           borderRadius: '8px',
           boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
@@ -131,6 +131,13 @@ export default function Login() {
           {fieldErrors.password && (
             <p style={{ color: '#ef4444', fontSize: '12px', marginTop: '4px' }}>{fieldErrors.password}</p>
           )}
+        </div>
+
+        <div style={{ textAlign: 'right', marginBottom: '16px' }}>
+          <a href="/forgot-password" onClick={(e) => { e.preventDefault(); navigate('/forgot-password'); }}
+            style={{ color: '#2563eb', textDecoration: 'none', fontSize: '14px', fontWeight: 500 }}>
+            Forgot password?
+          </a>
         </div>
 
         <button
