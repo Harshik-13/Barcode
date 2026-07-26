@@ -169,6 +169,15 @@ export async function departStudent(id: number, actorId: number, ip?: string) {
   }
 }
 
+export async function resolveStudentId(userId: number): Promise<number | null> {
+  const db = getDb();
+  const result = await db.query(
+    'SELECT s.id FROM students s JOIN users u ON s.email = u.email WHERE u.id = $1',
+    [userId]
+  );
+  return result.rows.length > 0 ? (result.rows[0] as { id: number }).id : null;
+}
+
 export async function getStudentHistory(studentId: number, page = 1, limit = 20) {
   const db = getDb();
   await getStudent(studentId);

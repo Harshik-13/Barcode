@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [working-mvp-v-0-1-with-student-side-updation] — 2026-07-26
+
+### Fixed
+
+- **CRITICAL — Notification identity mismatch**: notification routes (`GET /notifications`, `GET /notifications/unread-count`, `PATCH /notifications/:id/read`, `PATCH /notifications/read-all`) were querying with `users.id` instead of `students.id`. Added `resolveStudentId()` helper in `services/student.ts` that resolves `users.id` → `students.id` via the `JOIN students s ON s.email = u.email` pattern already used by the IDOR middleware. Student dashboard now correctly shows live notifications and unread counts after entry/exit scans.
+
+### Changed
+
+- Pre-existing TypeScript build errors fixed: `getDb` import added to `routes/sessions.ts`, `req.params` type coercion in `middleware/auth.ts`
+
 ## [production-mvp-1] — 2026-07-25
 
 ### Added

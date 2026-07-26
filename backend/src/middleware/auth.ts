@@ -80,7 +80,7 @@ export async function requireOwnStudentResource(req: Request, _res: Response, ne
     return;
   }
 
-  const resourceId = parseInt(req.params.studentId || req.params.id, 10);
+  const resourceId = parseInt((req.params.studentId || req.params.id) as string, 10);
   if (isNaN(resourceId)) {
     next(new ForbiddenError('Invalid resource identifier'));
     return;

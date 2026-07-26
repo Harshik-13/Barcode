@@ -1,5 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { requireAuth, requireRole, requireOwnStudentResource } from '../middleware/auth';
+import { getDb } from '../db';
 import { getSessionById, listSessions, createSession, startSession, exitSession, manualExitSession, completeSession, archiveSession, getLiveSessionCount, getLiveStudents, overrideSession, getActiveSessionForStudent, getStudentStats, reviewSession } from '../services/session';
 import { adminLimiter } from '../middleware/rateLimiter';
 import { parsePagination } from '../utils/pagination';
