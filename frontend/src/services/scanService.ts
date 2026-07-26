@@ -1,3 +1,5 @@
+import { api } from './api';
+
 export type ScanResultCode =
   | 'SUCCESS_ENTRY'
   | 'SUCCESS_EXIT'
@@ -32,43 +34,23 @@ export type ScanResult = { success: true; data: ScanSuccessData } | { success: f
 
 export async function submitScan(barcode: string): Promise<ScanResult> {
   try {
-    const res = await fetch('/api/scan', {
+    const response = await api<{ data: ScanSuccessData }>('/api/scan', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
-      body: JSON.stringify({ barcode }),
+      body: { barcode },
     });
-
-    if (res.status === 200) {
-      const body = await res.json();
-      return { success: true, data: body.data };
-    }
-
-    if (res.status >= 400 && res.status < 500) {
-      const body = await res.json().catch(() => ({}));
+    return { success: true, data: response.data };
+  } catch (err: unknown) {
+    if (err && typeof err === 'object' && 'error' in err) {
+      const apiErr = err as { error: string; message: string; details?: Record<string, unknown> };
       return {
         success: false,
         data: {
-          error: body.error || 'SERVER_ERROR',
-          message: body.message || 'Request failed',
-          details: body.details,
+          error: (apiErr.error as ScanResultCode) || 'SERVER_ERROR',
+          message: apiErr.message || 'Request failed',
+          details: apiErr.details,
         },
       };
     }
-
-    if (res.status === 401 || res.status === 403) {
-      return { success: false, data: { error: 'UNAUTHORIZED', message: 'Authentication required or insufficient permissions' } };
-    }
-
-    return { success: false, data: { error: 'SERVER_ERROR', message: 'Unexpected server error' } };
-  } catch {
     return { success: false, data: { error: 'SERVER_ERROR', message: 'Network error — request failed' } };
-  }
-}
-
-function getToken(): string {
-  try {
-    return localStorage.getItem('workspace_token') || '';
-  } catch {
-    return '';
   }
 }

@@ -38,3 +38,6 @@ logs/
 *.tsbuildinfo
 
 backend/data/imports/*.xlsx
+
+# Generated cache/index files
+ecret*
