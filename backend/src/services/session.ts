@@ -241,10 +241,11 @@ export async function manualExitSession(id: number, exitRecorderId: number, cate
   return session;
 }
 
-export async function completeSession(id: number, recorderId: number, summary: string, actorRole: string, ip?: string) {
+export async function completeSession(id: number, recorderId: number, summary: string, actorRole: string, ip?: string, categoryId?: number) {
   const session = await transition(id, 'completed', ['awaiting_summary', 'active'], {
     summary,
     completion_reason: 'normal',
+    ...(categoryId !== undefined ? { category_id: categoryId } : {}),
   });
 
   logAudit({ actorType: actorRole as 'admin' | 'faculty', actorId: recorderId, action: 'SESSION_COMPLETED', entityType: 'SESSION', entityId: id, details: { summary }, ipAddress: ip });
@@ -353,7 +354,7 @@ export async function updateSessionCategory(sessionId: number, categoryId: numbe
   if (lockResult.rows.length === 0) throw new NotFoundError('Session');
   const session = lockResult.rows[0] as SessionRow;
 
-  if (session.status !== 'active') {
+  if (session.status !== 'active' && session.status !== 'awaiting_summary') {
     throw new BusinessRuleError('INVALID_STATE', `Cannot set category on session in status '${session.status}'`);
   }
 

@@ -104,8 +104,8 @@ export const sessionsApi = {
     api<DataResponse<SessionWithDetails>>(`/api/sessions/${id}/exit`, { method: 'PATCH', body: { categoryId } }),
   manualExit: (id: number, reason: string, categoryId?: number) =>
     api<DataResponse<SessionWithDetails>>(`/api/sessions/${id}/manual-exit`, { method: 'PATCH', body: { reason, categoryId } }),
-  complete: (id: number, summary: string) =>
-    api<DataResponse<SessionWithDetails>>(`/api/sessions/${id}/complete`, { method: 'PATCH', body: { summary } }),
+  complete: (id: number, summary: string, categoryId?: number) =>
+    api<DataResponse<SessionWithDetails>>(`/api/sessions/${id}/complete`, { method: 'PATCH', body: { summary, ...(categoryId !== undefined ? { categoryId } : {}) } }),
   updateCategory: (id: number, categoryId: number) =>
     api<DataResponse<SessionWithDetails>>(`/api/sessions/${id}/category`, { method: 'PATCH', body: { categoryId } }),
   archive: (id: number, reason?: string) =>

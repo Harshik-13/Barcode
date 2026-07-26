@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../store/AuthContext';
-import { sessionsApi } from '../services/apiService';
+import { sessionsApi, categoriesApi } from '../services/apiService';
 import type { SessionWithDetails } from '../services/apiService';
-import type { SessionStatus } from '@workspace/shared';
+import type { Category, SessionStatus } from '@workspace/shared';
 
 const STATUS_LABELS: Record<SessionStatus, string> = {
   created: 'Created',
@@ -31,14 +31,21 @@ export default function SessionDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<number | ''>('');
 
   useEffect(() => {
     if (!id) return;
     setLoading(true);
-    sessionsApi.get(parseInt(id, 10))
-      .then((res) => {
-        setSession(res.data);
-        setSummary(res.data.summary || '');
+    Promise.all([
+      sessionsApi.get(parseInt(id, 10)),
+      categoriesApi.list('active'),
+    ])
+      .then(([sessionRes, catRes]) => {
+        setSession(sessionRes.data);
+        setSummary(sessionRes.data.summary || '');
+        setCategories(catRes.data);
+        if (sessionRes.data.categoryId) setSelectedCategory(sessionRes.data.categoryId);
       })
       .catch(() => setError('Session not found'))
       .finally(() => setLoading(false));
@@ -49,7 +56,8 @@ export default function SessionDetailPage() {
     setSubmitting(true);
     setError('');
     setSuccess('');
-    sessionsApi.complete(session.id, summary.trim())
+    const categoryId = selectedCategory !== '' ? (selectedCategory as number) : undefined;
+    sessionsApi.complete(session.id, summary.trim(), categoryId)
       .then((res) => {
         setSession(res.data);
         setSuccess('Summary submitted successfully');
@@ -118,6 +126,15 @@ export default function SessionDetailPage() {
             <h3 style={{ fontSize: '16px', marginBottom: '8px' }}>Submit Summary</h3>
             {success && <div style={{ marginBottom: '12px', padding: '10px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '6px', color: '#16a34a', fontSize: '14px' }}>{success}</div>}
             {error && <div style={{ marginBottom: '12px', padding: '10px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', color: '#dc2626', fontSize: '14px' }}>{error}</div>}
+            {!session.categoryId && categories.length > 0 && (
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px', color: '#374151' }}>Work Category</label>
+                <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value ? parseInt(e.target.value, 10) : '')} style={{ width: '100%', padding: '8px 10px', border: '1px solid #e5e7eb', borderRadius: '6px', fontSize: '14px', boxSizing: 'border-box' }}>
+                  <option value="">Select a category...</option>
+                  {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+            )}
             <textarea
               value={summary}
               onChange={(e) => setSummary(e.target.value)}

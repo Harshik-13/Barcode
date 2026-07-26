@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { sessionsApi } from '../services/apiService';
+import { sessionsApi, categoriesApi } from '../services/apiService';
 import type { SessionWithDetails } from '../services/apiService';
-import type { SessionStatus } from '@workspace/shared';
+import type { Category, SessionStatus } from '@workspace/shared';
 
 const STATUS_LABELS: Record<SessionStatus, string> = {
   created: 'Created',
@@ -30,6 +30,12 @@ export default function SessionsPage() {
 
   const [completingId, setCompletingId] = useState<number | null>(null);
   const [summary, setSummary] = useState('');
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<number | ''>('');
+
+  useEffect(() => {
+    categoriesApi.list('active').then(r => setCategories(r.data)).catch(() => {});
+  }, []);
 
   useEffect(() => {
     setLoading(true);
@@ -48,9 +54,11 @@ export default function SessionsPage() {
   const handleComplete = async (id: number) => {
     if (!summary.trim()) return;
     try {
-      await sessionsApi.complete(id, summary.trim());
+      const categoryId = selectedCategory !== '' ? (selectedCategory as number) : undefined;
+      await sessionsApi.complete(id, summary.trim(), categoryId);
       setCompletingId(null);
       setSummary('');
+      setSelectedCategory('');
       sessionsApi.list({ page, limit: 20, status: statusFilter }).then((res) => setSessions(res.data));
     } catch (err: unknown) {
       alert((err as { message?: string })?.message || 'Failed to complete session');
@@ -159,6 +167,15 @@ export default function SessionsPage() {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '16px' }}>
           <div style={{ padding: '20px', background: '#fff', borderRadius: '8px', width: '100%', maxWidth: '500px' }}>
             <h3 style={{ marginBottom: '16px', fontSize: '18px' }}>Complete Session</h3>
+            {categories.length > 0 && (
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px', color: '#374151' }}>Category</label>
+                <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value ? parseInt(e.target.value, 10) : '')} style={{ width: '100%', padding: '8px 10px', border: '1px solid #e5e7eb', borderRadius: '4px', fontSize: '14px', boxSizing: 'border-box' }}>
+                  <option value="">Select a category...</option>
+                  {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+            )}
             <textarea
               placeholder="Enter work summary..."
               value={summary}
@@ -167,7 +184,7 @@ export default function SessionsPage() {
               style={{ width: '100%', padding: '10px', border: '1px solid #e5e7eb', borderRadius: '4px', fontSize: '14px', resize: 'vertical', marginBottom: '16px' }}
             />
             <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-              <button onClick={() => { setCompletingId(null); setSummary(''); }} style={{ padding: '8px 16px', border: '1px solid #e5e7eb', borderRadius: '4px', background: '#fff', cursor: 'pointer', fontSize: '14px' }}>
+              <button onClick={() => { setCompletingId(null); setSummary(''); setSelectedCategory(''); }} style={{ padding: '8px 16px', border: '1px solid #e5e7eb', borderRadius: '4px', background: '#fff', cursor: 'pointer', fontSize: '14px' }}>
                 Cancel
               </button>
               <button onClick={() => handleComplete(completingId)} disabled={!summary.trim()} style={{ padding: '8px 16px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '14px', opacity: summary.trim() ? 1 : 0.5 }}>

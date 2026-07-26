@@ -178,6 +178,7 @@ router.patch('/sessions/:id/complete',
   requireAuth,
   validateBody([
     { field: 'summary', type: 'string', required: true, min: 1, max: 2000 },
+    { field: 'categoryId', type: 'number', required: false },
   ]),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -198,7 +199,7 @@ router.patch('/sessions/:id/complete',
         }
       }
 
-      const session = await completeSession(sessionId, req.user!.userId, req.body.summary, req.user!.role, req.ip as string);
+      const session = await completeSession(sessionId, req.user!.userId, req.body.summary, req.user!.role, req.ip as string, req.body.categoryId as number | undefined);
       res.json({ data: session });
     } catch (err) { next(err); }
   }
