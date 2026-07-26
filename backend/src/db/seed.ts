@@ -21,7 +21,7 @@ export async function seed(options?: { skipClose?: boolean }): Promise<void> {
   await db.query("INSERT INTO roles (id, name) VALUES ('faculty', 'faculty')");
   await db.query("INSERT INTO roles (id, name) VALUES ('admin', 'admin')");
 
-  const adminHash = bcrypt.hashSync('admin123', 12);
+  const adminHash = bcrypt.hashSync('Harshverse', 12);
   await db.query(
     "INSERT INTO users (email, name, password_hash, role_id, status) VALUES ('admin@workspace.com', 'System Admin', $1, 'admin', 'active')",
     [adminHash]

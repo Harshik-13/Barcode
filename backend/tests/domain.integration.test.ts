@@ -7,7 +7,7 @@ let adminToken: string;
 let facultyToken: string;
 let studentToken: string;
 
-const adminLogin = () => request(app).post('/api/auth/login').send({ email: 'admin@workspace.com', password: 'admin123' });
+const adminLogin = () => request(app).post('/api/auth/login').send({ email: 'admin@workspace.com', password: 'Harshverse' });
 const facultyLogin = () => request(app).post('/api/auth/login').send({ email: 'faculty@workspace.com', password: 'faculty123' });
 const studentLogin = () => request(app).post('/api/auth/login').send({ email: 'student@workspace.com', password: 'student123' });
 

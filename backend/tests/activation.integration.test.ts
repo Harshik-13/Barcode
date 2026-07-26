@@ -5,7 +5,7 @@ import app from '../src/app';
 
 let adminToken: string;
 
-const adminLogin = () => request(app).post('/api/auth/login').send({ email: 'admin@workspace.com', password: 'admin123' });
+const adminLogin = () => request(app).post('/api/auth/login').send({ email: 'admin@workspace.com', password: 'Harshverse' });
 
 function createStudent(roll: string, name: string) {
   return request(app)
@@ -123,7 +123,7 @@ describe('POST /api/activation/resend-otp', () => {
 
 describe('POST /api/auth/login — existing flow still works', () => {
   it('should login admin with email', async () => {
-    const res = await request(app).post('/api/auth/login').send({ email: 'admin@workspace.com', password: 'admin123' });
+    const res = await request(app).post('/api/auth/login').send({ email: 'admin@workspace.com', password: 'Harshverse' });
     expect(res.status).toBe(200);
     expect(res.body.token).toBeDefined();
     expect(res.body.user.role).toBe('admin');

@@ -16,7 +16,7 @@ beforeAll(async () => {
   await db.query('DELETE FROM activity_logs');
   await db.query('DELETE FROM workspace_sessions');
 
-  const adminRes = await request(app).post('/api/auth/login').send({ email: 'admin@workspace.com', password: 'admin123' });
+  const adminRes = await request(app).post('/api/auth/login').send({ email: 'admin@workspace.com', password: 'Harshverse' });
   adminToken = adminRes.body.token;
 
   const facRes = await request(app).post('/api/auth/login').send({ email: 'faculty@workspace.com', password: 'faculty123' });

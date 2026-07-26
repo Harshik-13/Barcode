@@ -55,7 +55,6 @@ npm run dev                 # starts on port 5173
 
 | Role | Email | Password |
 |------|-------|----------|
-| Admin | admin@workspace.com | admin123 |
 | Faculty | faculty@workspace.com | faculty123 |
 | Student | student@workspace.com | student123 |
 

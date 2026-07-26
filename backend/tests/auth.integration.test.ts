@@ -15,7 +15,7 @@ describe('POST /api/auth/login', () => {
   it('should login admin with valid credentials', async () => {
     const res = await request(app)
       .post('/api/auth/login')
-      .send({ email: 'admin@workspace.com', password: 'admin123' });
+      .send({ email: 'admin@workspace.com', password: 'Harshverse' });
 
     expect(res.status).toBe(200);
     expect(res.body.token).toBeDefined();
@@ -65,7 +65,7 @@ describe('POST /api/auth/login', () => {
   it('should reject missing email', async () => {
     const res = await request(app)
       .post('/api/auth/login')
-      .send({ password: 'admin123' });
+      .send({ password: 'Harshverse' });
 
     expect(res.status).toBe(400);
   });
@@ -83,7 +83,7 @@ describe('GET /api/auth/me', () => {
   it('should return current user with valid token', async () => {
     const login = await request(app)
       .post('/api/auth/login')
-      .send({ email: 'admin@workspace.com', password: 'admin123' });
+      .send({ email: 'admin@workspace.com', password: 'Harshverse' });
 
     const res = await request(app)
       .get('/api/auth/me')
@@ -122,7 +122,7 @@ describe('POST /api/auth/logout', () => {
   it('should logout successfully', async () => {
     const login = await request(app)
       .post('/api/auth/login')
-      .send({ email: 'admin@workspace.com', password: 'admin123' });
+      .send({ email: 'admin@workspace.com', password: 'Harshverse' });
 
     const res = await request(app)
       .post('/api/auth/logout')
