@@ -6,7 +6,7 @@ This file documents conventions and instructions for AI agents working on the Hi
 
 This is the **Hive (workspace attendance) system** — NOT a hostel meal attendance system. The domain is workspace attendance for startup environments.
 
-**Status: ReadyVersion-1.2** — All development phases complete. System is production-ready and running. Google OAuth migration (phases 1–3) is in progress — see "Google OAuth Migration Notes" below. New features should follow existing patterns and maintain backward compatibility.
+**Status: ReadyVersion-1.3** — All development phases complete. System is production-ready and running. Google OAuth migration (phases 1–3) is in progress — see "Google OAuth Migration Notes" below. New features should follow existing patterns and maintain backward compatibility.
 
 ## Source of Truth
 

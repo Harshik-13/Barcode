@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [ReadyVersion-1.3] — 2026-08-11
+
+### Changed
+
+- **Branding** — product renamed from "8Hour Workspace" to **Hive** ("Where Ideas Work Together."). User-facing only: browser title, PWA manifest, auth-page headings, top-bar wordmark, favicon, push notification title, email subject lines, SMTP display name, and docs. No database, API, env, route, or logic changes — `8hattendance@gmail.com` and internal identifiers kept.
+
 ## [ReadyVersion-1.2] — 2026-08-11
 
 ### Added
@@ -16,7 +22,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
-- **Branding** — product renamed from "8Hour Workspace" to **Hive** ("Where Ideas Work Together."). User-facing only: browser title, PWA manifest, auth-page headings, top-bar wordmark, favicon, push notification title, email subject lines, SMTP display name, and docs. No database, API, env, route, or logic changes — `8hattendance@gmail.com` and internal identifiers kept.
 - **Config** — `config.googleAuth` block (`clientId`, `jwksUri` overridable via `GOOGLE_JWKS_URI` for tests, `allowedDomains` from `ALLOWED_EMAIL_DOMAINS`); `rateLimit.authMax` from `AUTH_RATE_LIMIT_MAX`.
 - **Shared constants** — new error codes `DOMAIN_NOT_ALLOWED`, `ACCOUNT_NOT_FOUND_OR_INACTIVE`, `IDENTITY_CONFLICT`.
 - **Test count** — backend suite 160 → 183 tests across 13 suites.
