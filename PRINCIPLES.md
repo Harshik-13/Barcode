@@ -1,4 +1,4 @@
-# 8Hour Workspace Attendance System — Engineering Principles
+# Hive — Engineering Principles
 
 ## Core Philosophy
 

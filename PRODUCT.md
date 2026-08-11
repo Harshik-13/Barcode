@@ -14,7 +14,7 @@ web
 
 ## Product Purpose
 
-A role-based platform that records student attendance and daily work activity inside a college startup workspace ("8Hour Workspace"). It exists so faculty and admin know who is actually working in the workspace on a given day, what category of work they are doing, and for how long — with the student side staying in the loop through notifications, summaries, and their own statistics.
+A role-based platform that records student attendance and daily work activity inside a college startup workspace ("Hive"). It exists so faculty and admin know who is actually working in the workspace on a given day, what category of work they are doing, and for how long — with the student side staying in the loop through notifications, summaries, and their own statistics.
 
 ## Positioning
 
@@ -43,7 +43,7 @@ The workspace is a physical place, and the product is its accountability layer: 
 
 ## Brand Commitments
 
-None binding. The product currently goes by the name "8Hour Workspace" (title, manifest, theme color #2563EB) but the owner has explicitly marked all visual identity negotiable.
+None binding. The product currently goes by the name "Hive" with the tagline "Where Ideas Work Together." (title, manifest, theme color #2563EB) but the owner has explicitly marked all visual identity negotiable.
 
 ## Evidence on Hand
 

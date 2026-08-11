@@ -186,7 +186,7 @@ export async function sendPushToAll(payload: PushPayload): Promise<Array<{ succe
 
 export function buildNotificationPayload(type: string, message: string, sessionId?: number, actionUrl?: string): PushPayload {
   const basePayload: PushPayload = {
-    title: '8Hour Workspace',
+    title: 'Hive',
     body: message,
     icon: '/favicon.svg',
     badge: '/favicon.svg',

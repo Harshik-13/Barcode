@@ -11,7 +11,7 @@
 
 ## 1. Purpose
 
-Replace the entire OTP/password-based authentication system of the 8Hour Workspace Barcode Attendance System with Google OAuth.
+Replace the entire OTP/password-based authentication system of the Hive system with Google OAuth.
 
 - **Authentication changes.** Nothing else.
 - **Authorization does NOT change.**
@@ -486,7 +486,7 @@ The following MUST behave **exactly** the same before and after the migration:
 5. **No functionality regression** — section 12 is an acceptance contract; the full test suite and the manual checklist are the gate.
 6. Each phase lands as its own commit with the old behavior still working until Phase 6.
 7. Server-side validation remains mandatory for every new input (onboarding fields, etc.), and every new endpoint gets authorization/rate-limit treatment consistent with the codebase conventions in `AGENTS.md` and `PRINCIPLES.md`.
-8. The end state: the Barcode Attendance System is functionally identical except that **identity is acquired through Google OAuth**.
+8. The end state: Hive is functionally identical except that **identity is acquired through Google OAuth**.
 
 ---
 

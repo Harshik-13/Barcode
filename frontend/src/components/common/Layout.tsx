@@ -91,7 +91,7 @@ export function Layout() {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <strong style={{ marginRight: '12px', fontSize: '15px', whiteSpace: 'nowrap' }}>8Hour</strong>
+            <strong style={{ marginRight: '12px', fontSize: '15px', whiteSpace: 'nowrap' }}>Hive</strong>
             <nav
               className={`resp-nav-links${navOpen ? ' open' : ''}`}
             >

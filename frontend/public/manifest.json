@@ -1,7 +1,7 @@
 {
-  "name": "8Hour Workspace Attendance",
-  "short_name": "8Hour Workspace",
-  "description": "Attendance management system for 8Hour Workspace",
+  "name": "Hive",
+  "short_name": "Hive",
+  "description": "Where Ideas Work Together.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

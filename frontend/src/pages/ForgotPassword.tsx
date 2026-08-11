@@ -29,7 +29,7 @@ export default function ForgotPassword() {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100dvh', padding: '16px' }}>
       <div style={{ width: '100%', maxWidth: '400px', padding: '24px 20px', background: '#fff', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-        <h1 style={{ marginBottom: '8px', fontSize: '24px' }}>8Hour Workspace</h1>
+        <h1 style={{ marginBottom: '8px', fontSize: '24px' }}>Hive</h1>
         <p style={{ color: '#6b7280', marginBottom: '24px', fontSize: '14px' }}>Reset your password</p>
 
         {error && (

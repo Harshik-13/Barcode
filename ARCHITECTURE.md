@@ -1,4 +1,4 @@
-# 8Hour Workspace Attendance System — Architecture
+# Hive — Architecture
 
 ## System Overview
 

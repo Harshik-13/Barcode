@@ -43,7 +43,7 @@ export const config = {
     secure: process.env.SMTP_SECURE === 'true',
     user: process.env.SMTP_USER ?? '',
     password: process.env.SMTP_PASS ?? '',
-    from: process.env.SMTP_FROM ?? 'Barcode Attendance <8hattendance@gmail.com>',
+    from: process.env.SMTP_FROM ?? 'Hive <8hattendance@gmail.com>',
   },
   log: {
     level: process.env.LOG_LEVEL ?? 'info',

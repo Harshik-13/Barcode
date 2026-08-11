@@ -1,4 +1,4 @@
-# 8Hour Workspace Attendance System
+# Hive — Where Ideas Work Together.
 
 Role-based platform that records student attendance and daily work activity inside the startup workspace.
 

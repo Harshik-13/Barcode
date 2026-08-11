@@ -1,5 +1,5 @@
 ---
-name: 8Hour Workspace
+name: Hive
 description: Workspace attendance and work-session tracking for a college startup incubator
 colors:
   primary: "#2563eb"
@@ -94,7 +94,7 @@ components:
     textColor: "{colors.primary}"
 ---
 
-# Design System: 8Hour Workspace
+# Design System: Hive
 
 ## Overview
 
@@ -151,11 +151,11 @@ Decision Blue anchors a palette that is otherwise monochromatic neutral — a re
 **Character:** A precise, neutral technical voice. The stack is the platform's own UI type — nothing exotic, nothing decorative. Hierarchy is communicated through weight and color (Logbook Ink vs. Logbook Gray) more than size.
 
 ### Hierarchy
-- **Display** (700, 24px, 1.3): Page titles — the login heading "8Hour Workspace", top-level screen titles.
+- **Display** (700, 24px, 1.3): Page titles — the login heading "Hive", top-level screen titles.
 - **Title** (600, 18px, 1.3): Card headings — "Current Session", "Pending Summaries", section titles in cards.
 - **Body** (400, 14px, 1.5): Default form and table text; on mobile, body base is 15px with inputs forced to 16px to prevent iOS zoom.
 - **Label** (500, 13px, 1.4): Form field labels, table headers, status chips, small buttons. Table headers additionally render in Logbook Gray.
-- **Header brand** (700, 15px): The "8Hour" wordmark in the top bar.
+- **Header brand** (700, 15px): The "Hive" wordmark in the top bar.
 
 ### Named Rules
 **The Weight-Over-Size Rule.** Within cards, hierarchy changes via font weight and color first (600 vs 400, Ink vs Gray); font size stays within the 13–18px band. Only page-level titles jump to 24px.
