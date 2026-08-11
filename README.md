@@ -146,3 +146,22 @@ Copy `backend/.env.example` to `backend/.env` and edit:
 | `AUTH_RATE_LIMIT_MAX` | `10` | Login attempts per window on auth endpoints |
 
 Frontend env (`frontend/.env`): `VITE_API_BASE_URL`, `VITE_GOOGLE_CLIENT_ID` (must match `GOOGLE_CLIENT_ID` for the Google button to render).
+
+---
+
+## Google OAuth Setup (Google login)
+
+1. **Create an OAuth client** in [Google Cloud Console](https://console.cloud.google.com/apis/credentials) → Create Credentials → OAuth client ID → **Web application**.
+2. **Authorized JavaScript origins** — add exactly `http://localhost:5173` (no trailing slash; add your production origin later).
+3. **OAuth consent screen** — in *Testing* mode, add the `@vnrvjiet.in` accounts that should sign in as **Test users** (or publish the app).
+4. **Env vars** — set the same client ID in both files, then restart both dev servers:
+
+   ```bash
+   # backend/.env
+   GOOGLE_CLIENT_ID=xxxxxxxx.apps.googleusercontent.com
+
+   # frontend/.env
+   VITE_GOOGLE_CLIENT_ID=xxxxxxxx.apps.googleusercontent.com
+   ```
+
+Only verified `@vnrvjiet.in` accounts pass the server-side domain gate (configurable via `ALLOWED_EMAIL_DOMAINS`). The Google button appears on the login page only when `VITE_GOOGLE_CLIENT_ID` is set; the email/password path stays available until the migration's Phase 6.
