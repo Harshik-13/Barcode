@@ -9,6 +9,7 @@ export type ScanResultCode =
   | 'ACCOUNT_INACTIVE'
   | 'DUPLICATE_SCAN'
   | 'INVALID_SESSION_STATE'
+  | 'QUEUED_FOR_SYNC'
   | 'UNAUTHORIZED'
   | 'SERVER_ERROR';
 

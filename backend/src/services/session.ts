@@ -116,8 +116,13 @@ async function transition(sessionId: number, targetStatus: string, validFrom: st
 
 export async function getSessionById(id: number) {
   const db = getDb();
-  const row = await getSessionRow(db, id);
-  return rowToSession(row);
+  const result = await db.query(
+    'SELECT ws.*, s.roll as student_roll, s.name as student_name, c.name as category_name FROM workspace_sessions ws JOIN students s ON ws.student_id = s.id LEFT JOIN categories c ON ws.category_id = c.id WHERE ws.id = $1',
+    [id]
+  );
+  if (result.rows.length === 0) throw new NotFoundError('Session');
+  const row = result.rows[0] as Record<string, unknown>;
+  return rowToSessionDetails(row) as ReturnType<typeof rowToSession> & { studentRoll: string; studentName: string; categoryName: string | null };
 }
 
 function rowToSessionDetails(row: Record<string, unknown>) {
@@ -152,7 +157,10 @@ export async function listSessions(page = 1, limit = 20, filters?: { studentId?:
   if (filters?.studentId) { conditions.push(`ws.student_id = $${params.length + 1}`); params.push(filters.studentId); }
   if (filters?.status) { conditions.push(`ws.status = $${params.length + 1}`); params.push(filters.status); }
   if (filters?.dateFrom) { conditions.push(`ws.entry_time >= $${params.length + 1}`); params.push(filters.dateFrom); }
-  if (filters?.dateTo) { conditions.push(`ws.entry_time <= $${params.length + 1}`); params.push(filters.dateTo); }
+  if (filters?.dateTo) {
+    const dateTo = /^\d{4}-\d{2}-\d{2}$/.test(filters.dateTo) ? `${filters.dateTo} 23:59:59` : filters.dateTo;
+    conditions.push(`ws.entry_time <= $${params.length + 1}`); params.push(dateTo);
+  }
 
   const whereClause = conditions.length > 0 ? ` WHERE ${conditions.join(' AND ')}` : '';
 
@@ -226,16 +234,28 @@ export async function exitSession(id: number, exitRecorderId: number, categoryId
 export async function manualExitSession(id: number, exitRecorderId: number, categoryId: number | undefined, reason: string, actorRole: string, ip?: string) {
   const now = new Date().toISOString();
 
-  const session = await transition(id, 'awaiting_summary', ['active', 'created'], {
-    exit_recorder_id: exitRecorderId,
-    exit_time: now,
-    category_id: categoryId,
-    is_manual_exit: 1,
-    manual_exit_reason: reason,
-    completion_reason: 'manual_exit',
-  });
+  const current = await getSessionById(id);
+  const alreadyAwaitingSummary = current.status === 'awaiting_summary';
 
-  logAudit({ actorType: actorRole as 'admin' | 'faculty', actorId: exitRecorderId, action: 'SESSION_MANUAL_EXIT', entityType: 'SESSION', entityId: id, details: { reason, categoryId }, ipAddress: ip });
+  const session = alreadyAwaitingSummary
+    ? await transition(id, 'completed', ['awaiting_summary'], {
+        exit_recorder_id: exitRecorderId,
+        exit_time: current.exitTime ?? now,
+        category_id: categoryId,
+        is_manual_exit: 1,
+        manual_exit_reason: reason,
+        completion_reason: 'manual_exit',
+      })
+    : await transition(id, 'awaiting_summary', ['active', 'created'], {
+        exit_recorder_id: exitRecorderId,
+        exit_time: now,
+        category_id: categoryId,
+        is_manual_exit: 1,
+        manual_exit_reason: reason,
+        completion_reason: 'manual_exit',
+      });
+
+  logAudit({ actorType: actorRole as 'admin' | 'faculty', actorId: exitRecorderId, action: 'SESSION_MANUAL_EXIT', entityType: 'SESSION', entityId: id, details: { reason, categoryId, completedWithoutSummary: alreadyAwaitingSummary }, ipAddress: ip });
   const exitedSession = await getSessionById(id);
   createNotification(exitedSession.studentId, id, 'exit', `Your session was exited manually: ${reason}`);
   return session;

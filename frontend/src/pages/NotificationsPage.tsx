@@ -69,7 +69,7 @@ export default function NotificationsPage() {
                 <div style={{ fontWeight: n.isRead ? 400 : 500, marginBottom: '4px' }}>{n.message}</div>
                 <div style={{ color: '#9ca3af', fontSize: '12px' }}>{new Date(n.createdAt).toLocaleString()}</div>
                 {n.sessionId && (
-                  <button onClick={() => navigate(`/sessions/${n.sessionId}`)} style={{ marginTop: '8px', padding: '4px 10px', background: 'none', border: '1px solid #e5e7eb', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', color: '#6b7280' }}>
+                  <button onClick={() => { handleMarkAsRead(n.id); navigate(`/sessions/${n.sessionId}`); }} style={{ marginTop: '8px', padding: '4px 10px', background: 'none', border: '1px solid #e5e7eb', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', color: '#6b7280' }}>
                     View Session
                   </button>
                 )}

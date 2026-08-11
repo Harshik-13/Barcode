@@ -4,31 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { sessionsApi, notificationsApi, categoriesApi } from '../services/apiService';
 import type { SessionWithDetails, NotificationItem, SessionStats } from '../services/apiService';
 import type { Category } from '@workspace/shared';
-import type { SessionStatus } from '@workspace/shared';
-
-const STATUS_LABELS: Record<SessionStatus, string> = {
-  created: 'Created',
-  active: 'Active',
-  awaiting_summary: 'Awaiting Summary',
-  completed: 'Completed',
-  archived: 'Archived',
-};
-
-const STATUS_COLORS: Record<SessionStatus, string> = {
-  created: '#f59e0b',
-  active: '#10b981',
-  awaiting_summary: '#f97316',
-  completed: '#6b7280',
-  archived: '#9ca3af',
-};
-
-function formatDuration(seconds: number | null | undefined): string {
-  if (!seconds && seconds !== 0) return '-';
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  if (h > 0) return `${h}h ${m}m`;
-  return `${m}m`;
-}
+import { STATUS_LABELS, statusChipStyle, formatDuration } from '../utils/sessionStatus';
 
 export default function StudentDashboard() {
   const { user } = useAuth();
@@ -87,7 +63,7 @@ export default function StudentDashboard() {
 
   useEffect(() => {
     if (!user) return;
-    const interval = setInterval(fetchData, 5000);
+    const interval = setInterval(fetchData, 30000);
     return () => clearInterval(interval);
   }, [fetchData, user]);
 
@@ -144,9 +120,9 @@ export default function StudentDashboard() {
           {activeSession ? (
             <div>
               <div style={{ marginBottom: '8px' }}>
-                <span style={{ color: '#6b7280', fontSize: '14px' }}>Status </span>
-                <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: '4px', fontSize: '13px', fontWeight: 500, background: `${STATUS_COLORS[activeSession.status as SessionStatus]}20`, color: STATUS_COLORS[activeSession.status as SessionStatus] }}>
-                  {STATUS_LABELS[activeSession.status as SessionStatus] || activeSession.status}
+                <span style={{ color: 'var(--color-text-secondary)', fontSize: '14px' }}>Status </span>
+                <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: '4px', fontSize: '13px', fontWeight: 500, ...statusChipStyle(activeSession.status) }}>
+                  {STATUS_LABELS[activeSession.status] || activeSession.status}
                 </span>
               </div>
               <div style={{ marginBottom: '4px' }}><span style={{ color: '#6b7280', fontSize: '14px' }}>Entry </span><span style={{ fontSize: '14px' }}>{new Date(activeSession.entryTime).toLocaleString()}</span></div>
@@ -244,15 +220,16 @@ export default function StudentDashboard() {
               </thead>
               <tbody>
                 {recentSessions.map((s) => (
-                  <tr key={s.id} style={{ borderBottom: '1px solid #f3f4f6', cursor: 'pointer' }} onClick={() => navigate(`/sessions/${s.id}`)}>
+                  <tr key={s.id} tabIndex={0} style={{ borderBottom: '1px solid #f3f4f6', cursor: 'pointer', outlineOffset: '-2px' }} onClick={() => navigate(`/sessions/${s.id}`)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/sessions/${s.id}`); } }}>
                     <td style={{ padding: '8px 12px' }}>{new Date(s.entryTime).toLocaleDateString()}</td>
                     <td style={{ padding: '8px 12px' }}>{new Date(s.entryTime).toLocaleTimeString()}</td>
                     <td style={{ padding: '8px 12px' }}>{s.exitTime ? new Date(s.exitTime).toLocaleTimeString() : '-'}</td>
                     <td style={{ padding: '8px 12px' }}>{s.exitTime ? formatDuration(s.durationSeconds) : <LiveDuration entryTime={s.entryTime} />}</td>
                     <td style={{ padding: '8px 12px' }}>{s.categoryName || '-'}</td>
                     <td style={{ padding: '8px 12px' }}>
-                      <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 500, background: `${STATUS_COLORS[s.status as SessionStatus]}20`, color: STATUS_COLORS[s.status as SessionStatus] }}>
-                        {STATUS_LABELS[s.status as SessionStatus] || s.status}
+                      <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 500, ...statusChipStyle(s.status) }}>
+                        {STATUS_LABELS[s.status] || s.status}
                       </span>
                     </td>
                     <td style={{ padding: '8px 12px', color: '#2563eb', fontSize: '13px' }}>View</td>

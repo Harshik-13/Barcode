@@ -1,23 +1,8 @@
 import { useState, useEffect } from 'react';
 import { sessionsApi, categoriesApi } from '../services/apiService';
 import type { SessionWithDetails } from '../services/apiService';
-import type { Category, SessionStatus } from '@workspace/shared';
-
-const STATUS_LABELS: Record<SessionStatus, string> = {
-  created: 'Created',
-  active: 'Active',
-  awaiting_summary: 'Awaiting Summary',
-  completed: 'Completed',
-  archived: 'Archived',
-};
-
-const STATUS_COLORS: Record<SessionStatus, string> = {
-  created: '#f59e0b',
-  active: '#10b981',
-  awaiting_summary: '#f97316',
-  completed: '#6b7280',
-  archived: '#9ca3af',
-};
+import type { Category } from '@workspace/shared';
+import { STATUS_LABELS, statusChipStyle } from '../utils/sessionStatus';
 
 export default function SessionsPage() {
   const [sessions, setSessions] = useState<SessionWithDetails[]>([]);
@@ -125,8 +110,8 @@ export default function SessionsPage() {
                   <td style={{ padding: '8px 12px', fontSize: '13px' }}>{s.exitTime ? new Date(s.exitTime).toLocaleString() : '-'}</td>
                   <td style={{ padding: '8px 12px', color: '#6b7280' }}>{s.categoryName || '-'}</td>
                   <td style={{ padding: '8px 12px' }}>
-                    <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 500, background: `${STATUS_COLORS[s.status as SessionStatus]}20`, color: STATUS_COLORS[s.status as SessionStatus] }}>
-                      {STATUS_LABELS[s.status as SessionStatus] || s.status}
+                    <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 500, ...statusChipStyle(s.status) }}>
+                      {STATUS_LABELS[s.status] || s.status}
                     </span>
                     {s.completionReason && s.completionReason !== 'normal' && (
                       <span style={{ marginLeft: '4px', fontSize: '11px', color: '#6b7280' }}>({s.completionReason})</span>

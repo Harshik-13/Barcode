@@ -3,8 +3,8 @@
 Role-based platform that records student attendance and daily work activity inside the startup workspace.
 
 ![Status](https://img.shields.io/badge/status-production-brightgreen)
-![Tests](https://img.shields.io/badge/tests-160%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-ReadyVersion--1.1-blue)
+![Tests](https://img.shields.io/badge/tests-183%20passing-brightgreen)
+![Version](https://img.shields.io/badge/version-ReadyVersion--1.2-blue)
 
 ---
 
@@ -18,7 +18,7 @@ Role-based platform that records student attendance and daily work activity insi
 - **Faculty review** — Approve/reject sessions with feedback
 - **Management** — Students, categories, sessions, activity logs, faculty management
 - **Student import** — Bulk import from `.xlsx` with branch/section mapping
-- **Authentication** — JWT-based login, OTP activation, password change/reset
+- **Authentication** — Google OAuth (in migration, see `AUTH_MIGRATION_GOOGLE_OAUTH.md`), plus legacy JWT email/password until Phase 6; OTP activation, password change/reset
 - **Security** — IDOR protection, rate limiting, audit logging, session invalidation on password change
 
 ---
@@ -62,7 +62,7 @@ npm run dev                 # starts on port 5173
 
 ```bash
 cd backend
-npm test    # 160 tests across 11 test suites
+npm test    # 183 tests across 13 test suites
 ```
 
 ---
@@ -71,7 +71,7 @@ npm test    # 160 tests across 11 test suites
 
 - **Frontend**: React 18 + TypeScript + Vite
 - **Backend**: Node.js + Express
-- **Auth**: JWT (email/password)
+- **Auth**: JWT (email/password) + Google OAuth (`/api/auth/google`)
 - **Scanning**: html5-qrcode (camera-based QR/barcode)
 - **Database**: PostgreSQL (node-postgres)
 - **Email**: Nodemailer (Gmail SMTP)
@@ -119,6 +119,7 @@ npm test    # 160 tests across 11 test suites
 | `ARCHITECTURE.md` | System architecture and domain model |
 | `PRINCIPLES.md` | Engineering principles and security |
 | `AGENTS.md` | Conventions for AI agents |
+| `AUTH_MIGRATION_GOOGLE_OAUTH.md` | Google OAuth migration blueprint (phases, test plan) |
 
 ---
 
@@ -139,3 +140,9 @@ Copy `backend/.env.example` to `backend/.env` and edit:
 | `VAPID_PRIVATE_KEY` | — | Push notification private key |
 | `FRONTEND_URL` | `http://localhost:5173` | Frontend origin (for reset links) |
 | `STUDENT_EMAIL_DOMAIN` | `@vnrvjiet.in` | Student email domain |
+| `GOOGLE_CLIENT_ID` | — | Google OAuth client ID (enables `/api/auth/google`) |
+| `GOOGLE_JWKS_URI` | `https://www.googleapis.com/oauth2/v3/certs` | Google public keys (override for testing) |
+| `ALLOWED_EMAIL_DOMAINS` | `@vnrvjiet.in` | Comma-separated domain allowlist for Google login |
+| `AUTH_RATE_LIMIT_MAX` | `10` | Login attempts per window on auth endpoints |
+
+Frontend env (`frontend/.env`): `VITE_API_BASE_URL`, `VITE_GOOGLE_CLIENT_ID` (must match `GOOGLE_CLIENT_ID` for the Google button to render).

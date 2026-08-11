@@ -6,7 +6,7 @@ This file documents conventions and instructions for AI agents working on the 8H
 
 This is the **8Hour Workspace Attendance System** — NOT a hostel meal attendance system. The domain is workspace attendance for startup environments.
 
-**Status: ReadyVersion-1.1** — All development phases complete. System is production-ready and running. New features should follow existing patterns and maintain backward compatibility.
+**Status: ReadyVersion-1.2** — All development phases complete. System is production-ready and running. Google OAuth migration (phases 1–3) is in progress — see "Google OAuth Migration Notes" below. New features should follow existing patterns and maintain backward compatibility.
 
 ## Source of Truth
 
@@ -53,13 +53,24 @@ This is the **8Hour Workspace Attendance System** — NOT a hostel meal attendan
 ## Testing Notes
 
 - Tests use PostgreSQL database `workspace_test` (configured in `vitest.config.ts` via `DATABASE_URL`).
-- The test suite is **idempotent** — all 160 tests pass whether run once or repeatedly.
+- The test suite is **idempotent** — all 183 tests pass whether run once or repeatedly.
 - Each test file cleans up its own test-specific data in `beforeAll`:
   - `tests/scan.integration.test.ts` — deletes `workspace_sessions`, `notifications`, `activity_logs`, `faculty_notifications`
   - `tests/domain.integration.test.ts` — deletes `workspace_sessions`, `notifications`, `activity_logs`, test-created students
   - `tests/domain-extended.integration.test.ts` — deletes `workspace_sessions`, `notifications`, `activity_logs`, `faculty_notifications`, test-created faculty users
+  - `tests/googleAuth.integration.test.ts` — deletes its `*.google@vnrvjiet.in` test users/students in `afterAll`
+  - `tests/migration.integration.test.ts` — deletes its test-created users in `afterAll` (verify `google_sub` column + unique index, idempotency)
 - Seeded data (students, categories, users) is preserved and reused across test files.
 - Run `node scripts/create-test-db.js` from `backend/` to create the test database if missing.
+
+## Google OAuth Migration Notes
+
+- `AUTH_MIGRATION_GOOGLE_OAUTH.md` is the **single source of truth** for the auth migration (phases 1–3 implemented: `/api/auth/google`, JWKS verification, `users.google_sub` migration; phases 4–7 pending).
+- **Both login paths must work until Phase 6** — never remove email/password or OTP/activation flow before then.
+- `users.google_sub` is the permanent Google identity binding (unique, NULL for legacy users); it must NOT be written until Phase 5 (faculty/admin binding) and must be matched before email fallback.
+- All Google token verification is **server-side only** (JWKS RS256: `iss`, `aud`, `exp`, `iat`, `email_verified`, domain allowlist + `hd`). Never trust client-supplied profile data.
+- New test JWKS is served by a local HTTP server in `googleAuth.integration.test.ts`; set `GOOGLE_JWKS_URI` to it in tests.
+- `/api/auth/google` must stay behind the auth rate limiter.
 
 ## Production Hardening Notes
 

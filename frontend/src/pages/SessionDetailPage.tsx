@@ -3,23 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../store/AuthContext';
 import { sessionsApi, categoriesApi } from '../services/apiService';
 import type { SessionWithDetails } from '../services/apiService';
-import type { Category, SessionStatus } from '@workspace/shared';
-
-const STATUS_LABELS: Record<SessionStatus, string> = {
-  created: 'Created',
-  active: 'Active',
-  awaiting_summary: 'Awaiting Summary',
-  completed: 'Completed',
-  archived: 'Archived',
-};
-
-const STATUS_COLORS: Record<SessionStatus, string> = {
-  created: '#f59e0b',
-  active: '#10b981',
-  awaiting_summary: '#f97316',
-  completed: '#6b7280',
-  archived: '#9ca3af',
-};
+import type { Category } from '@workspace/shared';
+import { STATUS_LABELS, statusChipStyle } from '../utils/sessionStatus';
 
 export default function SessionDetailPage() {
   const { id } = useParams();
@@ -90,8 +75,8 @@ export default function SessionDetailPage() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
           <div>
             <div style={{ color: '#6b7280', fontSize: '13px' }}>Status</div>
-            <span style={{ display: 'inline-block', marginTop: '2px', padding: '2px 8px', borderRadius: '4px', fontSize: '13px', fontWeight: 500, background: `${STATUS_COLORS[session.status as SessionStatus]}20`, color: STATUS_COLORS[session.status as SessionStatus] }}>
-              {STATUS_LABELS[session.status as SessionStatus] || session.status}
+            <span style={{ display: 'inline-block', marginTop: '2px', padding: '2px 8px', borderRadius: '4px', fontSize: '13px', fontWeight: 500, ...statusChipStyle(session.status) }}>
+              {STATUS_LABELS[session.status] || session.status}
             </span>
           </div>
           <div>

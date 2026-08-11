@@ -80,7 +80,7 @@ export default function ActivityLogsPage() {
                     {log.entityType}{log.entityId !== null ? ` #${log.entityId}` : ''}
                   </td>
                   <td style={{ padding: '8px 12px', color: '#6b7280', fontSize: '13px', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {log.details ? JSON.stringify(log.details) : '-'}
+                    <span title={log.details ? JSON.stringify(log.details) : undefined}>{log.details ? JSON.stringify(log.details) : '-'}</span>
                   </td>
                 </tr>
               ))

@@ -1,34 +1,22 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Fragment } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../store/AuthContext';
-import { sessionsApi, sessionsStatsApi, studentsApi, categoriesApi } from '../services/apiService';
+import { sessionsApi, sessionsStatsApi, studentsApi } from '../services/apiService';
 import type { SessionWithDetails } from '../services/apiService';
-import type { Category } from '@workspace/shared';
+import { STATUS_LABELS, statusChipStyle, formatDuration } from '../utils/sessionStatus';
 
-const STATUS_LABELS: Record<string, string> = {
-  created: 'Created',
-  active: 'Active',
-  awaiting_summary: 'Awaiting Summary',
-  completed: 'Completed',
-  archived: 'Archived',
-};
+function rowKeyHandler(e: React.KeyboardEvent, action: () => void) {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    action();
+  }
+}
 
-const STATUS_COLORS: Record<string, string> = {
-  created: '#f59e0b',
-  active: '#10b981',
-  awaiting_summary: '#f97316',
-  completed: '#6b7280',
-  archived: '#9ca3af',
-};
-
-const CATEGORY_COLORS = ['#3b82f6', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#6366f1'];
-
-function formatDuration(seconds: number | null | undefined): string {
-  if (!seconds && seconds !== 0) return '-';
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  if (h > 0) return `${h}h ${m}m`;
-  return `${m}m`;
+function toDateString(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
 export default function FacultyDashboard() {
@@ -48,22 +36,16 @@ export default function FacultyDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Filter state for main session list
-  const [filterStatus, setFilterStatus] = useState<string | undefined>();
-  const [filterCategory, setFilterCategory] = useState<string | undefined>();
-  const [filterDateFrom, setFilterDateFrom] = useState('');
-  const [filterDateTo, setFilterDateTo] = useState('');
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [filteredSessions, setFilteredSessions] = useState<SessionWithDetails[]>([]);
-  const [filterPage, setFilterPage] = useState(1);
-  const [filterTotalPages, setFilterTotalPages] = useState(1);
-  const [filterTotal, setFilterTotal] = useState(0);
+  const [ledgerDate, setLedgerDate] = useState(() => toDateString(new Date()));
+  const [ledgerSessions, setLedgerSessions] = useState<SessionWithDetails[]>([]);
+  const [ledgerLoading, setLedgerLoading] = useState(false);
+  const [ledgerError, setLedgerError] = useState('');
 
   const fetchData = useCallback(() => {
     setLoading(true);
     setError('');
 
-    const today = new Date().toISOString().slice(0, 10);
+    const today = toDateString(new Date());
 
     Promise.all([
       sessionsApi.list({ status: 'created', limit: 20 }).then(r => r.data).catch(() => [] as SessionWithDetails[]),
@@ -71,14 +53,12 @@ export default function FacultyDashboard() {
       sessionsApi.list({ status: 'awaiting_summary', limit: 20 }).then(r => r.data).catch(() => [] as SessionWithDetails[]),
       sessionsApi.list({ dateFrom: today, limit: 50 }).then(r => r.data).catch(() => [] as SessionWithDetails[]),
       sessionsStatsApi.live().then(r => r.data).catch(() => ({ count: 0, students: [] })),
-      categoriesApi.list('active').then(r => r.data).catch(() => [] as Category[]),
     ])
-      .then(([created, active, awaiting, todaySess, live, cats]) => {
+      .then(([created, active, awaiting, todaySess, live]) => {
         setActiveSessions([...created, ...active, ...awaiting]);
         setTodaySessions(todaySess);
         setLiveCount(live.count);
         setLiveStudents(live.students);
-        setCategories(cats);
       })
       .catch(() => setError('Failed to load dashboard data'))
       .finally(() => setLoading(false));
@@ -88,28 +68,28 @@ export default function FacultyDashboard() {
 
   useEffect(() => {
     if (!user) return;
-    const interval = setInterval(fetchData, 30000);
+    const interval = setInterval(fetchData, 60000);
     return () => clearInterval(interval);
   }, [fetchData, user]);
 
-  const fetchFilteredSessions = useCallback(async (pageNum: number) => {
-    const params: Record<string, string | number | undefined> = { page: pageNum, limit: 20 };
-    if (filterStatus) params.status = filterStatus;
-    if (filterDateFrom) params.dateFrom = filterDateFrom;
-    if (filterDateTo) params.dateTo = filterDateTo;
-    try {
-      const res = await sessionsApi.list(params);
-      setFilteredSessions(res.data);
-      setFilterTotal(res.pagination.total);
-      setFilterTotalPages(res.pagination.totalPages);
-    } catch {
-      setFilteredSessions([]);
-    }
-  }, [filterStatus, filterDateFrom, filterDateTo]);
+  const fetchLedger = useCallback((day: string) => {
+    setLedgerLoading(true);
+    setLedgerError('');
+    sessionsApi.list({ dateFrom: day, dateTo: day, limit: 200 })
+      .then((res) => setLedgerSessions(res.data))
+      .catch(() => setLedgerError('Failed to load the day ledger'))
+      .finally(() => setLedgerLoading(false));
+  }, []);
 
   useEffect(() => {
-    fetchFilteredSessions(filterPage);
-  }, [filterPage, fetchFilteredSessions]);
+    fetchLedger(ledgerDate);
+  }, [ledgerDate, fetchLedger]);
+
+  const shiftLedgerDay = useCallback((dir: 1 | -1) => {
+    const d = new Date(`${ledgerDate}T12:00:00`);
+    d.setDate(d.getDate() + dir);
+    setLedgerDate(toDateString(d));
+  }, [ledgerDate]);
 
   const handleSearch = async (q: string) => {
     setSearchQuery(q);
@@ -148,54 +128,61 @@ export default function FacultyDashboard() {
   };
 
   if (loading && activeSessions.length === 0) {
-    return <div style={{ textAlign: 'center', padding: '48px', color: '#6b7280' }}>Loading dashboard...</div>;
+    return <div style={{ textAlign: 'center', padding: '48px', color: 'var(--color-text-secondary)' }}>Loading dashboard...</div>;
   }
 
   if (error && activeSessions.length === 0) {
-    return <div style={{ padding: '16px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#dc2626' }}>{error}</div>;
+    return <div style={{ padding: '16px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 'var(--radius-md)', color: 'var(--color-error)' }}>{error}</div>;
   }
+
+  const ledgerTotalSeconds = ledgerSessions.reduce((sum, s) => {
+    if (s.durationSeconds != null) return sum + s.durationSeconds;
+    if (s.exitTime) return sum + Math.max(0, Math.round((new Date(s.exitTime).getTime() - new Date(s.entryTime).getTime()) / 1000));
+    return sum;
+  }, 0);
+  const ledgerStudents = new Set(ledgerSessions.map(s => s.studentId)).size;
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', flexWrap: 'wrap', marginBottom: '24px' }}>
         <div>
           <h1 style={{ fontSize: '24px', marginBottom: '4px' }}>Faculty Dashboard</h1>
-          <p style={{ color: '#6b7280' }}>Welcome, {user?.name}</p>
+          <p style={{ color: 'var(--color-text-secondary)' }}>Welcome, {user?.name}</p>
         </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button onClick={() => navigate('/scanner')} style={{ padding: '10px 20px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '14px', fontWeight: 500, cursor: 'pointer' }}>
-            Open Scanner
-          </button>
-        </div>
+        <button onClick={() => navigate('/scanner')} style={{ padding: '12px 24px', background: 'var(--color-primary)', color: '#fff', border: 'none', borderRadius: 'var(--radius-md)', fontSize: '15px', fontWeight: 600, cursor: 'pointer' }}>
+          Open Scanner
+        </button>
       </div>
 
       {/* Stat cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px', marginBottom: '24px' }}>
-        <StatCard label="Students Inside" value={liveCount} color="#10b981" />
-        <StatCard label="Active Sessions" value={activeSessions.filter(s => s.status === 'active').length} color="#3b82f6" />
-        <StatCard label="Awaiting Summary" value={activeSessions.filter(s => s.status === 'awaiting_summary').length} color="#f97316" />
-        <StatCard label="Today's Sessions" value={todaySessions.length} color="#8b5cf6" />
+        <StatCard label="Students Inside" value={liveCount} />
+        <StatCard label="Active Sessions" value={activeSessions.filter(s => s.status === 'active').length} />
+        <StatCard label="Awaiting Summary" value={activeSessions.filter(s => s.status === 'awaiting_summary').length} />
+        <StatCard label="Today's Sessions" value={todaySessions.length} />
       </div>
 
       <div className="resp-grid-two-col" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px', marginBottom: '24px' }}>
-        <div style={{ padding: '20px', background: '#fff', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
+        <div style={{ padding: '20px', background: '#fff', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
           <h2 style={{ fontSize: '16px', marginBottom: '12px' }}>Students Inside</h2>
           {liveStudents.length === 0 ? (
             <p style={{ color: '#9ca3af', fontSize: '14px' }}>No students currently inside</p>
           ) : (
             <div style={{ maxHeight: '240px', overflowY: 'auto' }}>
               <div className="resp-table-wrap compact"><table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-                <thead><tr style={{ borderBottom: '1px solid #e5e7eb', textAlign: 'left' }}>
-                  <th style={{ padding: '6px 8px', color: '#6b7280', fontWeight: 500 }}>Student</th>
-                  <th style={{ padding: '6px 8px', color: '#6b7280', fontWeight: 500 }}>Roll</th>
-                  <th style={{ padding: '6px 8px', color: '#6b7280', fontWeight: 500 }}>Since</th>
+                <thead><tr style={{ borderBottom: '1px solid var(--color-border)', textAlign: 'left' }}>
+                  <th style={{ padding: '6px 8px', color: 'var(--color-text-secondary)', fontWeight: 500 }}>Student</th>
+                  <th style={{ padding: '6px 8px', color: 'var(--color-text-secondary)', fontWeight: 500 }}>Roll</th>
+                  <th style={{ padding: '6px 8px', color: 'var(--color-text-secondary)', fontWeight: 500 }}>Since</th>
                 </tr></thead>
                 <tbody>
                   {liveStudents.map(s => (
-                    <tr key={s.id} style={{ borderBottom: '1px solid #f3f4f6', cursor: 'pointer' }} onClick={() => handleSelectStudent({ id: s.studentId, name: s.studentName, roll: s.studentRoll, status: 'enrolled' })}>
+                    <tr key={s.id} tabIndex={0} style={{ borderBottom: '1px solid #f3f4f6', cursor: 'pointer', outlineOffset: '-2px' }}
+                      onClick={() => handleSelectStudent({ id: s.studentId, name: s.studentName, roll: s.studentRoll, status: 'enrolled' })}
+                      onKeyDown={(e) => rowKeyHandler(e, () => handleSelectStudent({ id: s.studentId, name: s.studentName, roll: s.studentRoll, status: 'enrolled' }))}>
                       <td style={{ padding: '6px 8px', fontWeight: 500 }}>{s.studentName}</td>
-                      <td style={{ padding: '6px 8px', color: '#6b7280' }}>{s.studentRoll}</td>
-                      <td style={{ padding: '6px 8px', color: '#6b7280', fontSize: '12px' }}>{new Date(s.entryTime).toLocaleTimeString()}</td>
+                      <td style={{ padding: '6px 8px', color: 'var(--color-text-secondary)' }}>{s.studentRoll}</td>
+                      <td style={{ padding: '6px 8px', color: 'var(--color-text-secondary)', fontSize: '12px' }}>{new Date(s.entryTime).toLocaleTimeString()}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -204,27 +191,34 @@ export default function FacultyDashboard() {
           )}
         </div>
 
-          <div style={{ padding: '20px', background: '#fff', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
+        <div style={{ padding: '20px', background: '#fff', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
           <h2 style={{ fontSize: '16px', marginBottom: '12px' }}>Student Search</h2>
-          
+
+          <label htmlFor="faculty-student-search" style={{ position: 'absolute', width: '1px', height: '1px', overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>
+            Search students
+          </label>
           <input
+            id="faculty-student-search"
             placeholder="Search by name, roll, or email..."
             value={searchQuery}
             onChange={(e) => handleSearch(e.target.value)}
-            style={{ width: '100%', padding: '10px', border: '1px solid #e5e7eb', borderRadius: '6px', fontSize: '14px', boxSizing: 'border-box' }}
+            style={{ width: '100%', padding: '10px', border: '1px solid var(--color-border)', borderRadius: '6px', fontSize: '14px', boxSizing: 'border-box' }}
           />
           {searchResults.length > 0 && (
-            <div style={{ marginTop: '8px', maxHeight: '200px', overflowY: 'auto', border: '1px solid #e5e7eb', borderRadius: '6px' }}>
+            <div style={{ marginTop: '8px', maxHeight: '200px', overflowY: 'auto', border: '1px solid var(--color-border)', borderRadius: '6px' }}>
               {searchResults.map(s => (
-                <div key={s.id} onClick={() => handleSelectStudent(s)} style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid #f3f4f6', fontSize: '13px' }}
+                <button
+                  key={s.id}
+                  onClick={() => handleSelectStudent(s)}
                   onMouseEnter={(e) => { e.currentTarget.style.background = '#f9fafb'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                  style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 12px', cursor: 'pointer', border: 'none', borderBottom: '1px solid #f3f4f6', background: 'transparent', fontSize: '13px', fontFamily: 'inherit' }}
                 >
-                  <strong>{s.name}</strong> <span style={{ color: '#6b7280' }}>{s.roll}</span>
+                  <strong>{s.name}</strong> <span style={{ color: 'var(--color-text-secondary)' }}>{s.roll}</span>
                   <span style={{ float: 'right', fontSize: '11px', padding: '1px 6px', borderRadius: '4px', background: s.status === 'enrolled' ? '#d1fae5' : '#fef3c7', color: s.status === 'enrolled' ? '#065f46' : '#92400e' }}>
                     {s.status}
                   </span>
-                </div>
+                </button>
               ))}
             </div>
           )}
@@ -233,39 +227,41 @@ export default function FacultyDashboard() {
 
       {/* Selected student history */}
       {selectedStudent && (
-        <div style={{ padding: '20px', background: '#fff', borderRadius: '8px', border: '1px solid #e5e7eb', marginBottom: '24px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+        <div style={{ padding: '20px', background: '#fff', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', marginBottom: '24px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '12px' }}>
             <h2 style={{ fontSize: '16px', margin: 0 }}>{selectedStudent.name} ({selectedStudent.roll})</h2>
-            <span style={{ fontSize: '13px', color: '#6b7280' }}>{studentHistoryTotal} session(s)</span>
+            <span style={{ fontSize: '13px', color: 'var(--color-text-secondary)' }}>{studentHistoryTotal} session(s)</span>
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button onClick={() => navigate(`/sessions?studentId=${selectedStudent.id}`)} style={{ padding: '6px 14px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '12px', cursor: 'pointer' }}>View All Sessions</button>
-              <button onClick={() => navigate('/scanner')} style={{ padding: '6px 14px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '12px', cursor: 'pointer' }}>Scan Entry/Exit</button>
+              <button onClick={() => navigate(`/sessions?studentId=${selectedStudent.id}`)} style={{ padding: '6px 14px', background: 'var(--color-primary)', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '12px', cursor: 'pointer' }}>View All Sessions</button>
+              <button onClick={() => navigate('/scanner')} style={{ padding: '6px 14px', background: 'var(--color-primary)', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '12px', cursor: 'pointer' }}>Scan Entry/Exit</button>
               <button onClick={() => setSelectedStudent(null)} style={{ padding: '6px 14px', background: '#6b7280', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '12px', cursor: 'pointer' }}>Close</button>
             </div>
           </div>
-          <h3 style={{ fontSize: '14px', color: '#6b7280', marginBottom: '8px' }}>Session History</h3>
+          <h3 style={{ fontSize: '14px', color: 'var(--color-text-secondary)', marginBottom: '8px' }}>Session History</h3>
           {studentHistory.length === 0 ? (
             <p style={{ color: '#9ca3af', fontSize: '13px' }}>No session history</p>
           ) : (
             <>
               <div className="resp-table-wrap compact"><table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-                <thead><tr style={{ borderBottom: '1px solid #e5e7eb', textAlign: 'left' }}>
-                  <th style={{ padding: '6px 8px', color: '#6b7280', fontWeight: 500 }}>Entry</th>
-                  <th style={{ padding: '6px 8px', color: '#6b7280', fontWeight: 500 }}>Exit</th>
-                  <th style={{ padding: '6px 8px', color: '#6b7280', fontWeight: 500 }}>Duration</th>
-                  <th style={{ padding: '6px 8px', color: '#6b7280', fontWeight: 500 }}>Category</th>
-                  <th style={{ padding: '6px 8px', color: '#6b7280', fontWeight: 500 }}>Status</th>
+                <thead><tr style={{ borderBottom: '1px solid var(--color-border)', textAlign: 'left' }}>
+                  <th style={{ padding: '6px 8px', color: 'var(--color-text-secondary)', fontWeight: 500 }}>Entry</th>
+                  <th style={{ padding: '6px 8px', color: 'var(--color-text-secondary)', fontWeight: 500 }}>Exit</th>
+                  <th style={{ padding: '6px 8px', color: 'var(--color-text-secondary)', fontWeight: 500 }}>Duration</th>
+                  <th style={{ padding: '6px 8px', color: 'var(--color-text-secondary)', fontWeight: 500 }}>Category</th>
+                  <th style={{ padding: '6px 8px', color: 'var(--color-text-secondary)', fontWeight: 500 }}>Status</th>
                 </tr></thead>
                 <tbody>
                   {studentHistory.map(s => (
-                    <tr key={s.id} style={{ borderBottom: '1px solid #f3f4f6', cursor: 'pointer' }} onClick={() => navigate(`/sessions/${s.id}`)}>
+                    <tr key={s.id} tabIndex={0} style={{ borderBottom: '1px solid #f3f4f6', cursor: 'pointer', outlineOffset: '-2px' }}
+                      onClick={() => navigate(`/sessions/${s.id}`)}
+                      onKeyDown={(e) => rowKeyHandler(e, () => navigate(`/sessions/${s.id}`))}>
                       <td style={{ padding: '6px 8px', fontSize: '12px' }}>{new Date(s.entryTime).toLocaleString()}</td>
-                      <td style={{ padding: '6px 8px', fontSize: '12px', color: '#6b7280' }}>{s.exitTime ? new Date(s.exitTime).toLocaleString() : '-'}</td>
+                      <td style={{ padding: '6px 8px', fontSize: '12px', color: 'var(--color-text-secondary)' }}>{s.exitTime ? new Date(s.exitTime).toLocaleString() : '-'}</td>
                       <td style={{ padding: '6px 8px', fontSize: '12px' }}>{formatDuration(s.durationSeconds)}</td>
-                      <td style={{ padding: '6px 8px', color: '#6b7280' }}>{s.categoryName || '-'}</td>
+                      <td style={{ padding: '6px 8px', color: 'var(--color-text-secondary)' }}>{s.categoryName || '-'}</td>
                       <td style={{ padding: '6px 8px' }}>
-                        <span style={{ padding: '1px 6px', borderRadius: '4px', fontSize: '11px', fontWeight: 500, background: `${STATUS_COLORS[s.status]}20`, color: STATUS_COLORS[s.status] }}>
-                          {STATUS_LABELS[s.status] || s.status}
+                        <span style={{ padding: '1px 6px', borderRadius: '4px', fontSize: '11px', fontWeight: 500, ...statusChipStyle(s.status) }}>
+                          {STATUS_LABELS[s.status as keyof typeof STATUS_LABELS] || s.status}
                         </span>
                       </td>
                     </tr>
@@ -275,12 +271,12 @@ export default function FacultyDashboard() {
               {studentHistoryTotalPages > 1 && (
                 <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '12px' }}>
                   <button disabled={studentHistoryPage <= 1} onClick={() => handleStudentHistoryPage(studentHistoryPage - 1)}
-                    style={{ padding: '6px 12px', border: '1px solid #e5e7eb', borderRadius: '4px', background: '#fff', cursor: studentHistoryPage <= 1 ? 'default' : 'pointer', opacity: studentHistoryPage <= 1 ? 0.5 : 1 }}>
+                    style={{ padding: '6px 12px', border: '1px solid var(--color-border)', borderRadius: '4px', background: '#fff', cursor: studentHistoryPage <= 1 ? 'default' : 'pointer', opacity: studentHistoryPage <= 1 ? 0.5 : 1 }}>
                     Prev
                   </button>
-                  <span style={{ padding: '6px 12px', fontSize: '13px', color: '#6b7280' }}>{studentHistoryPage} / {studentHistoryTotalPages}</span>
+                  <span style={{ padding: '6px 12px', fontSize: '13px', color: 'var(--color-text-secondary)' }}>{studentHistoryPage} / {studentHistoryTotalPages}</span>
                   <button disabled={studentHistoryPage >= studentHistoryTotalPages} onClick={() => handleStudentHistoryPage(studentHistoryPage + 1)}
-                    style={{ padding: '6px 12px', border: '1px solid #e5e7eb', borderRadius: '4px', background: '#fff', cursor: studentHistoryPage >= studentHistoryTotalPages ? 'default' : 'pointer', opacity: studentHistoryPage >= studentHistoryTotalPages ? 0.5 : 1 }}>
+                    style={{ padding: '6px 12px', border: '1px solid var(--color-border)', borderRadius: '4px', background: '#fff', cursor: studentHistoryPage >= studentHistoryTotalPages ? 'default' : 'pointer', opacity: studentHistoryPage >= studentHistoryTotalPages ? 0.5 : 1 }}>
                     Next
                   </button>
                 </div>
@@ -290,113 +286,32 @@ export default function FacultyDashboard() {
         </div>
       )}
 
-      {/* Historical sessions with filters */}
-      <div style={{ padding: '20px', background: '#fff', borderRadius: '8px', border: '1px solid #e5e7eb', marginBottom: '24px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-          <h2 style={{ fontSize: '16px', margin: 0 }}>Historical Sessions</h2>
-          <button onClick={() => { setFilterPage(1); fetchFilteredSessions(1); }} style={{ padding: '6px 14px', background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: '4px', fontSize: '12px', cursor: 'pointer' }}>Refresh</button>
-        </div>
-
-        <div style={{ display: 'flex', gap: '12px', marginBottom: '16px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-          <div>
-            <label style={{ display: 'block', fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>Status</label>
-            <select value={filterStatus || ''} onChange={(e) => { setFilterStatus(e.target.value || undefined); setFilterPage(1); }}
-              style={{ padding: '6px 12px', border: '1px solid #e5e7eb', borderRadius: '4px', fontSize: '13px' }}>
-              <option value="">All</option>
-              {Object.entries(STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-            </select>
-          </div>
-          <div>
-            <label style={{ display: 'block', fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>From</label>
-            <input type="date" value={filterDateFrom} onChange={(e) => { setFilterDateFrom(e.target.value); setFilterPage(1); }}
-              style={{ padding: '6px 12px', border: '1px solid #e5e7eb', borderRadius: '4px', fontSize: '13px' }} />
-          </div>
-          <div>
-            <label style={{ display: 'block', fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>To</label>
-            <input type="date" value={filterDateTo} onChange={(e) => { setFilterDateTo(e.target.value); setFilterPage(1); }}
-              style={{ padding: '6px 12px', border: '1px solid #e5e7eb', borderRadius: '4px', fontSize: '13px' }} />
-          </div>
-          <span style={{ fontSize: '13px', color: '#6b7280', paddingBottom: '6px' }}>{filterTotal} session(s)</span>
-        </div>
-
-        {filteredSessions.length === 0 ? (
-          <p style={{ color: '#9ca3af', fontSize: '14px' }}>No sessions match the filters</p>
-        ) : (
-          <>
-            <div className="resp-table-wrap"><table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid #e5e7eb', textAlign: 'left' }}>
-                  <th style={{ padding: '8px 12px', color: '#6b7280', fontWeight: 500 }}>Student</th>
-                  <th style={{ padding: '8px 12px', color: '#6b7280', fontWeight: 500 }}>Roll</th>
-                  <th style={{ padding: '8px 12px', color: '#6b7280', fontWeight: 500 }}>Entry</th>
-                  <th style={{ padding: '8px 12px', color: '#6b7280', fontWeight: 500 }}>Exit</th>
-                  <th style={{ padding: '8px 12px', color: '#6b7280', fontWeight: 500 }}>Duration</th>
-                  <th style={{ padding: '8px 12px', color: '#6b7280', fontWeight: 500 }}>Category</th>
-                  <th style={{ padding: '8px 12px', color: '#6b7280', fontWeight: 500 }}>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredSessions.map((s) => (
-                  <tr key={s.id} style={{ borderBottom: '1px solid #f3f4f6', cursor: 'pointer' }} onClick={() => navigate(`/sessions/${s.id}`)}>
-                    <td style={{ padding: '8px 12px', fontWeight: 500 }}>{s.studentName || `Student #${s.studentId}`}</td>
-                    <td style={{ padding: '8px 12px', color: '#6b7280' }}>{s.studentRoll || '-'}</td>
-                    <td style={{ padding: '8px 12px', fontSize: '12px' }}>{new Date(s.entryTime).toLocaleString()}</td>
-                    <td style={{ padding: '8px 12px', fontSize: '12px' }}>{s.exitTime ? new Date(s.exitTime).toLocaleString() : '-'}</td>
-                    <td style={{ padding: '8px 12px', fontSize: '12px' }}>{formatDuration(s.durationSeconds)}</td>
-                    <td style={{ padding: '8px 12px', color: '#6b7280' }}>{s.categoryName || '-'}</td>
-                    <td style={{ padding: '8px 12px' }}>
-                      <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 500, background: `${STATUS_COLORS[s.status]}20`, color: STATUS_COLORS[s.status] }}>
-                        {STATUS_LABELS[s.status] || s.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table></div>
-            {filterTotalPages > 1 && (
-              <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '12px' }}>
-                <button disabled={filterPage <= 1} onClick={() => setFilterPage(filterPage - 1)}
-                  style={{ padding: '6px 12px', border: '1px solid #e5e7eb', borderRadius: '4px', background: '#fff', cursor: filterPage <= 1 ? 'default' : 'pointer', opacity: filterPage <= 1 ? 0.5 : 1 }}>
-                  Prev
-                </button>
-                <span style={{ padding: '6px 12px', fontSize: '13px', color: '#6b7280' }}>{filterPage} / {filterTotalPages}</span>
-                <button disabled={filterPage >= filterTotalPages} onClick={() => setFilterPage(filterPage + 1)}
-                  style={{ padding: '6px 12px', border: '1px solid #e5e7eb', borderRadius: '4px', background: '#fff', cursor: filterPage >= filterTotalPages ? 'default' : 'pointer', opacity: filterPage >= filterTotalPages ? 0.5 : 1 }}>
-                  Next
-                </button>
-              </div>
-            )}
-          </>
-        )}
-      </div>
-
       {/* Active & Pending Sessions */}
-      <div style={{ padding: '20px', background: '#fff', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-          <h2 style={{ fontSize: '16px', margin: 0 }}>Active & Pending Sessions</h2>
-          <button onClick={fetchData} style={{ padding: '6px 14px', background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: '4px', fontSize: '12px', cursor: 'pointer' }}>Refresh</button>
-        </div>
+      <div style={{ padding: '20px', background: '#fff', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', marginBottom: '24px' }}>
+        <h2 style={{ fontSize: '16px', margin: '0 0 16px' }}>Active & Pending Sessions</h2>
         {activeSessions.length === 0 ? (
           <p style={{ color: '#9ca3af', fontSize: '14px' }}>No active sessions</p>
         ) : (
           <div className="resp-table-wrap compact"><table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
             <thead>
-              <tr style={{ borderBottom: '1px solid #e5e7eb', textAlign: 'left' }}>
-                <th style={{ padding: '8px 12px', color: '#6b7280', fontWeight: 500 }}>Student</th>
-                <th style={{ padding: '8px 12px', color: '#6b7280', fontWeight: 500 }}>Roll</th>
-                <th style={{ padding: '8px 12px', color: '#6b7280', fontWeight: 500 }}>Entry Time</th>
-                <th style={{ padding: '8px 12px', color: '#6b7280', fontWeight: 500 }}>Status</th>
+              <tr style={{ borderBottom: '1px solid var(--color-border)', textAlign: 'left' }}>
+                <th style={{ padding: '8px 12px', color: 'var(--color-text-secondary)', fontWeight: 500 }}>Student</th>
+                <th style={{ padding: '8px 12px', color: 'var(--color-text-secondary)', fontWeight: 500 }}>Roll</th>
+                <th style={{ padding: '8px 12px', color: 'var(--color-text-secondary)', fontWeight: 500 }}>Entry Time</th>
+                <th style={{ padding: '8px 12px', color: 'var(--color-text-secondary)', fontWeight: 500 }}>Status</th>
               </tr>
             </thead>
             <tbody>
               {activeSessions.map((s) => (
-                <tr key={s.id} style={{ borderBottom: '1px solid #f3f4f6', cursor: 'pointer' }} onClick={() => navigate(`/sessions/${s.id}`)}>
+                <tr key={s.id} tabIndex={0} style={{ borderBottom: '1px solid #f3f4f6', cursor: 'pointer', outlineOffset: '-2px' }}
+                  onClick={() => navigate(`/sessions/${s.id}`)}
+                  onKeyDown={(e) => rowKeyHandler(e, () => navigate(`/sessions/${s.id}`))}>
                   <td style={{ padding: '8px 12px', fontWeight: 500 }}>{s.studentName || `Student #${s.studentId}`}</td>
-                  <td style={{ padding: '8px 12px', color: '#6b7280' }}>{s.studentRoll || '-'}</td>
+                  <td style={{ padding: '8px 12px', color: 'var(--color-text-secondary)' }}>{s.studentRoll || '-'}</td>
                   <td style={{ padding: '8px 12px', fontSize: '12px' }}>{new Date(s.entryTime).toLocaleString()}</td>
                   <td style={{ padding: '8px 12px' }}>
-                    <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 500, background: `${STATUS_COLORS[s.status]}20`, color: STATUS_COLORS[s.status] }}>
-                      {STATUS_LABELS[s.status] || s.status}
+                    <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 500, ...statusChipStyle(s.status) }}>
+                      {STATUS_LABELS[s.status as keyof typeof STATUS_LABELS] || s.status}
                     </span>
                   </td>
                 </tr>
@@ -405,15 +320,89 @@ export default function FacultyDashboard() {
           </table></div>
         )}
       </div>
+
+      {/* Day Ledger */}
+      <div style={{ padding: '20px', background: '#fff', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' }}>
+          <h2 style={{ fontSize: '16px', margin: 0 }}>Day Ledger</h2>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <button onClick={() => shiftLedgerDay(-1)} aria-label="Previous day" style={{ padding: '6px 12px', border: '1px solid var(--color-border)', borderRadius: '4px', background: '#fff', cursor: 'pointer', fontSize: '14px' }}>&larr;</button>
+            <label htmlFor="ledger-date" style={{ position: 'absolute', width: '1px', height: '1px', overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>Ledger date</label>
+            <input id="ledger-date" type="date" value={ledgerDate} onChange={(e) => e.target.value && setLedgerDate(e.target.value)}
+              style={{ padding: '6px 12px', border: '1px solid var(--color-border)', borderRadius: '4px', fontSize: '13px' }} />
+            <button onClick={() => shiftLedgerDay(1)} aria-label="Next day" style={{ padding: '6px 12px', border: '1px solid var(--color-border)', borderRadius: '4px', background: '#fff', cursor: 'pointer', fontSize: '14px' }}>&rarr;</button>
+            <span style={{ fontSize: '13px', color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>{ledgerSessions.length} session(s)</span>
+          </div>
+        </div>
+
+        {ledgerError && (
+          <p style={{ color: 'var(--color-error)', fontSize: '13px', marginBottom: '12px' }}>{ledgerError}</p>
+        )}
+        {ledgerLoading ? (
+          <p style={{ color: 'var(--color-text-secondary)', fontSize: '14px' }}>Loading ledger...</p>
+        ) : ledgerSessions.length === 0 ? (
+          <p style={{ color: '#9ca3af', fontSize: '14px' }}>No sessions recorded on {new Date(`${ledgerDate}T12:00:00`).toLocaleDateString()}</p>
+        ) : (
+          <>
+            <div className="resp-table-wrap"><table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--color-border)', textAlign: 'left' }}>
+                  <th style={{ padding: '8px 12px', color: 'var(--color-text-secondary)', fontWeight: 500 }}>Student</th>
+                  <th style={{ padding: '8px 12px', color: 'var(--color-text-secondary)', fontWeight: 500 }}>Roll</th>
+                  <th style={{ padding: '8px 12px', color: 'var(--color-text-secondary)', fontWeight: 500 }}>Entry</th>
+                  <th style={{ padding: '8px 12px', color: 'var(--color-text-secondary)', fontWeight: 500 }}>Exit</th>
+                  <th style={{ padding: '8px 12px', color: 'var(--color-text-secondary)', fontWeight: 500 }}>Duration</th>
+                  <th style={{ padding: '8px 12px', color: 'var(--color-text-secondary)', fontWeight: 500 }}>Category</th>
+                  <th style={{ padding: '8px 12px', color: 'var(--color-text-secondary)', fontWeight: 500 }}>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ledgerSessions.map((s) => (
+                  <Fragment key={s.id}>
+                    <tr key={s.id} tabIndex={0} style={{ borderBottom: s.summary ? 'none' : '1px solid #f3f4f6', cursor: 'pointer', outlineOffset: '-2px' }}
+                      onClick={() => navigate(`/sessions/${s.id}`)}
+                      onKeyDown={(e) => rowKeyHandler(e, () => navigate(`/sessions/${s.id}`))}>
+                      <td style={{ padding: '8px 12px', fontWeight: 500 }}>{s.studentName || `Student #${s.studentId}`}</td>
+                      <td style={{ padding: '8px 12px', color: 'var(--color-text-secondary)' }}>{s.studentRoll || '-'}</td>
+                      <td style={{ padding: '8px 12px', fontSize: '12px' }}>{new Date(s.entryTime).toLocaleTimeString()}</td>
+                      <td style={{ padding: '8px 12px', fontSize: '12px' }}>{s.exitTime ? new Date(s.exitTime).toLocaleTimeString() : '-'}</td>
+                      <td style={{ padding: '8px 12px', fontSize: '12px' }}>{formatDuration(s.durationSeconds)}</td>
+                      <td style={{ padding: '8px 12px', color: 'var(--color-text-secondary)' }}>{s.categoryName || '-'}</td>
+                      <td style={{ padding: '8px 12px' }}>
+                        <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 500, ...statusChipStyle(s.status) }}>
+                          {STATUS_LABELS[s.status as keyof typeof STATUS_LABELS] || s.status}
+                        </span>
+                      </td>
+                    </tr>
+                    {s.summary && (
+                      <tr key={`${s.id}-summary`}>
+                        <td colSpan={7} style={{ padding: '2px 12px 8px', fontSize: '12px', color: 'var(--color-text-secondary)', borderBottom: '1px solid #f3f4f6' }}>
+                          <em>{s.summary}</em>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                ))}
+              </tbody>
+            </table></div>
+
+            <div style={{ marginTop: '16px', padding: '12px 16px', background: '#f9fafb', borderRadius: 'var(--radius-sm)', display: 'flex', gap: '24px', flexWrap: 'wrap', fontSize: '13px', color: 'var(--color-text-secondary)' }}>
+              <span><strong>{ledgerSessions.length}</strong> sessions</span>
+              <span><strong>{formatDuration(ledgerTotalSeconds)}</strong> total time</span>
+              <span><strong>{ledgerStudents}</strong> student(s)</span>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
 
-function StatCard({ label, value, color }: { label: string; value: string | number; color?: string }) {
+function StatCard({ label, value }: { label: string; value: string | number }) {
   return (
-    <div style={{ padding: '16px', background: '#fff', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
-      <p style={{ color: '#6b7280', fontSize: '12px', marginBottom: '6px' }}>{label}</p>
-      <p style={{ fontSize: '24px', fontWeight: 700, color: color || '#111827', margin: 0 }}>{value}</p>
+    <div style={{ padding: '16px', background: '#fff', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
+      <p style={{ color: 'var(--color-text-secondary)', fontSize: '12px', marginBottom: '6px' }}>{label}</p>
+      <p style={{ fontSize: '24px', fontWeight: 700, color: 'var(--color-text-primary)', margin: 0 }}>{value}</p>
     </div>
   );
 }

@@ -19,7 +19,7 @@ export function useScanner() {
     if (!navigator.onLine) {
       await enqueueScan(barcode);
       const size = await getQueueSize();
-      setState({ lastResult: { success: false, data: { error: 'SERVER_ERROR', message: 'Offline — scan queued for retry' } }, queueSize: size, isProcessing: false });
+      setState({ lastResult: { success: false, data: { error: 'QUEUED_FOR_SYNC', message: 'Scan queued — will sync automatically when you are back online' } }, queueSize: size, isProcessing: false });
       processingRef.current = false;
       return;
     }

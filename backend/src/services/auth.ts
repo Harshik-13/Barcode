@@ -23,7 +23,7 @@ interface TokenPayload {
   exp: number;
 }
 
-function signToken(userId: number, role: string, passwordChangedAt: Date | string): string {
+export function signToken(userId: number, role: string, passwordChangedAt: Date | string): string {
   const now = Math.floor(Date.now() / 1000);
   const pcaDate = typeof passwordChangedAt === 'string' ? new Date(passwordChangedAt) : passwordChangedAt;
   const payload: TokenPayload = {
@@ -34,6 +34,31 @@ function signToken(userId: number, role: string, passwordChangedAt: Date | strin
     exp: now + config.jwt.expiryHours * 3600,
   };
   return jwt.sign(payload, config.jwt.secret);
+}
+
+export async function buildLoginResponse(user: {
+  id: number;
+  email: string;
+  name: string;
+  role_id: string;
+  password_changed_at: string | null;
+}): Promise<{ token: string; user: { id: number; name: string; role: string; email: string; studentId?: number } }> {
+  const pca = user.password_changed_at ?? new Date().toISOString();
+  const token = signToken(user.id, user.role_id, pca);
+
+  let studentId: number | undefined;
+  if (user.role_id === 'student') {
+    const db = getDb();
+    const stuResult = await db.query('SELECT id FROM students WHERE email = $1', [user.email]);
+    if (stuResult.rows.length > 0) {
+      studentId = (stuResult.rows[0] as { id: number }).id;
+    }
+  }
+
+  return {
+    token,
+    user: { id: user.id, name: user.name, role: user.role_id, email: user.email, studentId },
+  };
 }
 
 export async function authenticate(loginId: string, password: string, ip?: string) {
@@ -84,9 +109,6 @@ export async function authenticate(loginId: string, password: string, ip?: strin
     throw new ForbiddenError('Your account is not active');
   }
 
-  const pca = user.password_changed_at ?? new Date().toISOString();
-  const token = signToken(user.id, user.role_id, pca);
-
   await logAudit({
     actorType: user.role_id as 'faculty' | 'admin' | 'student',
     actorId: user.id,
@@ -96,19 +118,7 @@ export async function authenticate(loginId: string, password: string, ip?: strin
     ipAddress: ip,
   });
 
-  let studentId: number | undefined;
-  if (user.role_id === 'student') {
-    const db = getDb();
-    const stuResult = await db.query('SELECT id FROM students WHERE email = $1', [user.email]);
-    if (stuResult.rows.length > 0) {
-      studentId = (stuResult.rows[0] as { id: number }).id;
-    }
-  }
-
-  return {
-    token,
-    user: { id: user.id, name: user.name, role: user.role_id, email: user.email, studentId },
-  };
+  return buildLoginResponse(user as UserRow);
 }
 
 export async function getCurrentUser(userId: number) {

@@ -29,6 +29,8 @@ export interface SessionWithDetails extends WorkspaceSession {
 export const authApi = {
   login: (email: string, password: string) =>
     api<AuthResponse>('/api/auth/login', { method: 'POST', body: { email, password } }),
+  googleLogin: (credential: string) =>
+    api<AuthResponse>('/api/auth/google', { method: 'POST', body: { credential } }),
   logout: () =>
     api<{ message: string }>('/api/auth/logout', { method: 'POST' }),
   me: () =>
@@ -255,7 +257,7 @@ export interface CategoryUsage {
 export const profileApi = {
   get: () =>
     api<DataResponse<ProfileData>>('/api/profile'),
-  update: (data: { name?: string; hostel?: string | null; branch?: string | null; section?: string | null }) =>
+  update: (data: { name?: string; branch?: string | null; section?: string | null }) =>
     api<DataResponse<ProfileData>>('/api/profile', { method: 'PATCH', body: data }),
   pictureUrl: (userId: number) =>
     `${env.apiBaseUrl}/api/profile/picture/${userId}`,

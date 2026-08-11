@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, type FormEvent } from 'react';
 
 interface CameraScannerProps {
   onScan: (barcode: string) => void;
@@ -9,6 +9,8 @@ interface CameraScannerProps {
 export default function CameraScanner({ onScan, onError, enabled }: CameraScannerProps) {
   const scannerRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<'loading' | 'scanning' | 'permission-denied' | 'no-camera' | 'unsupported' | 'paused'>('loading');
+  const [reloadKey, setReloadKey] = useState(0);
+  const [manualCode, setManualCode] = useState('');
   const scannerInstanceRef = useRef<{ stop: () => Promise<void>; pause: () => void; resume: () => void } | null>(null);
   const lastScanRef = useRef<string>('');
   const scanTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -86,7 +88,7 @@ export default function CameraScanner({ onScan, onError, enabled }: CameraScanne
 
       const config = {
         fps: 30,
-        qrbox: { width: 400, height: 200 },
+        qrbox: { width: 300, height: 200 },
         formatsToSupport: [
           0,  // QR_CODE
           1,  // CODE_128
@@ -128,7 +130,7 @@ export default function CameraScanner({ onScan, onError, enabled }: CameraScanne
       stop();
       if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current);
     };
-  }, [enabled, stop]);
+  }, [enabled, stop, reloadKey]);
 
   const resume = useCallback(() => {
     if (scannerInstanceRef.current) {
@@ -137,17 +139,54 @@ export default function CameraScanner({ onScan, onError, enabled }: CameraScanne
     }
   }, []);
 
+  const handleManualSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    const code = manualCode.trim();
+    if (!code) return;
+    setManualCode('');
+    onScan(code);
+  };
+
+  const cameraUnavailable = status === 'permission-denied' || status === 'no-camera' || status === 'unsupported';
+
   return (
     <div className="camera-scanner">
       <div ref={scannerRef} style={{ width: '100%', minHeight: '300px' }} />
       {status === 'loading' && <p className="scanner-status">Initializing camera...</p>}
-      {status === 'permission-denied' && <p className="scanner-status error">Camera permission denied. Please update your browser settings.</p>}
-      {status === 'no-camera' && <p className="scanner-status error">No camera detected on this device.</p>}
-      {status === 'unsupported' && <p className="scanner-status error">Camera scanner is not supported on this browser.</p>}
+      {status === 'permission-denied' && <p className="scanner-status error">Camera permission denied. Allow camera access, or use manual entry below.</p>}
+      {status === 'no-camera' && <p className="scanner-status error">No camera detected on this device. Use manual entry below.</p>}
+      {status === 'unsupported' && <p className="scanner-status error">Camera scanner is not supported on this browser. Use manual entry below.</p>}
       {status === 'paused' && (
         <div className="scanner-paused">
           <p>Scan paused</p>
           <button onClick={resume} className="resume-btn">Resume Scanning</button>
+        </div>
+      )}
+
+      {cameraUnavailable && (
+        <div style={{ marginTop: '12px' }}>
+          <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', marginBottom: '12px' }}>
+            <button onClick={() => { setReloadKey(k => k + 1); }} style={{ padding: '8px 16px', border: '1px solid var(--color-border)', borderRadius: '4px', background: '#fff', cursor: 'pointer', fontSize: '13px' }}>
+              Retry Camera
+            </button>
+          </div>
+          <form onSubmit={handleManualSubmit} style={{ display: 'flex', gap: '8px' }}>
+            <label htmlFor="manual-barcode" style={{ position: 'absolute', width: '1px', height: '1px', overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>
+              Student barcode
+            </label>
+            <input
+              id="manual-barcode"
+              type="text"
+              placeholder="Enter roll number or student code..."
+              value={manualCode}
+              onChange={(e) => setManualCode(e.target.value)}
+              autoCapitalize="characters"
+              style={{ flex: 1, padding: '10px 12px', border: '1px solid var(--color-border)', borderRadius: '6px', fontSize: '14px', minWidth: 0 }}
+            />
+            <button type="submit" disabled={!manualCode.trim()} style={{ padding: '10px 16px', background: 'var(--color-primary)', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '14px', fontWeight: 500, cursor: manualCode.trim() ? 'pointer' : 'not-allowed', opacity: manualCode.trim() ? 1 : 0.6 }}>
+              Scan
+            </button>
+          </form>
         </div>
       )}
     </div>

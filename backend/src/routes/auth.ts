@@ -1,11 +1,25 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { requireAuth } from '../middleware/auth';
 import { authenticate, getCurrentUser, logLogout, logPermissionDenied } from '../services/auth';
+import { loginWithGoogleToken } from '../services/googleAuth';
 import { requestPasswordReset, resetPassword } from '../services/passwordReset';
 import { authLimiter } from '../middleware/rateLimiter';
 import { validateBody } from '../utils/validation';
 
 const router = Router();
+
+router.post('/auth/google',
+  authLimiter,
+  validateBody([
+    { field: 'credential', type: 'string', required: true, min: 1 },
+  ]),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const result = await loginWithGoogleToken(req.body.credential, req.ip as string);
+      res.json(result);
+    } catch (err) { next(err); }
+  }
+);
 
 router.post('/auth/login',
   authLimiter,

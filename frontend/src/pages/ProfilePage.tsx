@@ -16,7 +16,8 @@ export default function ProfilePage() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState({
-    hostel: '',
+    branch: '',
+    section: '',
   });
 
   const [pwForm, setPwForm] = useState({
@@ -34,7 +35,8 @@ export default function ProfilePage() {
       .then((res) => {
         setProfile(res.data);
         setForm({
-          hostel: res.data.hostel || '',
+          branch: res.data.branch || '',
+          section: res.data.section || '',
         });
       })
       .catch(() => setError('Failed to load profile'))
@@ -46,10 +48,11 @@ export default function ProfilePage() {
     setError('');
     setSuccess('');
     try {
-      const data: { hostel?: string | null } = {};
+      const data: { branch?: string | null; section?: string | null } = {};
       const old = profile!;
       if (user?.role === 'student') {
-        if (form.hostel !== (old.hostel || '')) data.hostel = form.hostel || null;
+        if (form.branch !== (old.branch || '')) data.branch = form.branch || null;
+        if (form.section !== (old.section || '')) data.section = form.section || null;
       }
       if (Object.keys(data).length === 0) {
         setEditing(false);
@@ -69,7 +72,8 @@ export default function ProfilePage() {
   const handleCancel = () => {
     if (!profile) return;
     setForm({
-      hostel: profile.hostel || '',
+      branch: profile.branch || '',
+      section: profile.section || '',
     });
     setEditing(false);
     setError('');
@@ -153,11 +157,9 @@ export default function ProfilePage() {
   };
 
   const labelStyle: React.CSSProperties = {
-    fontSize: '12px',
+    fontSize: '13px',
     fontWeight: 600,
     color: 'var(--color-text-secondary)',
-    textTransform: 'uppercase',
-    letterSpacing: '0.5px',
   };
 
   const pwInputStyle: React.CSSProperties = {
@@ -193,12 +195,12 @@ export default function ProfilePage() {
       <h1 style={{ fontSize: '22px', fontWeight: 700, marginBottom: '24px' }}>Profile</h1>
 
       {error && (
-        <div style={{ padding: '12px', borderRadius: '6px', background: '#fef2f2', color: '#b91c1c', marginBottom: '16px', fontSize: '14px' }}>
+        <div style={{ padding: '12px', borderRadius: 'var(--radius-sm)', background: '#fef2f2', color: 'var(--color-error)', marginBottom: '16px', fontSize: '14px' }}>
           {error}
         </div>
       )}
       {success && (
-        <div style={{ padding: '12px', borderRadius: '6px', background: '#f0fdf4', color: '#15803d', marginBottom: '16px', fontSize: '14px' }}>
+        <div style={{ padding: '12px', borderRadius: 'var(--radius-sm)', background: '#f0fdf4', color: 'var(--color-success)', marginBottom: '16px', fontSize: '14px' }}>
           {success}
         </div>
       )}
@@ -206,7 +208,7 @@ export default function ProfilePage() {
       <div style={{
         background: '#fff',
         border: '1px solid var(--color-border)',
-        borderRadius: '12px',
+        borderRadius: 'var(--radius-lg)',
         padding: '32px',
       }}>
         <div style={{ textAlign: 'center', marginBottom: '28px' }}>
@@ -326,27 +328,33 @@ export default function ProfilePage() {
           {user?.role === 'student' && (
             <>
               <div style={fieldStyle}>
-                <span style={labelStyle}>Hostel</span>
+                <span style={labelStyle}>Branch</span>
                 {editing ? (
                   <input
                     style={inputStyle}
-                    value={form.hostel}
-                    onChange={(e) => setForm({ ...form, hostel: e.target.value })}
+                    value={form.branch}
+                    onChange={(e) => setForm({ ...form, branch: e.target.value })}
                     maxLength={100}
+                    aria-label="Branch"
                   />
                 ) : (
-                  <span style={{ fontSize: '14px', color: 'var(--color-text-primary)' }}>{profile.hostel || '-'}</span>
+                  <span style={{ fontSize: '14px', color: 'var(--color-text-primary)' }}>{profile.branch || '-'}</span>
                 )}
               </div>
 
               <div style={fieldStyle}>
-                <span style={labelStyle}>Branch</span>
-                <span style={{ fontSize: '14px', color: 'var(--color-text-primary)' }}>{profile.branch || '-'}</span>
-              </div>
-
-              <div style={fieldStyle}>
                 <span style={labelStyle}>Section</span>
-                <span style={{ fontSize: '14px', color: 'var(--color-text-primary)' }}>{profile.section || '-'}</span>
+                {editing ? (
+                  <input
+                    style={inputStyle}
+                    value={form.section}
+                    onChange={(e) => setForm({ ...form, section: e.target.value })}
+                    maxLength={20}
+                    aria-label="Section"
+                  />
+                ) : (
+                  <span style={{ fontSize: '14px', color: 'var(--color-text-primary)' }}>{profile.section || '-'}</span>
+                )}
               </div>
             </>
           )}
@@ -415,19 +423,19 @@ export default function ProfilePage() {
       <div style={{
         background: '#fff',
         border: '1px solid var(--color-border)',
-        borderRadius: '12px',
+        borderRadius: 'var(--radius-lg)',
         padding: '32px',
         marginTop: '24px',
       }}>
         <h2 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '20px' }}>Security</h2>
 
         {pwError && (
-          <div style={{ padding: '12px', borderRadius: '6px', background: '#fef2f2', color: '#b91c1c', marginBottom: '16px', fontSize: '14px' }}>
+          <div style={{ padding: '12px', borderRadius: 'var(--radius-sm)', background: '#fef2f2', color: 'var(--color-error)', marginBottom: '16px', fontSize: '14px' }}>
             {pwError}
           </div>
         )}
         {pwSuccess && (
-          <div style={{ padding: '12px', borderRadius: '6px', background: '#f0fdf4', color: '#15803d', marginBottom: '16px', fontSize: '14px' }}>
+          <div style={{ padding: '12px', borderRadius: 'var(--radius-sm)', background: '#f0fdf4', color: 'var(--color-success)', marginBottom: '16px', fontSize: '14px' }}>
             {pwSuccess}
           </div>
         )}

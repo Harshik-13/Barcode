@@ -167,6 +167,7 @@ All endpoints are mounted under `/api` prefix. All **43 endpoints** are consumed
 | Method | Endpoint | Auth | Role | Frontend |
 |--------|----------|------|------|----------|
 | POST | `/api/auth/login` | None | All | Login page |
+| POST | `/api/auth/google` | Rate limited | All | Login page — "Continue with Google" (verifies Google ID token, domain-gated `@vnrvjiet.in`) |
 | POST | `/api/auth/logout` | Bearer | All | Layout logout button |
 | GET | `/api/auth/me` | Bearer | All | Session restore on page load |
 
@@ -271,6 +272,9 @@ CREATE TABLE roles (
 );
 
 -- Users (faculty + admin accounts)
+-- NOTE: current schema is defined by backend/src/db/migrate.ts; status values are
+-- 'invited'/'active'/'suspended'/'deactivated'. google_sub added by Phase 3 of the
+-- Google OAuth migration (unique, NULL for legacy password users).
 CREATE TABLE users (
   id SERIAL PRIMARY KEY,
   email TEXT UNIQUE NOT NULL,
@@ -278,7 +282,8 @@ CREATE TABLE users (
   role_id TEXT NOT NULL REFERENCES roles(id),
   password_hash TEXT NOT NULL,
   is_active INTEGER DEFAULT 1,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  google_sub TEXT UNIQUE
 );
 
 -- Students (workspace participants)

@@ -1,13 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../store/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { env } from '../utils/env';
+import type { GoogleCredentialResponse } from '../types/google-accounts';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
-  const { login, isLoading, isAuthenticated } = useAuth();
+  const googleButtonRef = useRef<HTMLDivElement>(null);
+  const { login, loginWithGoogle, isLoading, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -16,12 +19,60 @@ export default function Login() {
     }
   }, [isAuthenticated, navigate]);
 
+  const handleGoogleCredential = async (response: GoogleCredentialResponse) => {
+    setError('');
+    try {
+      await loginWithGoogle(response.credential);
+    } catch (err: unknown) {
+      const apiErr = err as { message?: string };
+      setError(apiErr.message ?? 'Google sign-in failed. Please try again.');
+    }
+  };
+
+  useEffect(() => {
+    if (!env.googleClientId) return;
+
+    const renderButton = () => {
+      const gsi = window.google?.accounts?.id;
+      if (!gsi || !googleButtonRef.current) return;
+      gsi.initialize({
+        client_id: env.googleClientId,
+        callback: handleGoogleCredential,
+        auto_select: false,
+      });
+      const width = googleButtonRef.current.clientWidth;
+      gsi.renderButton(googleButtonRef.current, {
+        theme: 'outline',
+        size: 'large',
+        text: 'continue_with',
+        shape: 'rectangular',
+        ...(width > 0 ? { width } : {}),
+      });
+    };
+
+    const loadGoogleScript = () => {
+      const existing = document.getElementById('gsi-client-script');
+      if (existing) {
+        renderButton();
+        return;
+      }
+      const script = document.createElement('script');
+      script.id = 'gsi-client-script';
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.async = true;
+      script.defer = true;
+      script.onload = renderButton;
+      document.head.appendChild(script);
+    };
+
+    loadGoogleScript();
+  }, []);
+
   const validate = (): boolean => {
     const errors: { email?: string; password?: string } = {};
     if (!email.trim()) errors.email = 'Email is required';
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.email = 'Invalid email format';
     if (!password) errors.password = 'Password is required';
-    else if (password.length < 1) errors.password = 'Password is required';
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -78,6 +129,17 @@ export default function Login() {
           >
             {error}
           </div>
+        )}
+
+        {env.googleClientId && (
+          <>
+            <div ref={googleButtonRef} style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+              <span style={{ flex: 1, height: '1px', background: '#e5e7eb' }} />
+              <span style={{ color: '#9ca3af', fontSize: '12px' }}>or sign in with email</span>
+              <span style={{ flex: 1, height: '1px', background: '#e5e7eb' }} />
+            </div>
+          </>
         )}
 
         <div style={{ marginBottom: '16px' }}>

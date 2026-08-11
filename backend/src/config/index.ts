@@ -21,6 +21,15 @@ export const config = {
   rateLimit: {
     windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS ?? '60000', 10),
     maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS ?? '100', 10),
+    authMax: parseInt(process.env.AUTH_RATE_LIMIT_MAX ?? '10', 10),
+  },
+  googleAuth: {
+    clientId: process.env.GOOGLE_CLIENT_ID ?? '',
+    jwksUri: process.env.GOOGLE_JWKS_URI ?? 'https://www.googleapis.com/oauth2/v3/certs',
+    allowedDomains: (process.env.ALLOWED_EMAIL_DOMAINS ?? '@vnrvjiet.in')
+      .split(',')
+      .map((domain) => domain.trim())
+      .filter(Boolean),
   },
   activation: {
     studentEmailDomain: process.env.STUDENT_EMAIL_DOMAIN ?? '@vnrvjiet.in',

@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [ReadyVersion-1.2] — 2026-08-11
+
+### Added
+
+- **Google OAuth Phase 2 — backend** — `services/googleAuth.ts`: `verifyGoogleIdToken` (cryptographic verification against Google JWKS via jwks-rsa + jsonwebtoken RS256: issuer, audience, exp/iat, `email_verified === true`, domain allowlist with `hd` check) and `loginWithGoogleToken` (email+`hd` domain gate, inactive-account rejection, `GOOGLE_LOGIN`/`GOOGLE_LOGIN_FAILED`/`GOOGLE_LOGIN_REJECTED_DOMAIN` audit). New `POST /api/auth/google` endpoint behind the auth rate limiter. `signToken` exported and shared `buildLoginResponse` helper extracted in `services/auth.ts` (password login refactored onto it — behavior identical).
+- **Google OAuth Phase 2 — frontend** — "Continue with Google" button (Google Identity Services) + "or sign in with email" divider on `Login.tsx`, rendered only when `VITE_GOOGLE_CLIENT_ID` is set; `AuthContext.loginWithGoogle` and `authApi.googleLogin` (same session handling as login). Email/password path untouched — **both login paths work during Phase 2**.
+- **Google OAuth Phase 3 — database migration** — `users.google_sub TEXT` (nullable) + unique index `idx_users_google_sub` in `db/migrate.ts` (idempotent; legacy rows unaffected — all `google_sub` NULL). Pre-migration dump: `backend/backups/workspace-pre-google-sub-*.dump`.
+- **Tests** — `tests/googleAuth.integration.test.ts` (19 tests: faculty/admin/student success, invalid domain, unverified email, wrong aud/iss, expired/future/tampered tokens, suspended/unknown accounts, audit trail) and `tests/migration.integration.test.ts` (4 tests: column, unique index, idempotency, NULL + duplicate rejection).
+
+### Changed
+
+- **Config** — `config.googleAuth` block (`clientId`, `jwksUri` overridable via `GOOGLE_JWKS_URI` for tests, `allowedDomains` from `ALLOWED_EMAIL_DOMAINS`); `rateLimit.authMax` from `AUTH_RATE_LIMIT_MAX`.
+- **Shared constants** — new error codes `DOMAIN_NOT_ALLOWED`, `ACCOUNT_NOT_FOUND_OR_INACTIVE`, `IDENTITY_CONFLICT`.
+- **Test count** — backend suite 160 → 183 tests across 13 suites.
+
+### Security
+
+- Google ID token verified **server-side only** (JWKS signature, `iss`, `aud`, `exp`, `iat`, `email_verified`, domain). Client never supplies profile data.
+- Domain gate rejects every account outside `@vnrvjiet.in` with `DOMAIN_NOT_ALLOWED` (audited as `GOOGLE_LOGIN_REJECTED_DOMAIN`).
+- `/api/auth/google` inherits the same `authLimiter` protection as `/auth/login`.
+
+### Verified (E2E, live Google account)
+
+- Real OAuth client + authorized JS origin `http://localhost:5173`; full Google sign-in (2FA + consent) posts a real ID token; backend cryptographically verifies it and rejects `@gmail.com` with `DOMAIN_NOT_ALLOWED`; UI shows "Only @vnrvjiet.in accounts can sign in."; audit row written.
+
 ## [ReadyVersion-1.1] — 2026-07-26
 
 ### Fixed

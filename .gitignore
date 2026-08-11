@@ -41,3 +41,10 @@ backend/data/imports/*.xlsx
 
 # Generated cache/index files
 ecret*
+
+# Agent tooling and local artifacts
+.gemini/
+.opencode/
+.impeccable/
+backend/backups/
+

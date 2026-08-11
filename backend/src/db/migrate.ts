@@ -204,6 +204,10 @@ export async function migrate(options?: { skipClose?: boolean }): Promise<void> 
 
   await db.query(`CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_hash ON password_reset_tokens(token_hash)`);
 
+  // 17. Add google_sub to users (idempotent) — Google OAuth permanent identity binding
+  try { await db.query(`ALTER TABLE users ADD COLUMN google_sub TEXT`); } catch { /* column already exists */ }
+  await db.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google_sub ON users(google_sub)`);
+
   logger.info('Migration completed successfully');
   if (!options?.skipClose) {
     await closeDb();

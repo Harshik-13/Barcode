@@ -53,6 +53,31 @@ button:focus {
   outline-offset: 2px;
 }
 
+.resp-hamburger {
+  display: none;
+}
+
+.resp-nav-links {
+  display: flex;
+  gap: 4px;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* ── Responsive Utilities ── */
 
 .resp-table-wrap {
@@ -150,10 +175,14 @@ button:focus {
   .resp-nav-links.open {
     display: flex;
   }
+  .resp-hamburger {
+    display: inline-flex !important;
+  }
   .resp-nav-overlay {
     display: none;
     position: fixed;
     inset: 0;
+    top: 56px;
     background: rgba(0,0,0,0.3);
     z-index: 998;
   }

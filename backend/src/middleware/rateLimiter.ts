@@ -56,4 +56,4 @@ export function createRateLimiter(name: string, maxRequests: number, windowMs: n
 export const globalLimiter = createRateLimiter('global', config.rateLimit.maxRequests, config.rateLimit.windowMs);
 export const scanLimiter = createRateLimiter('scan', 30, 60000);
 export const adminLimiter = createRateLimiter('admin', 30, 60000);
-export const authLimiter = createRateLimiter('auth', 10, 60000);
+export const authLimiter = createRateLimiter('auth', config.rateLimit.authMax, 60000);

@@ -113,11 +113,15 @@ export default function StudentsPage() {
             </div>
           )}
           <div className="resp-stack@mobile" style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-            <input placeholder="Roll Number" value={createRoll} onChange={(e) => setCreateRoll(e.target.value.toUpperCase())} required style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '4px', fontSize: '14px', flex: 1, minWidth: '120px' }} />
-            <input placeholder="Full Name" value={createName} onChange={(e) => setCreateName(e.target.value)} required style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '4px', fontSize: '14px', flex: 1, minWidth: '150px' }} />
-            <input placeholder="Branch" value={createBranch} onChange={(e) => setCreateBranch(e.target.value)} style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '4px', fontSize: '14px', flex: 1, minWidth: '90px' }} />
-            <input placeholder="Section" value={createSection} onChange={(e) => setCreateSection(e.target.value.toUpperCase())} style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '4px', fontSize: '14px', flex: 0, minWidth: '70px', maxWidth: '90px' }} />
-            <button type="submit" style={{ padding: '8px 16px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '14px', cursor: 'pointer', minHeight: '44px' }}>
+            <label htmlFor="student-roll" style={{ position: 'absolute', width: '1px', height: '1px', overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>Roll Number</label>
+            <input id="student-roll" placeholder="Roll Number" value={createRoll} onChange={(e) => setCreateRoll(e.target.value.toUpperCase())} required style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '4px', fontSize: '14px', flex: 1, minWidth: '120px' }} />
+            <label htmlFor="student-name" style={{ position: 'absolute', width: '1px', height: '1px', overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>Full Name</label>
+            <input id="student-name" placeholder="Full Name" value={createName} onChange={(e) => setCreateName(e.target.value)} required style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '4px', fontSize: '14px', flex: 1, minWidth: '150px' }} />
+            <label htmlFor="student-branch" style={{ position: 'absolute', width: '1px', height: '1px', overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>Branch</label>
+            <input id="student-branch" placeholder="Branch" value={createBranch} onChange={(e) => setCreateBranch(e.target.value)} style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '4px', fontSize: '14px', flex: 1, minWidth: '90px' }} />
+            <label htmlFor="student-section" style={{ position: 'absolute', width: '1px', height: '1px', overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>Section</label>
+            <input id="student-section" placeholder="Section" value={createSection} onChange={(e) => setCreateSection(e.target.value.toUpperCase())} style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '4px', fontSize: '14px', flex: 0, minWidth: '70px', maxWidth: '90px' }} />
+            <button type="submit" style={{ padding: '8px 16px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '14px', cursor: 'pointer', minHeight: '44px' }}>
               Create
             </button>
           </div>
@@ -125,7 +129,9 @@ export default function StudentsPage() {
       )}
 
       <div className="resp-stack@mobile" style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+        <label htmlFor="students-search" style={{ position: 'absolute', width: '1px', height: '1px', overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>Search students</label>
         <input
+          id="students-search"
           placeholder="Search by name, roll, or email..."
           value={searchQuery}
           onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}

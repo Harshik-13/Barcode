@@ -72,7 +72,7 @@ export function Layout() {
         .catch(() => {});
     };
     fetchCount();
-    const interval = setInterval(fetchCount, 5000);
+    const interval = setInterval(fetchCount, 60000);
     return () => clearInterval(interval);
   }, [user]);
 
@@ -94,7 +94,6 @@ export function Layout() {
             <strong style={{ marginRight: '12px', fontSize: '15px', whiteSpace: 'nowrap' }}>8Hour</strong>
             <nav
               className={`resp-nav-links${navOpen ? ' open' : ''}`}
-              style={{ display: 'flex', gap: '4px' }}
             >
               {navItems.map((item) => (
                 <NavLink
@@ -119,14 +118,18 @@ export function Layout() {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             {user?.role === 'student' && (
-              <div onClick={() => navigate('/notifications')} style={{ position: 'relative', cursor: 'pointer', padding: '4px' }}>
-                <span style={{ fontSize: '18px' }}>&#128276;</span>
+              <button
+                onClick={() => navigate('/notifications')}
+                aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
+                style={{ position: 'relative', cursor: 'pointer', padding: '4px', background: 'none', border: 'none', fontSize: '18px', lineHeight: 1 }}
+              >
+                <span aria-hidden="true">&#128276;</span>
                 {unreadCount > 0 && (
                   <span style={{ position: 'absolute', top: '-2px', right: '-4px', background: '#ef4444', color: '#fff', borderRadius: '999px', padding: '1px 6px', fontSize: '11px', fontWeight: 600, lineHeight: 1.4 }}>
                     {unreadCount > 99 ? '99+' : unreadCount}
                   </span>
                 )}
-              </div>
+              </button>
             )}
             <span className="resp-hide@mobile" style={{ color: '#6b7280', fontSize: '14px' }}>
               {user?.name}
@@ -155,12 +158,7 @@ export function Layout() {
         <Outlet />
       </main>
       <style>{`
-        .resp-hamburger { display: none; }
         @media (max-width: 768px) {
-          .resp-hamburger { display: inline-flex !important; }
-          .resp-nav-links { display: none !important; position: fixed; top: 56px; left: 0; right: 0; bottom: 0; background: #fff; flex-direction: column; padding: 16px; gap: 4px; z-index: 999; overflow-y: auto; }
-          .resp-nav-links.open { display: flex !important; }
-          .resp-nav-overlay.open { display: block !important; }
           header { padding: 0 12px !important; }
           main { padding: 12px !important; }
         }
