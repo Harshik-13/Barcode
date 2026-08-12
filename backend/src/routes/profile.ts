@@ -4,7 +4,7 @@ import path from 'path';
 import { requireAuth } from '../middleware/auth';
 import { getProfile, updateProfile } from '../services/profile';
 import { uploadProfilePicture, removeProfilePicture } from '../services/profilePicture';
-import { changePassword } from '../services/password';
+
 import { config } from '../config';
 import { authLimiter } from '../middleware/rateLimiter';
 import { validateBody } from '../utils/validation';
@@ -38,29 +38,6 @@ router.patch('/profile', requireAuth, async (req: Request, res: Response, next: 
     res.json({ data: profile });
   } catch (err) { next(err); }
 });
-
-router.patch('/profile/change-password',
-  authLimiter,
-  requireAuth,
-  validateBody([
-    { field: 'currentPassword', type: 'string', required: true, min: 1 },
-    { field: 'newPassword', type: 'string', required: true, min: 1 },
-    { field: 'confirmPassword', type: 'string', required: true, min: 1 },
-  ]),
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      await changePassword(
-        req.user!.userId,
-        req.body.currentPassword,
-        req.body.newPassword,
-        req.body.confirmPassword,
-        req.user!.role,
-        req.ip as string
-      );
-      res.json({ message: 'Password updated successfully' });
-    } catch (err) { next(err); }
-  }
-);
 
 router.post(
   '/profile/picture',

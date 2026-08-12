@@ -18,12 +18,7 @@ const SessionDetailPage = lazy(() => import('./pages/SessionDetailPage'));
 const Unauthorized = lazy(() => import('./pages/Unauthorized'));
 const Forbidden = lazy(() => import('./pages/Forbidden'));
 const NotFound = lazy(() => import('./pages/NotFound'));
-const ActivatePage = lazy(() => import('./pages/ActivatePage'));
-const FacultyManagementPage = lazy(() => import('./pages/FacultyManagementPage'));
-const FacultyActivatePage = lazy(() => import('./pages/FacultyActivatePage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
-const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
-const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 const OnboardingPage = lazy(() => import('./pages/OnboardingPage'));
 
 function App() {
@@ -34,10 +29,6 @@ function App() {
           <Suspense fallback={<Loading fullPage />}>
             <Routes>
               <Route path="/login" element={<Login />} />
-              <Route path="/activate" element={<ActivatePage />} />
-              <Route path="/faculty/activate" element={<FacultyActivatePage />} />
-              <Route path="/forgot-password" element={<ForgotPassword />} />
-              <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/unauthorized" element={<Unauthorized />} />
               <Route path="/forbidden" element={<Forbidden />} />
               <Route element={<ProtectedRoute />}>

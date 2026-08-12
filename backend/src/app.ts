@@ -14,9 +14,9 @@ import scanRoutes from './routes/scan';
 import activityLogRoutes from './routes/activityLogs';
 import notificationRoutes from './routes/notifications';
 import pushRoutes from './routes/push';
-import activationRoutes from './routes/activation';
+
 import facultyRoutes from './routes/faculty';
-import facultyActivationRoutes from './routes/facultyActivation';
+
 import dashboardRoutes from './routes/dashboard';
 import profileRoutes from './routes/profile';
 import studentImportRoutes from './routes/studentImport';
@@ -38,9 +38,9 @@ app.use('/api', scanRoutes);
 app.use('/api', activityLogRoutes);
 app.use('/api', notificationRoutes);
 app.use('/api', pushRoutes);
-app.use('/api', activationRoutes);
+
 app.use('/api', facultyRoutes);
-app.use('/api', facultyActivationRoutes);
+
 app.use('/api', dashboardRoutes);
 app.use('/api', profileRoutes);
 app.use('/api', studentImportRoutes);
