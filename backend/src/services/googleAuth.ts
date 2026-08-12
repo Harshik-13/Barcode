@@ -133,76 +133,33 @@ export async function loginWithGoogleToken(idToken: string, ip?: string): Promis
   const emailLocalPart = email.split('@')[0];
   const roll = emailLocalPart.toUpperCase();
 
-  const result = await db.query(
-    'SELECT id, email, name, role_id, status, password_changed_at, google_sub, profile_picture FROM users WHERE email = $1',
-    [email]
-  );
+  const USER_COLS = 'id, email, name, role_id, status, password_changed_at, google_sub, profile_picture';
 
-  if (result.rows.length > 0) {
-    const user = result.rows[0] as {
-      id: number;
-      email: string;
-      name: string;
-      role_id: string;
-      status: string;
-      password_changed_at: string | null;
-      google_sub: string | null;
-      profile_picture: string | null;
-    };
+  const subResult = await db.query(`SELECT ${USER_COLS} FROM users WHERE google_sub = $1`, [claims.sub]);
 
-    if (user.status !== 'active') {
+  if (subResult.rows.length > 0) {
+    return finalizeGoogleLogin(subResult.rows[0] as GoogleUserRow, claims, ip);
+  }
+
+  const emailResult = await db.query(`SELECT ${USER_COLS} FROM users WHERE email = $1`, [email]);
+
+  if (emailResult.rows.length > 0) {
+    const user = emailResult.rows[0] as GoogleUserRow;
+
+    if (user.google_sub && user.google_sub !== claims.sub) {
       await logAudit({
-        actorType: user.role_id as 'faculty' | 'admin' | 'student',
-        actorId: user.id,
+        actorType: 'system',
+        actorId: null,
         action: 'GOOGLE_LOGIN_FAILED',
         entityType: 'USER',
         entityId: user.id,
-        details: { reason: 'account_inactive', status: user.status },
+        details: { reason: 'identity_conflict', email },
         ipAddress: ip,
       });
-      throw new ForbiddenError('Your account is not active');
+      throw new UnauthorizedError('IDENTITY_CONFLICT', 'This account is already linked to a different Google sign-in.');
     }
 
-    const updates: string[] = [];
-    const params: Array<string | null> = [];
-    let paramIdx = 1;
-
-    if (!user.google_sub) {
-      updates.push(`google_sub = $${paramIdx}`);
-      params.push(claims.sub);
-      paramIdx++;
-    }
-
-    if (!user.profile_picture && claims.picture) {
-      updates.push(`profile_picture = $${paramIdx}`);
-      params.push(claims.picture);
-      paramIdx++;
-    }
-
-    if (updates.length > 0) {
-      params.push(String(user.id));
-      await db.query(`UPDATE users SET ${updates.join(', ')} WHERE id = $${paramIdx}`, params);
-    }
-
-    let needsOnboarding = false;
-    if (user.role_id === 'student') {
-      const stuResult = await db.query('SELECT id, branch FROM students WHERE email = $1', [user.email]);
-      if (stuResult.rows.length > 0) {
-        needsOnboarding = !(stuResult.rows[0] as { branch: string | null }).branch;
-      }
-    }
-
-    await logAudit({
-      actorType: user.role_id as 'faculty' | 'admin' | 'student',
-      actorId: user.id,
-      action: 'GOOGLE_LOGIN',
-      entityType: 'USER',
-      entityId: user.id,
-      ipAddress: ip,
-    });
-
-    const loginResp = await buildLoginResponse(user);
-    return { ...loginResp, needsOnboarding: needsOnboarding || undefined };
+    return finalizeGoogleLogin(user, claims, ip);
   }
 
   const stuResult = await db.query(
@@ -219,49 +176,13 @@ export async function loginWithGoogleToken(idToken: string, ip?: string): Promis
       branch: string | null;
     };
 
-    await db.query('BEGIN');
-    try {
-      const userResult = await db.query(
-        `INSERT INTO users (email, name, role_id, status, google_sub, profile_picture)
-         VALUES ($1, $2, 'student', 'active', $3, $4)
-         ON CONFLICT (email) DO UPDATE SET
-           google_sub = COALESCE(users.google_sub, EXCLUDED.google_sub),
-           profile_picture = COALESCE(EXCLUDED.profile_picture, users.profile_picture)
-         RETURNING id, email, name, role_id, status, password_changed_at`,
-        [email, claims.name || student.name, claims.sub, claims.picture || null]
-      );
-
-      if (!student.email) {
-        await db.query('UPDATE students SET email = $1 WHERE id = $2', [email, student.id]);
-      }
-
-      await db.query('COMMIT');
-
-      const user = userResult.rows[0] as {
-        id: number;
-        email: string;
-        name: string;
-        role_id: string;
-        status: string;
-        password_changed_at: string | null;
-      };
-
-      await logAudit({
-        actorType: 'student',
-        actorId: user.id,
-        action: 'GOOGLE_LOGIN',
-        entityType: 'USER',
-        entityId: user.id,
-        ipAddress: ip,
-      });
-
-      const loginResp = await buildLoginResponse(user);
-      const needsOnboarding = !student.branch;
-      return { ...loginResp, needsOnboarding: needsOnboarding || undefined };
-    } catch (err) {
-      await db.query('ROLLBACK');
-      throw err;
+    if (!student.email) {
+      await db.query('UPDATE students SET email = $1 WHERE id = $2', [email, student.id]);
     }
+
+    const user = await provisionStudentUser(email, claims, ip, 'student-exists', true);
+    const needsOnboarding = !student.branch;
+    return { ...(await buildLoginResponse(user)), needsOnboarding: needsOnboarding || undefined };
   }
 
   await db.query('BEGIN');
@@ -272,55 +193,146 @@ export async function loginWithGoogleToken(idToken: string, ip?: string): Promis
        ON CONFLICT (roll) DO UPDATE SET
          name = COALESCE(EXCLUDED.name, students.name),
          email = COALESCE(EXCLUDED.email, students.email)
-       RETURNING id, roll, name, email, branch`,
+       RETURNING id, roll`,
       [roll, claims.name || roll, email]
     );
 
-    const userInsert = await db.query(
-      `INSERT INTO users (email, name, role_id, status, google_sub, profile_picture)
-       VALUES ($1, $2, 'student', 'active', $3, $4)
-       ON CONFLICT (email) DO UPDATE SET
-         google_sub = COALESCE(users.google_sub, EXCLUDED.google_sub),
-         profile_picture = COALESCE(EXCLUDED.profile_picture, users.profile_picture)
-       RETURNING id, email, name, role_id, status, password_changed_at`,
-      [email, claims.name || roll, claims.sub, claims.picture || null]
-    );
+    const user = await provisionStudentUser(email, claims, ip, 'auto-provision');
 
     await db.query('COMMIT');
 
-    const user = userInsert.rows[0] as {
-      id: number;
-      email: string;
-      name: string;
-      role_id: string;
-      status: string;
-      password_changed_at: string | null;
-    };
-    const student = studentInsert.rows[0] as {
-      id: number;
-      roll: string;
-      name: string;
-      email: string;
-      branch: string | null;
-    };
+    logAudit({
+      actorType: 'student',
+      actorId: user.id,
+      action: 'GOOGLE_LOGIN',
+      entityType: 'USER',
+      entityId: user.id,
+      details: { autoProvisioned: true, roll: studentInsert.rows[0].roll },
+      ipAddress: ip,
+    });
 
+    const loginResp = await buildLoginResponse(user);
+    return { ...loginResp, needsOnboarding: true };
+  } catch (err) {
+    await db.query('ROLLBACK');
+    throw err;
+  }
+}
+
+interface GoogleUserRow {
+  id: number;
+  email: string;
+  name: string;
+  role_id: string;
+  status: string;
+  password_changed_at: string | null;
+  google_sub: string | null;
+  profile_picture: string | null;
+}
+
+async function finalizeGoogleLogin(user: GoogleUserRow, claims: GoogleIdTokenClaims, ip?: string) {
+  if (user.status !== 'active') {
+    await logAudit({
+      actorType: user.role_id as 'faculty' | 'admin' | 'student',
+      actorId: user.id,
+      action: 'GOOGLE_LOGIN_FAILED',
+      entityType: 'USER',
+      entityId: user.id,
+      details: { reason: 'account_inactive', status: user.status },
+      ipAddress: ip,
+    });
+    throw new ForbiddenError('Your account is not active');
+  }
+
+  const updates: string[] = [];
+  const params: Array<string | null> = [];
+  let paramIdx = 1;
+
+  if (!user.google_sub) {
+    updates.push(`google_sub = $${paramIdx}`);
+    params.push(claims.sub);
+    paramIdx++;
+  }
+
+  if (!user.profile_picture && claims.picture) {
+    updates.push(`profile_picture = $${paramIdx}`);
+    params.push(claims.picture);
+    paramIdx++;
+  }
+
+  if (updates.length > 0) {
+    params.push(String(user.id));
+    await getDb().query(`UPDATE users SET ${updates.join(', ')} WHERE id = $${paramIdx}`, params);
+  }
+
+  let needsOnboarding = false;
+  if (user.role_id === 'student') {
+    const db = getDb();
+    const stuResult = await db.query('SELECT id, branch FROM students WHERE email = $1', [user.email]);
+    if (stuResult.rows.length > 0) {
+      needsOnboarding = !(stuResult.rows[0] as { branch: string | null }).branch;
+    }
+  }
+
+  await logAudit({
+    actorType: user.role_id as 'faculty' | 'admin' | 'student',
+    actorId: user.id,
+    action: 'GOOGLE_LOGIN',
+    entityType: 'USER',
+    entityId: user.id,
+    ipAddress: ip,
+  });
+
+  const loginResp = await buildLoginResponse(user);
+  return { ...loginResp, needsOnboarding: needsOnboarding || undefined };
+}
+
+async function provisionStudentUser(
+  email: string,
+  claims: GoogleIdTokenClaims,
+  ip?: string,
+  provisionReason?: string,
+  auditLogin = false
+): Promise<GoogleUserRow> {
+  const db = getDb();
+  const result = await db.query(
+    `INSERT INTO users (email, name, role_id, status, google_sub, profile_picture)
+     VALUES ($1, $2, 'student', 'active', $3, $4)
+     ON CONFLICT (email) DO UPDATE SET
+       google_sub = COALESCE(users.google_sub, EXCLUDED.google_sub),
+       profile_picture = COALESCE(EXCLUDED.profile_picture, users.profile_picture)
+     RETURNING id, email, name, role_id, status, password_changed_at, google_sub, profile_picture`,
+    [email, claims.name || '', claims.sub, claims.picture || null]
+  );
+
+  const user = result.rows[0] as GoogleUserRow;
+
+  if (user.google_sub && user.google_sub !== claims.sub) {
+    await logAudit({
+      actorType: 'system',
+      actorId: null,
+      action: 'GOOGLE_LOGIN_FAILED',
+      entityType: 'USER',
+      entityId: user.id,
+      details: { reason: 'identity_conflict', email, provisionReason },
+      ipAddress: ip,
+    });
+    throw new UnauthorizedError('IDENTITY_CONFLICT', 'This email is already linked to a different Google sign-in.');
+  }
+
+  if (auditLogin) {
     await logAudit({
       actorType: 'student',
       actorId: user.id,
       action: 'GOOGLE_LOGIN',
       entityType: 'USER',
       entityId: user.id,
-      details: { autoProvisioned: true, roll: student.roll },
+      details: { autoProvisioned: true },
       ipAddress: ip,
     });
-
-    const loginResp = await buildLoginResponse(user);
-    const needsOnboarding = !student.branch;
-    return { ...loginResp, needsOnboarding: needsOnboarding || undefined };
-  } catch (err) {
-    await db.query('ROLLBACK');
-    throw err;
   }
+
+  return user;
 }
 
 export async function completeOnboarding(

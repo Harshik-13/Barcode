@@ -11,7 +11,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 - **Branding** — product renamed from "8Hour Workspace" to **Hive** ("Where Ideas Work Together."). User-facing only: browser title, PWA manifest, auth-page headings, top-bar wordmark, favicon, push notification title, email subject lines, SMTP display name, and docs. No database, API, env, route, or logic changes — `8hattendance@gmail.com` and internal identifiers kept.
 
-## [ReadyVersion-1.2] — 2026-08-11
+## Phase 5 — Faculty/Admin Google Sub Binding (2026-08-12)
+
+- **Objective:** Bind `google_sub` for existing faculty/admin users on first Google login; reject identity-conflict logins (google_sub already bound to another account); never auto-create admins.
+- **Files affected (backend):** `services/googleAuth.ts` (primary `google_sub` lookup + conflict guard, email-fallback-only-when-null); `provisionStudentUser` helper (ON CONFLICT guard + identity guard); `completeOnboarding` export.
+- **Files affected (frontend):** none — login flow already works identically.
+- **Risks:** Admin lockout if every admin is bound and Google fails — mitigated by binding all existing admins/faculty during this phase (a backfill script that pre-binds known emails is explicitly forbidden: binding requires a verified token; instead keep password fallback until Phase 6).
+- **Rollback:** Keep legacy login active; no account-level changes beyond the nullable `google_sub` write.
+- **Audit:** Every Google login attempt (success, failure, domain rejection, conflict) is audited with the same `activity_logs` pattern (`GOOGLE_LOGIN`, `GOOGLE_LOGIN_FAILED`, `GOOGLE_LOGIN_REJECTED_DOMAIN`, `IDENTITY_CONFLICT`).
+
+### Conflict guard details:
+- **Primary match:** `users.google_sub = token.sub` (unique constraint).
+- **Email fallback:** Only when `google_sub IS NULL` on the found user; otherwise `IDENTITY_CONFLICT` error thrown (HTTP 401), audit `GOOGLE_LOGIN_FAILED` reason `identity_conflict`.
+- **Identity conflict:** If user found by email AND `google_sub IS NOT NULL && google_sub != claims.sub` → reject; ensures a Google account cannot claim a user whose `sub` is already bound.
+
+## Phase 6 — Removal of legacy authentication
+
+### Phase 7 — Regression testing
+
+### Changed
+
+- **Branding** — product renamed from "8Hour Workspace" to **Hive** ("Where Ideas Work Together."). User-facing only: browser title, PWA manifest, auth-page headings, top-bar wordmark, favicon, push notification title, email subject lines, SMTP display name, and docs. No database, API, env, route, or logic changes — `8hattendance@gmail.com` and internal identifiers kept.
+
+### Security
+
+- **Server-side verification only.** The backend verifies the Google ID token itself (cryptographic verification via Google's JWKS public keys). The client never sends "profile data"; it sends the token. Trust nothing else.
+- **Never trust client profile data.** Name, email, picture, and domain come exclusively from the verified token claims.
+- **Validate the token:**
+  - `iss` — must be Google's issuer (`https://accounts.google.com`).
+  - `aud` — must equal this application's OAuth client ID.
+  - `exp`/`iat` — reject expired/not-yet-valid tokens.
+  - `email_verified === true` — reject unverified accounts.
+- **Domain allowlist.** Reject every account whose verified email is not `@vnrvjiet.in` (`hd` must also match when present). Log the rejection (`GOOGLE_LOGIN_REJECTED_DOMAIN`).
+- **Identity matching:**
+  - Primary match: `users.google_sub = token.sub` (unique constraint).
+  - First-login fallback: match by email only when `google_sub` is null — then **permanently bind** `google_sub`. After binding, email lookup is never used again for that user.
+  - A `google_sub` already bound to another account is an identity conflict → reject.
+- **Privilege escalation prevention.** Role is never taken from Google. Role is determined by the existing `users.role_id` (faculty/admin) or assigned as `student` during student auto-provision. No endpoint accepts a role from a client during login or onboarding.
+- **No unauthorized role assignment.** Admin/faculty never auto-create; the domain gate plus roster lookup ensures only known faculty/admins gain those roles. Students always get `student` — nothing they send can change it.
+- **Suspended/deactivated accounts** are rejected at login regardless of Google validity.
+- **Rate limiting** — the new Google login endpoint inherits the same `authLimiter` protection as `/auth/login` today.
+- **Audit** — every Google login attempt (success, failure, domain rejection, conflict) is audited with the same `activity_logs` pattern.
+
+---
+*Boundary statement: this document intentionally changes only the authentication subsystem. Attendance, scanning, session lifecycle, notifications, push, profile, dashboards, analytics, audit, and roles are frozen contracts of this migration.*
 
 ### Added
 

@@ -1,8 +1,8 @@
 # Auth Migration: Google OAuth
 
-> **Status: BLUEPRINT — Phases 1, 2, 3 IMPLEMENTED as of 2026-08-11.**
+> **Status: BLUEPRINT — Phases 1–5 IMPLEMENTED as of 2026-08-12.**
 >
-> **Phases 4–7 pending** (student onboarding redesign, faculty/admin binding, legacy removal, regression testing).
+> **Phase 8 pending** (admin re-verify + regression checklist migration).
 >
 > This document is the **single source of truth** for replacing the OTP/password authentication system with Google OAuth.
 > Future implementation prompts MUST reference this document and follow it exactly.

@@ -17,6 +17,7 @@ const TEST_EMAILS = [
   'suspended.google@vnrvjiet.in',
   'unknown.google@vnrvjiet.in',
   'faculty-bind.google@vnrvjiet.in',
+  'conflict.google@vnrvjiet.in',
 ];
 
 const keyPair = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
@@ -81,6 +82,9 @@ beforeAll(async () => {
   await db.query(
     "INSERT INTO users (email, name, role_id, status) VALUES ('faculty-bind.google@vnrvjiet.in', 'Google Test Faculty Bind', 'faculty', 'active')"
   );
+  await db.query(
+    "INSERT INTO users (email, name, role_id, status, google_sub) VALUES ('conflict.google@vnrvjiet.in', 'Google Test Conflict', 'faculty', 'active', 'sub-owner')"
+  );
 }, 15000);
 
 afterAll(async () => {
@@ -130,7 +134,7 @@ describe('POST /api/auth/google — successful sign-in', () => {
   it('should issue a JWT that works with protected routes', async () => {
     const login = await request(app)
       .post('/api/auth/google')
-      .send({ credential: signGoogleToken(baseClaims({ sub: 'sub-me' })) });
+      .send({ credential: signGoogleToken(baseClaims({ sub: 'google-test-sub' })) });
 
     const me = await request(app)
       .get('/api/auth/me')
@@ -170,7 +174,7 @@ describe('POST /api/auth/google — rejections', () => {
   it('should accept hd when it matches and reject when it does not', async () => {
     const ok = await request(app)
       .post('/api/auth/google')
-      .send({ credential: signGoogleToken(baseClaims({ hd: 'vnrvjiet.in', sub: 'sub-hd-ok' })) });
+      .send({ credential: signGoogleToken(baseClaims({ hd: 'vnrvjiet.in', sub: 'google-test-sub' })) });
     expect(ok.status).toBe(200);
 
     const bad = await request(app)
@@ -327,7 +331,7 @@ describe('POST /api/auth/onboarding', () => {
   it('should complete onboarding for a student who needs it', async () => {
     const loginRes = await request(app)
       .post('/api/auth/google')
-      .send({ credential: signGoogleToken(baseClaims({ email: 'unknown.google@vnrvjiet.in', sub: 'sub-onboard' })) });
+      .send({ credential: signGoogleToken(baseClaims({ email: 'unknown.google@vnrvjiet.in', sub: 'sub-unknown' })) });
     expect(loginRes.status).toBe(200);
     const token = loginRes.body.token;
 
@@ -353,7 +357,7 @@ describe('POST /api/auth/onboarding', () => {
   it('should reject onboarding for non-students', async () => {
     const loginRes = await request(app)
       .post('/api/auth/google')
-      .send({ credential: signGoogleToken(baseClaims({ email: 'faculty.google@vnrvjiet.in', sub: 'sub-faculty-onboard' })) });
+      .send({ credential: signGoogleToken(baseClaims({ email: 'faculty-bind.google@vnrvjiet.in', sub: 'sub-faculty-binding' })) });
     expect(loginRes.status).toBe(200);
     const token = loginRes.body.token;
 
@@ -367,7 +371,7 @@ describe('POST /api/auth/onboarding', () => {
   it('should reject if onboarding already completed', async () => {
     const loginRes = await request(app)
       .post('/api/auth/google')
-      .send({ credential: signGoogleToken(baseClaims({ email: 'student.google@vnrvjiet.in', sub: 'sub-student-reonboard' })) });
+      .send({ credential: signGoogleToken(baseClaims({ email: 'student.google@vnrvjiet.in', sub: 'sub-student' })) });
     expect(loginRes.status).toBe(200);
     const token = loginRes.body.token;
 
@@ -377,5 +381,67 @@ describe('POST /api/auth/onboarding', () => {
       .send({ branch: 'ECE', section: 'C' });
     expect(onbRes.status).toBe(400);
     expect(onbRes.body.error).toBe('ALREADY_COMPLETED');
+  });
+});
+
+describe('POST /api/auth/google — Phase 5 faculty/admin binding', () => {
+  it('should reject an identity conflict: google_sub already bound to a different account', async () => {
+    const res = await request(app)
+      .post('/api/auth/google')
+      .send({ credential: signGoogleToken(baseClaims({ email: 'conflict.google@vnrvjiet.in', sub: 'sub-other' })) });
+
+    expect(res.status).toBe(401);
+    expect(res.body.error).toBe('IDENTITY_CONFLICT');
+
+    const db = getDb();
+    const result = await db.query("SELECT google_sub FROM users WHERE email = 'conflict.google@vnrvjiet.in'");
+    expect(result.rows[0].google_sub).toBe('sub-owner');
+  });
+
+  it('should keep allowing the bound account via google_sub primary lookup', async () => {
+    const res = await request(app)
+      .post('/api/auth/google')
+      .send({ credential: signGoogleToken(baseClaims({ email: 'conflict.google@vnrvjiet.in', sub: 'sub-owner' })) });
+
+    expect(res.status).toBe(200);
+    expect(res.body.user.role).toBe('faculty');
+    expect(res.body.user.email).toBe('conflict.google@vnrvjiet.in');
+  });
+
+  it('should match by google_sub even if the email changed', async () => {
+    const res = await request(app)
+      .post('/api/auth/google')
+      .send({ credential: signGoogleToken(baseClaims({ email: 'renamed-email.google@vnrvjiet.in', sub: 'sub-faculty-binding' })) });
+
+    expect(res.status).toBe(200);
+    expect(res.body.user.role).toBe('faculty');
+    expect(res.body.user.email).toBe('faculty-bind.google@vnrvjiet.in');
+  });
+
+  it('should never auto-create an admin for an unknown email', async () => {
+    const db = getDb();
+    const beforeResult = await db.query("SELECT COUNT(*) as count FROM users WHERE role_id = 'admin'");
+    const before = parseInt(beforeResult.rows[0].count, 10);
+
+    const res = await request(app)
+      .post('/api/auth/google')
+      .send({ credential: signGoogleToken(baseClaims({ email: 'newperson.google@vnrvjiet.in', sub: 'sub-newperson' })) });
+
+    expect(res.status).toBe(200);
+    expect(res.body.user.role).toBe('student');
+
+    const afterResult = await db.query("SELECT COUNT(*) as count FROM users WHERE role_id = 'admin'");
+    expect(parseInt(afterResult.rows[0].count, 10)).toBe(before);
+
+    await db.query("DELETE FROM students WHERE email = 'newperson.google@vnrvjiet.in'");
+    await db.query("DELETE FROM users WHERE email = 'newperson.google@vnrvjiet.in'");
+  });
+
+  it('should audit identity conflicts as GOOGLE_LOGIN_FAILED', async () => {
+    const db = getDb();
+    const result = await db.query(
+      "SELECT COUNT(*) as count FROM activity_logs WHERE action = 'GOOGLE_LOGIN_FAILED' AND details::text LIKE '%identity_conflict%'"
+    );
+    expect(parseInt(result.rows[0].count, 10)).toBeGreaterThan(0);
   });
 });
