@@ -22,7 +22,10 @@ export default function Login() {
   const handleGoogleCredential = async (response: GoogleCredentialResponse) => {
     setError('');
     try {
-      await loginWithGoogle(response.credential);
+      const result = await loginWithGoogle(response.credential);
+      if (result.needsOnboarding) {
+        navigate('/onboarding', { replace: true });
+      }
     } catch (err: unknown) {
       const apiErr = err as { message?: string };
       setError(apiErr.message ?? 'Google sign-in failed. Please try again.');

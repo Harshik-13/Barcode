@@ -24,6 +24,7 @@ const FacultyActivatePage = lazy(() => import('./pages/FacultyActivatePage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
+const OnboardingPage = lazy(() => import('./pages/OnboardingPage'));
 
 function App() {
   return (
@@ -40,6 +41,7 @@ function App() {
               <Route path="/unauthorized" element={<Unauthorized />} />
               <Route path="/forbidden" element={<Forbidden />} />
               <Route element={<ProtectedRoute />}>
+                <Route path="/onboarding" element={<OnboardingPage />} />
                 <Route element={<Layout />}>
                   <Route path="/" element={<Dashboard />} />
                   <Route path="/dashboard" element={<Dashboard />} />

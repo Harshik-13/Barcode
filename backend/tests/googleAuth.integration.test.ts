@@ -16,6 +16,7 @@ const TEST_EMAILS = [
   'student.google@vnrvjiet.in',
   'suspended.google@vnrvjiet.in',
   'unknown.google@vnrvjiet.in',
+  'faculty-bind.google@vnrvjiet.in',
 ];
 
 const keyPair = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
@@ -76,6 +77,9 @@ beforeAll(async () => {
   );
   await db.query(
     "INSERT INTO users (email, name, role_id, status) VALUES ('suspended.google@vnrvjiet.in', 'Google Test Suspended', 'student', 'suspended')"
+  );
+  await db.query(
+    "INSERT INTO users (email, name, role_id, status) VALUES ('faculty-bind.google@vnrvjiet.in', 'Google Test Faculty Bind', 'faculty', 'active')"
   );
 }, 15000);
 
@@ -138,13 +142,15 @@ describe('POST /api/auth/google — successful sign-in', () => {
 });
 
 describe('POST /api/auth/google — rejections', () => {
-  it('should reject a valid-domain email with no existing account', async () => {
+  it('should auto-provision a student with a valid-domain email and no existing account', async () => {
     const res = await request(app)
       .post('/api/auth/google')
       .send({ credential: signGoogleToken(baseClaims({ email: 'unknown.google@vnrvjiet.in', sub: 'sub-unknown' })) });
 
-    expect(res.status).toBe(401);
-    expect(res.body.error).toBe('ACCOUNT_NOT_FOUND');
+    expect(res.status).toBe(200);
+    expect(res.body.token).toBeDefined();
+    expect(res.body.user.role).toBe('student');
+    expect(res.body.needsOnboarding).toBe(true);
   });
 
   it('should reject non-allowlisted domains', async () => {
@@ -275,5 +281,101 @@ describe('Google login audit trail', () => {
     const db = getDb();
     const result = await db.query("SELECT COUNT(*) as count FROM activity_logs WHERE action = 'GOOGLE_LOGIN_FAILED'");
     expect(parseInt(result.rows[0].count, 10)).toBeGreaterThan(0);
+  });
+});
+
+describe('POST /api/auth/google — student provisioning', () => {
+  it('should return needsOnboarding: true for a newly provisioned student', async () => {
+    const res = await request(app)
+      .post('/api/auth/google')
+      .send({ credential: signGoogleToken(baseClaims({ email: 'unknown.google@vnrvjiet.in', sub: 'sub-unknown' })) });
+
+    expect(res.status).toBe(200);
+    expect(res.body.user.role).toBe('student');
+    expect(res.body.needsOnboarding).toBe(true);
+    expect(res.body.user.studentId).toBeDefined();
+  });
+
+  it('should return needsOnboarding: false for an existing student with branch set', async () => {
+    const res = await request(app)
+      .post('/api/auth/google')
+      .send({ credential: signGoogleToken(baseClaims({ email: 'student.google@vnrvjiet.in', sub: 'sub-student' })) });
+
+    expect(res.status).toBe(200);
+    expect(res.body.user.role).toBe('student');
+    expect(res.body.needsOnboarding).toBeFalsy();
+  });
+
+  it('should bind google_sub on first login and use it on subsequent logins', async () => {
+    const res1 = await request(app)
+      .post('/api/auth/google')
+      .send({ credential: signGoogleToken(baseClaims({ email: 'faculty-bind.google@vnrvjiet.in', sub: 'sub-faculty-binding' })) });
+    expect(res1.status).toBe(200);
+
+    const db = getDb();
+    const result = await db.query("SELECT google_sub FROM users WHERE email = 'faculty-bind.google@vnrvjiet.in'");
+    expect(result.rows[0].google_sub).toBe('sub-faculty-binding');
+
+    const res2 = await request(app)
+      .post('/api/auth/google')
+      .send({ credential: signGoogleToken(baseClaims({ email: 'faculty-bind.google@vnrvjiet.in', sub: 'sub-faculty-binding' })) });
+    expect(res2.status).toBe(200);
+  });
+});
+
+describe('POST /api/auth/onboarding', () => {
+  it('should complete onboarding for a student who needs it', async () => {
+    const loginRes = await request(app)
+      .post('/api/auth/google')
+      .send({ credential: signGoogleToken(baseClaims({ email: 'unknown.google@vnrvjiet.in', sub: 'sub-onboard' })) });
+    expect(loginRes.status).toBe(200);
+    const token = loginRes.body.token;
+
+    const statusRes = await request(app)
+      .get('/api/auth/onboarding/status')
+      .set('Authorization', `Bearer ${token}`);
+    expect(statusRes.status).toBe(200);
+    expect(statusRes.body.needsOnboarding).toBe(true);
+
+    const onbRes = await request(app)
+      .post('/api/auth/onboarding')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ branch: 'CSE', section: 'B', hostel: 'BH1' });
+    expect(onbRes.status).toBe(200);
+
+    const statusRes2 = await request(app)
+      .get('/api/auth/onboarding/status')
+      .set('Authorization', `Bearer ${token}`);
+    expect(statusRes2.status).toBe(200);
+    expect(statusRes2.body.needsOnboarding).toBe(false);
+  });
+
+  it('should reject onboarding for non-students', async () => {
+    const loginRes = await request(app)
+      .post('/api/auth/google')
+      .send({ credential: signGoogleToken(baseClaims({ email: 'faculty.google@vnrvjiet.in', sub: 'sub-faculty-onboard' })) });
+    expect(loginRes.status).toBe(200);
+    const token = loginRes.body.token;
+
+    const onbRes = await request(app)
+      .post('/api/auth/onboarding')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ branch: 'CSE', section: 'A' });
+    expect(onbRes.status).toBe(403);
+  });
+
+  it('should reject if onboarding already completed', async () => {
+    const loginRes = await request(app)
+      .post('/api/auth/google')
+      .send({ credential: signGoogleToken(baseClaims({ email: 'student.google@vnrvjiet.in', sub: 'sub-student-reonboard' })) });
+    expect(loginRes.status).toBe(200);
+    const token = loginRes.body.token;
+
+    const onbRes = await request(app)
+      .post('/api/auth/onboarding')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ branch: 'ECE', section: 'C' });
+    expect(onbRes.status).toBe(400);
+    expect(onbRes.body.error).toBe('ALREADY_COMPLETED');
   });
 });
