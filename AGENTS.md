@@ -6,7 +6,7 @@ This file documents conventions and instructions for AI agents working on the Hi
 
 This is the **Hive (workspace attendance) system** — NOT a hostel meal attendance system. The domain is workspace attendance for startup environments.
 
-**Status: ReadyVersion-1.4** — All development phases complete. System is production-ready and running. Google OAuth migration complete (phases 1–6 implemented: `/api/auth/google`, JWKS verification, `users.google_sub` migration, student auto-provisioning, faculty/admin binding, legacy auth removal). Phase 7 (regression testing) complete. UI polish pass complete — fixed misleading stats, removed non-functional controls, aligned with DESIGN.md flat/hairline doctrine, extracted inline styles, improved notification readability. New features should follow existing patterns and maintain backward compatibility.
+**Status: ReadyVersion-1.4** — All development phases complete. System is production-ready and running. Google OAuth migration complete (phases 1–6 implemented: `/api/auth/google`, JWKS verification, `users.google_sub` migration, student auto-provisioning, faculty/admin binding, legacy auth removal). Phase 7 (regression testing) complete. UI polish pass complete — fixed misleading stats, removed non-functional controls, aligned with DESIGN.md flat/hairline doctrine, extracted inline styles, improved notification readability. Dev login configured with approved Gmail accounts for admin/faculty testing. New features should follow existing patterns and maintain backward compatibility.
 
 ## Source of Truth
 
