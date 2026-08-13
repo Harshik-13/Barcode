@@ -20,6 +20,7 @@ const Forbidden = lazy(() => import('./pages/Forbidden'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const OnboardingPage = lazy(() => import('./pages/OnboardingPage'));
+const FacultyManagementPage = lazy(() => import('./pages/FacultyManagementPage'));
 
 function App() {
   return (

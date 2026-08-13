@@ -123,43 +123,7 @@ export async function migrate(options?: { skipClose?: boolean }): Promise<void> 
   await db.query(`CREATE INDEX IF NOT EXISTS idx_activity_logs_entity ON activity_logs(entity_type, entity_id)`);
   await db.query(`CREATE INDEX IF NOT EXISTS idx_activity_logs_created ON activity_logs(created_at)`);
 
-  // 9. Activation OTPs Table
-  await db.query(`
-    CREATE TABLE IF NOT EXISTS activation_otps (
-      id SERIAL PRIMARY KEY,
-      student_id INTEGER NOT NULL REFERENCES students(id),
-      otp_hash TEXT NOT NULL,
-      attempts INTEGER NOT NULL DEFAULT 0,
-      max_attempts INTEGER NOT NULL DEFAULT 5,
-      expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
-      is_used INTEGER NOT NULL DEFAULT 0,
-      verified_at TIMESTAMP WITH TIME ZONE,
-      activation_token TEXT,
-      created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-
-  await db.query(`CREATE INDEX IF NOT EXISTS idx_activation_otps_student ON activation_otps(student_id, is_used)`);
-
-  // 10. Faculty Activation OTPs Table
-  await db.query(`
-    CREATE TABLE IF NOT EXISTS faculty_activation_otps (
-      id SERIAL PRIMARY KEY,
-      user_id INTEGER NOT NULL REFERENCES users(id),
-      otp_hash TEXT NOT NULL,
-      attempts INTEGER NOT NULL DEFAULT 0,
-      max_attempts INTEGER NOT NULL DEFAULT 5,
-      expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
-      is_used INTEGER NOT NULL DEFAULT 0,
-      verified_at TIMESTAMP WITH TIME ZONE,
-      activation_token TEXT,
-      created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-
-  await db.query(`CREATE INDEX IF NOT EXISTS idx_faculty_activation_otps_user ON faculty_activation_otps(user_id, is_used)`);
-
-  // 11. Push Subscriptions Table
+  // 9. Push Subscriptions Table
   await db.query(`
     CREATE TABLE IF NOT EXISTS push_subscriptions (
       id SERIAL PRIMARY KEY,
@@ -190,21 +154,7 @@ export async function migrate(options?: { skipClose?: boolean }): Promise<void> 
   // 15. Add password_changed_at to users (idempotent)
   try { await db.query(`ALTER TABLE users ADD COLUMN password_changed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP`); } catch { /* column already exists */ }
 
-  // 16. Password Reset Tokens Table
-  await db.query(`
-    CREATE TABLE IF NOT EXISTS password_reset_tokens (
-      id SERIAL PRIMARY KEY,
-      user_id INTEGER NOT NULL REFERENCES users(id),
-      token_hash TEXT NOT NULL,
-      expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
-      used_at TIMESTAMP WITH TIME ZONE,
-      created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-
-  await db.query(`CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_hash ON password_reset_tokens(token_hash)`);
-
-  // 17. Add google_sub to users (idempotent) — Google OAuth permanent identity binding
+  // 16. Add google_sub to users (idempotent) — Google OAuth permanent identity binding
   try { await db.query(`ALTER TABLE users ADD COLUMN google_sub TEXT`); } catch { /* column already exists */ }
   await db.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google_sub ON users(google_sub)`);
 

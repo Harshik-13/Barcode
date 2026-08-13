@@ -215,48 +215,6 @@ async function executeImport({ parsed, actorId, ip }: ImportOptions): Promise<Im
   return { imported, updated, skipped: 0, failed: 0, errors: [] };
 }
 
-export async function importStudentsFromFile(
-  filePath: string,
-  actorId: number,
-  ip?: string
-): Promise<ImportResult> {
-  const ext = path.extname(filePath).toLowerCase();
-  if (!IMPORT.ALLOWED_EXTENSIONS.includes(ext as typeof IMPORT.ALLOWED_EXTENSIONS[number])) {
-    throw new ValidationError('INVALID_EXTENSION', `Extension ${ext} is not allowed. Only .xlsx files are accepted.`);
-  }
-
-  const fs = await import('fs');
-  if (!fs.existsSync(filePath)) {
-    throw new ValidationError('FILE_NOT_FOUND', `File not found: ${filePath}`);
-  }
-
-  const buffer = fs.readFileSync(filePath);
-  if (buffer.length === 0) {
-    throw new ValidationError('EMPTY_FILE', 'File is empty');
-  }
-
-  if (buffer.length > IMPORT.MAX_SIZE_BYTES) {
-    throw new ValidationError('FILE_TOO_LARGE', `File size exceeds the maximum of ${(IMPORT.MAX_SIZE_BYTES / 1024 / 1024).toFixed(1)}MB`);
-  }
-
-  let parsed: ParsedStudent[];
-  try {
-    parsed = parseWorkbook(buffer);
-  } catch {
-    throw new ValidationError('INVALID_WORKBOOK', 'Failed to parse workbook. Ensure it is a valid .xlsx file.');
-  }
-
-  if (parsed.length === 0) {
-    throw new ValidationError('NO_VALID_ROWS', 'No valid student rows found in the workbook');
-  }
-
-  if (parsed.length > IMPORT.MAX_ROWS) {
-    throw new ValidationError('TOO_MANY_ROWS', `Workbook contains ${parsed.length} students. Maximum allowed is ${IMPORT.MAX_ROWS}.`);
-  }
-
-  return executeImport({ parsed, actorId, ip });
-}
-
 export async function importStudents(
   file: Express.Multer.File,
   actorId: number,

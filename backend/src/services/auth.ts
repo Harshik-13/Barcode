@@ -1,19 +1,8 @@
-import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { getDb } from '../db';
 import { config } from '../config';
-import { UnauthorizedError, ForbiddenError } from '../utils/errors';
+import { UnauthorizedError } from '../utils/errors';
 import { logAudit } from './audit';
-
-interface UserRow {
-  id: number;
-  email: string;
-  name: string;
-  password_hash: string;
-  role_id: string;
-  status: string;
-  password_changed_at: string | null;
-}
 
 interface TokenPayload {
   sub: number;
@@ -61,71 +50,11 @@ export async function buildLoginResponse(user: {
   };
 }
 
-export async function authenticate(loginId: string, password: string, ip?: string) {
-  const email = loginId;
-
-  const db = getDb();
-  const result = await db.query('SELECT * FROM users WHERE email = $1', [email]);
-  const hasRow = result.rows.length > 0;
-  const user = hasRow ? (result.rows[0] as UserRow) : ({} as Record<string, never>);
-
-  if (!hasRow || !('id' in user)) {
-    await logAudit({
-      actorType: 'system',
-      actorId: null,
-      action: 'LOGIN_FAILED',
-      entityType: 'USER',
-      entityId: null,
-      details: { reason: 'invalid_email', email },
-      ipAddress: ip,
-    });
-    throw new UnauthorizedError('INVALID_CREDENTIALS', 'Invalid email or password');
-  }
-
-  const valid = bcrypt.compareSync(password, user.password_hash);
-  if (!valid) {
-    await logAudit({
-      actorType: 'system',
-      actorId: null,
-      action: 'LOGIN_FAILED',
-      entityType: 'USER',
-      entityId: user.id,
-      details: { reason: 'invalid_password' },
-      ipAddress: ip,
-    });
-    throw new UnauthorizedError('INVALID_CREDENTIALS', 'Invalid email or password');
-  }
-
-  if (user.status !== 'active') {
-    await logAudit({
-      actorType: user.role_id as 'faculty' | 'admin' | 'student',
-      actorId: user.id,
-      action: 'LOGIN_FAILED',
-      entityType: 'USER',
-      entityId: user.id,
-      details: { reason: 'account_inactive', status: user.status },
-      ipAddress: ip,
-    });
-    throw new ForbiddenError('Your account is not active');
-  }
-
-  await logAudit({
-    actorType: user.role_id as 'faculty' | 'admin' | 'student',
-    actorId: user.id,
-    action: 'LOGIN',
-    entityType: 'USER',
-    entityId: user.id,
-    ipAddress: ip,
-  });
-
-  return buildLoginResponse(user as UserRow);
-}
-
 export async function getCurrentUser(userId: number) {
   const db = getDb();
   const result = await db.query('SELECT id, email, name, role_id, status, created_at FROM users WHERE id = $1', [userId]);
   const hasRow = result.rows.length > 0;
-  const user = hasRow ? (result.rows[0] as UserRow) : ({} as Record<string, never>);
+  const user = hasRow ? (result.rows[0] as { id: number; email: string; name: string; role_id: string; status: string; created_at: string }) : ({} as Record<string, never>);
 
   if (!hasRow || !('id' in user)) {
     throw new UnauthorizedError('INVALID_TOKEN', 'User not found');

@@ -33,9 +33,6 @@ export const config = {
   },
   activation: {
     studentEmailDomain: process.env.STUDENT_EMAIL_DOMAIN ?? '@vnrvjiet.in',
-    otpExpiryMinutes: parseInt(process.env.OTP_EXPIRY_MINUTES ?? '10', 10),
-    otpMaxAttempts: parseInt(process.env.OTP_MAX_ATTEMPTS ?? '5', 10),
-    otpCooldownSeconds: parseInt(process.env.ACTIVATION_COOLDOWN_SECONDS ?? '30', 10),
   },
   email: {
     host: process.env.SMTP_HOST ?? 'smtp.gmail.com',

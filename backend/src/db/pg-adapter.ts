@@ -28,10 +28,8 @@ export const EXPECTED_TABLES = [
   'workspace_sessions',
   'notifications',
   'activity_logs',
-  'activation_otps',
   'push_subscriptions',
   'faculty_notifications',
-  'faculty_activation_otps',
 ] as const;
 
 export type PgDatabase = Pool;

@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { submitScan, enqueueScan, processQueue, getQueueSize, type ScanResult, type ScanSuccessData, type ScanRejectData } from '../services';
+import { submitScan, enqueueScan, processQueue, getQueueSize, type ScanResult } from '../services';
 
 export interface ScannerState {
   lastResult: ScanResult | null;

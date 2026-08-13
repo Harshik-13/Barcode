@@ -20,16 +20,6 @@ export default function ProfilePage() {
     section: '',
   });
 
-  const [pwForm, setPwForm] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: '',
-  });
-  const [pwSaving, setPwSaving] = useState(false);
-  const [pwError, setPwError] = useState('');
-  const [pwSuccess, setPwSuccess] = useState('');
-  const [showPw, setShowPw] = useState({ current: false, new: false, confirm: false });
-
   useEffect(() => {
     profileApi.get()
       .then((res) => {
@@ -110,25 +100,6 @@ export default function ProfilePage() {
     }
   };
 
-  const handleChangePassword = async () => {
-    setPwSaving(true);
-    setPwError('');
-    setPwSuccess('');
-    try {
-      await profileApi.changePassword(
-        pwForm.currentPassword,
-        pwForm.newPassword,
-        pwForm.confirmPassword
-      );
-      setPwForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
-      setPwSuccess('Password updated successfully');
-    } catch (err: any) {
-      setPwError(err?.message || 'Failed to update password');
-    } finally {
-      setPwSaving(false);
-    }
-  };
-
   if (loading) return <Loading />;
 
   if (!profile) {
@@ -160,34 +131,6 @@ export default function ProfilePage() {
     fontSize: '13px',
     fontWeight: 600,
     color: 'var(--color-text-secondary)',
-  };
-
-  const pwInputStyle: React.CSSProperties = {
-    width: '100%',
-    padding: '8px 12px',
-    border: '1px solid var(--color-border)',
-    borderRadius: '6px',
-    fontSize: '14px',
-    fontFamily: 'inherit',
-  };
-
-  const toggleBtnStyle: React.CSSProperties = {
-    position: 'absolute',
-    right: '8px',
-    top: '50%',
-    transform: 'translateY(-50%)',
-    background: 'none',
-    border: 'none',
-    cursor: 'pointer',
-    fontSize: '13px',
-    color: 'var(--color-text-secondary)',
-    padding: '4px',
-  };
-
-  const pwWrapperStyle: React.CSSProperties = {
-    position: 'relative',
-    display: 'flex',
-    alignItems: 'center',
   };
 
   return (
@@ -417,113 +360,6 @@ export default function ProfilePage() {
               Edit Profile
             </button>
           )}
-        </div>
-      </div>
-
-      <div style={{
-        background: '#fff',
-        border: '1px solid var(--color-border)',
-        borderRadius: 'var(--radius-lg)',
-        padding: '32px',
-        marginTop: '24px',
-      }}>
-        <h2 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '20px' }}>Security</h2>
-
-        {pwError && (
-          <div style={{ padding: '12px', borderRadius: 'var(--radius-sm)', background: '#fef2f2', color: 'var(--color-error)', marginBottom: '16px', fontSize: '14px' }}>
-            {pwError}
-          </div>
-        )}
-        {pwSuccess && (
-          <div style={{ padding: '12px', borderRadius: 'var(--radius-sm)', background: '#f0fdf4', color: 'var(--color-success)', marginBottom: '16px', fontSize: '14px' }}>
-            {pwSuccess}
-          </div>
-        )}
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div style={fieldStyle}>
-            <span style={labelStyle}>Current Password</span>
-            <div style={pwWrapperStyle}>
-              <input
-                style={pwInputStyle}
-                type={showPw.current ? 'text' : 'password'}
-                value={pwForm.currentPassword}
-                onChange={(e) => setPwForm({ ...pwForm, currentPassword: e.target.value })}
-                autoComplete="current-password"
-              />
-              <button
-                type="button"
-                style={toggleBtnStyle}
-                onClick={() => setShowPw({ ...showPw, current: !showPw.current })}
-                tabIndex={-1}
-              >
-                {showPw.current ? 'Hide' : 'Show'}
-              </button>
-            </div>
-          </div>
-
-          <div style={fieldStyle}>
-            <span style={labelStyle}>New Password</span>
-            <div style={pwWrapperStyle}>
-              <input
-                style={pwInputStyle}
-                type={showPw.new ? 'text' : 'password'}
-                value={pwForm.newPassword}
-                onChange={(e) => setPwForm({ ...pwForm, newPassword: e.target.value })}
-                autoComplete="new-password"
-              />
-              <button
-                type="button"
-                style={toggleBtnStyle}
-                onClick={() => setShowPw({ ...showPw, new: !showPw.new })}
-                tabIndex={-1}
-              >
-                {showPw.new ? 'Hide' : 'Show'}
-              </button>
-            </div>
-          </div>
-
-          <div style={fieldStyle}>
-            <span style={labelStyle}>Confirm New Password</span>
-            <div style={pwWrapperStyle}>
-              <input
-                style={pwInputStyle}
-                type={showPw.confirm ? 'text' : 'password'}
-                value={pwForm.confirmPassword}
-                onChange={(e) => setPwForm({ ...pwForm, confirmPassword: e.target.value })}
-                autoComplete="new-password"
-              />
-              <button
-                type="button"
-                style={toggleBtnStyle}
-                onClick={() => setShowPw({ ...showPw, confirm: !showPw.confirm })}
-                tabIndex={-1}
-              >
-                {showPw.confirm ? 'Hide' : 'Show'}
-              </button>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
-            <button
-              className="touch-target"
-              onClick={handleChangePassword}
-              disabled={pwSaving}
-              style={{
-                padding: '10px 20px',
-                borderRadius: '6px',
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: 600,
-                background: 'var(--color-primary)',
-                color: '#fff',
-                opacity: pwSaving ? 0.7 : 1,
-              }}
-            >
-              {pwSaving ? 'Updating...' : 'Change Password'}
-            </button>
-          </div>
         </div>
       </div>
     </div>
