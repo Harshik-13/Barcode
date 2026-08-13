@@ -61,6 +61,8 @@ beforeAll(async () => {
   await initDb();
   const db = getDb();
 
+  await db.query('DELETE FROM notifications WHERE session_id IN (SELECT id FROM workspace_sessions WHERE entry_recorder_id IN (SELECT id FROM users WHERE email = ANY($1)) OR exit_recorder_id IN (SELECT id FROM users WHERE email = ANY($1)))', [TEST_EMAILS]);
+  await db.query('DELETE FROM workspace_sessions WHERE entry_recorder_id IN (SELECT id FROM users WHERE email = ANY($1)) OR exit_recorder_id IN (SELECT id FROM users WHERE email = ANY($1))', [TEST_EMAILS]);
   await db.query('DELETE FROM students WHERE email = ANY($1)', [TEST_EMAILS]);
   await db.query('DELETE FROM users WHERE email = ANY($1)', [TEST_EMAILS]);
 
@@ -89,6 +91,8 @@ beforeAll(async () => {
 
 afterAll(async () => {
   const db = getDb();
+  await db.query('DELETE FROM notifications WHERE session_id IN (SELECT id FROM workspace_sessions WHERE entry_recorder_id IN (SELECT id FROM users WHERE email = ANY($1)) OR exit_recorder_id IN (SELECT id FROM users WHERE email = ANY($1)))', [TEST_EMAILS]);
+  await db.query('DELETE FROM workspace_sessions WHERE entry_recorder_id IN (SELECT id FROM users WHERE email = ANY($1)) OR exit_recorder_id IN (SELECT id FROM users WHERE email = ANY($1))', [TEST_EMAILS]);
   await db.query('DELETE FROM students WHERE email = ANY($1)', [TEST_EMAILS]);
   await db.query('DELETE FROM users WHERE email = ANY($1)', [TEST_EMAILS]);
   await new Promise<void>((resolve) => jwksServer.close(() => resolve()));

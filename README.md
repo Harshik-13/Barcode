@@ -3,7 +3,7 @@
 Role-based platform that records student attendance and daily work activity inside the startup workspace.
 
 ![Status](https://img.shields.io/badge/status-production-brightgreen)
-![Tests](https://img.shields.io/badge/tests-183%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-177%20passing-brightgreen)
 ![Version](https://img.shields.io/badge/version-ReadyVersion--1.3-blue)
 
 ---
@@ -18,8 +18,8 @@ Role-based platform that records student attendance and daily work activity insi
 - **Faculty review** — Approve/reject sessions with feedback
 - **Management** — Students, categories, sessions, activity logs, faculty management
 - **Student import** — Bulk import from `.xlsx` with branch/section mapping
-- **Authentication** — Google OAuth (in migration, see `AUTH_MIGRATION_GOOGLE_OAUTH.md`), plus legacy JWT email/password until Phase 6; OTP activation, password change/reset
-- **Security** — IDOR protection, rate limiting, audit logging, session invalidation on password change
+- **Authentication** — Google OAuth with `@vnrvjiet.in` domain gate (`/api/auth/google`), JWT session tokens
+- **Security** — IDOR protection, rate limiting, audit logging, Google OAuth domain gating
 
 ---
 
@@ -53,16 +53,13 @@ npm run dev                 # starts on port 5173
 
 ### Default Credentials
 
-| Role | Email | Password |
-|------|-------|----------|
-| Faculty | faculty@workspace.com | faculty123 |
-| Student | student@workspace.com | student123 |
+Google OAuth is the only login method. All accounts must use `@vnrvjiet.in` emails. Seeded users (admin@workspace.com, faculty@workspace.com, student@workspace.com) are pre-provisioned and can sign in via Google.
 
 ### Run Tests
 
 ```bash
 cd backend
-npm test    # 183 tests across 13 test suites
+npm test    # 177 tests across 12 test suites
 ```
 
 ---
@@ -71,7 +68,7 @@ npm test    # 183 tests across 13 test suites
 
 - **Frontend**: React 18 + TypeScript + Vite
 - **Backend**: Node.js + Express
-- **Auth**: JWT (email/password) + Google OAuth (`/api/auth/google`)
+- **Auth**: Google OAuth (`/api/auth/google`) + JWT session tokens
 - **Scanning**: html5-qrcode (camera-based QR/barcode)
 - **Database**: PostgreSQL (node-postgres)
 - **Email**: Nodemailer (Gmail SMTP)
@@ -164,4 +161,4 @@ Frontend env (`frontend/.env`): `VITE_API_BASE_URL`, `VITE_GOOGLE_CLIENT_ID` (mu
    VITE_GOOGLE_CLIENT_ID=xxxxxxxx.apps.googleusercontent.com
    ```
 
-Only verified `@vnrvjiet.in` accounts pass the server-side domain gate (configurable via `ALLOWED_EMAIL_DOMAINS`). The Google button appears on the login page only when `VITE_GOOGLE_CLIENT_ID` is set; the email/password path stays available until the migration's Phase 6.
+Only verified `@vnrvjiet.in` accounts pass the server-side domain gate (configurable via `ALLOWED_EMAIL_DOMAINS`). The Google button appears on the login page only when `VITE_GOOGLE_CLIENT_ID` is set.

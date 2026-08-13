@@ -1,8 +1,8 @@
 # Auth Migration: Google OAuth
 
-> **Status: BLUEPRINT — Phases 1–5 IMPLEMENTED as of 2026-08-12.**
+> **Status: IMPLEMENTED — Phases 1–6 COMPLETE as of 2026-08-13.**
 >
-> **Phase 8 pending** (admin re-verify + regression checklist migration).
+> **Phase 7 (regression testing) COMPLETE** — all 177 tests passing, legacy auth tests replaced by Google OAuth tests.
 >
 > This document is the **single source of truth** for replacing the OTP/password authentication system with Google OAuth.
 > Future implementation prompts MUST reference this document and follow it exactly.

@@ -6,7 +6,7 @@ This file documents conventions and instructions for AI agents working on the Hi
 
 This is the **Hive (workspace attendance) system** — NOT a hostel meal attendance system. The domain is workspace attendance for startup environments.
 
-**Status: ReadyVersion-1.3** — All development phases complete. System is production-ready and running. Google OAuth migration (phases 1–3) is in progress — see "Google OAuth Migration Notes" below. New features should follow existing patterns and maintain backward compatibility.
+**Status: ReadyVersion-1.3** — All development phases complete. System is production-ready and running. Google OAuth migration complete (phases 1–6 implemented: `/api/auth/google`, JWKS verification, `users.google_sub` migration, student auto-provisioning, faculty/admin binding, legacy auth removal). Phase 7 (regression testing) complete — all 177 tests passing. New features should follow existing patterns and maintain backward compatibility.
 
 ## Source of Truth
 
@@ -53,7 +53,7 @@ This is the **Hive (workspace attendance) system** — NOT a hostel meal attenda
 ## Testing Notes
 
 - Tests use PostgreSQL database `workspace_test` (configured in `vitest.config.ts` via `DATABASE_URL`).
-- The test suite is **idempotent** — all 183 tests pass whether run once or repeatedly.
+- The test suite is **idempotent** — all 177 tests pass whether run once or repeatedly.
 - Each test file cleans up its own test-specific data in `beforeAll`:
   - `tests/scan.integration.test.ts` — deletes `workspace_sessions`, `notifications`, `activity_logs`, `faculty_notifications`
   - `tests/domain.integration.test.ts` — deletes `workspace_sessions`, `notifications`, `activity_logs`, test-created students
@@ -65,7 +65,7 @@ This is the **Hive (workspace attendance) system** — NOT a hostel meal attenda
 
 ## Google OAuth Migration Notes
 
-- `AUTH_MIGRATION_GOOGLE_OAUTH.md` is the **single source of truth** for the auth migration (phases 1–3 implemented: `/api/auth/google`, JWKS verification, `users.google_sub` migration; phases 4–7 pending).
+- `AUTH_MIGRATION_GOOGLE_OAUTH.md` is the **single source of truth** for the auth migration (phases 1–6 implemented: `/api/auth/google`, JWKS verification, `users.google_sub` migration, student auto-provisioning, faculty/admin binding, legacy auth removal).
 - **Both login paths must work until Phase 6** — never remove email/password or OTP/activation flow before then.
 - `users.google_sub` is the permanent Google identity binding (unique, NULL for legacy users); it must NOT be written until Phase 5 (faculty/admin binding) and must be matched before email fallback.
 - All Google token verification is **server-side only** (JWKS RS256: `iss`, `aud`, `exp`, `iat`, `email_verified`, domain allowlist + `hd`). Never trust client-supplied profile data.

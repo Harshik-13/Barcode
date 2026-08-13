@@ -166,10 +166,9 @@ All endpoints are mounted under `/api` prefix. All **43 endpoints** are consumed
 ### Auth
 | Method | Endpoint | Auth | Role | Frontend |
 |--------|----------|------|------|----------|
-| POST | `/api/auth/login` | None | All | Login page |
 | POST | `/api/auth/google` | Rate limited | All | Login page — "Continue with Google" (verifies Google ID token, domain-gated `@vnrvjiet.in`) |
-| POST | `/api/auth/logout` | Bearer | All | Layout logout button |
 | GET | `/api/auth/me` | Bearer | All | Session restore on page load |
+| POST | `/api/auth/logout` | Bearer | All | Layout logout button |
 
 ### Scan
 | Method | Endpoint | Auth | Role | Frontend |
@@ -233,15 +232,6 @@ All endpoints are mounted under `/api` prefix. All **43 endpoints** are consumed
 | PATCH | `/api/notifications/:id/read` | Bearer | Student | Notifications page — mark single as read |
 | PATCH | `/api/notifications/read-all` | Bearer | Student | Notifications page — mark all as read |
 
-### Activation
-| Method | Endpoint | Auth | Role | Frontend |
-|--------|----------|------|------|----------|
-| POST | `/api/activation/start` | Global rate limit | None | Activate page — Step 1: enter roll → OTP sent |
-| POST | `/api/activation/resend-otp` | Global rate limit | None | Activate page — resend with cooldown |
-| POST | `/api/activation/verify-otp` | Global rate limit | None | Activate page — Step 2: enter OTP |
-| POST | `/api/activation/set-password` | Global rate limit | None | Activate page — Step 3: create password |
-| POST | `/api/activation/status` | Global rate limit | None | Activate page — check activation state |
-
 ### System
 | Method | Endpoint | Auth | Frontend |
 |--------|----------|------|----------|
@@ -272,18 +262,15 @@ CREATE TABLE roles (
 );
 
 -- Users (faculty + admin accounts)
--- NOTE: current schema is defined by backend/src/db/migrate.ts; status values are
--- 'invited'/'active'/'suspended'/'deactivated'. google_sub added by Phase 3 of the
--- Google OAuth migration (unique, NULL for legacy password users).
 CREATE TABLE users (
   id SERIAL PRIMARY KEY,
   email TEXT UNIQUE NOT NULL,
   name TEXT,
   role_id TEXT NOT NULL REFERENCES roles(id),
-  password_hash TEXT NOT NULL,
-  is_active INTEGER DEFAULT 1,
+  status TEXT DEFAULT 'active' CHECK (status IN ('invited', 'active', 'suspended', 'deactivated')),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  google_sub TEXT UNIQUE
+  google_sub TEXT UNIQUE,
+  profile_picture TEXT
 );
 
 -- Students (workspace participants)
@@ -292,11 +279,10 @@ CREATE TABLE students (
   roll TEXT UNIQUE NOT NULL,
   name TEXT,
   email TEXT UNIQUE,
-  status TEXT DEFAULT 'active' CHECK (status IN ('active', 'suspended', 'departed')),
+  status TEXT DEFAULT 'enrolled' CHECK (status IN ('invited', 'enrolled', 'suspended', 'departed')),
   branch TEXT,
   section TEXT,
-  password_hash TEXT,
-  is_activated INTEGER DEFAULT 0,
+  hostel TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -397,10 +383,8 @@ CREATE TABLE activation_otps (
 5. **Duplicate scan prevention** — Prevent double entry (no active session) and double exit (no open session). Validate at API level.
 6. **Offline-first** — Faculty app caches student roster and can queue scans for sync.
 7. **Notification system** — Notifications are auto-created server-side on entry/exit/complete/archive via `createNotification()`. Students poll for unread count every 30s and view full history in the notification center.
-8. **Student account activation** — Admin creates students without passwords. Students self-activate via OTP sent to their derived college email (`roll@vnrvjiet.in`). OTP is bcrypt-hashed, has 10min expiry, max 5 attempts, and 30s resend cooldown. Password is set only after OTP verification via a cryptographic activation token.
 
-9. **IDOR protection** — `requireOwnStudentResource` middleware resolves the calling user's student record via `JOIN students s ON s.email = u.email` and rejects if the resource `studentId`/`id` param does not match. Applied to all student-scoped endpoints.
-
+8. **IDOR protection** — `requireOwnStudentResource` middleware resolves the calling user's student record via `JOIN students s ON s.email = u.email` and rejects if the resource `studentId`/`id` param does not match. Applied to all student-scoped endpoints.
 10. **Race condition prevention** — Session state transitions use `SELECT ... FOR UPDATE` row-level locking inside transactions. The UPDATE checks `rowCount === 0` to detect concurrent modifications and returns a `RACE_CONDITION` error.
 
 11. **Search bounded** — Student search queries are limited to 20 results to prevent unbounded queries on large datasets.

@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { requireAuth } from '../middleware/auth';
-import { authenticate, getCurrentUser, logLogout, logPermissionDenied } from '../services/auth';
+import { getCurrentUser, logLogout } from '../services/auth';
 import { loginWithGoogleToken, completeOnboarding } from '../services/googleAuth';
 import { authLimiter } from '../middleware/rateLimiter';
 import { validateBody } from '../utils/validation';
@@ -21,7 +21,8 @@ router.post('/auth/google',
   }
 );
 
-router.post('/auth/login',
+router.get('/auth/me',
+  requireAuth,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const user = await getCurrentUser(req.user!.userId);
