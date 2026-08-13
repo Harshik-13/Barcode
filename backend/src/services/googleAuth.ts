@@ -126,7 +126,7 @@ export async function loginWithGoogleToken(idToken: string, ip?: string): Promis
       details: { email, hd },
       ipAddress: ip,
     });
-    throw new UnauthorizedError('DOMAIN_NOT_ALLOWED', 'Only @vnrvjiet.in accounts can sign in.');
+    throw new UnauthorizedError('DOMAIN_NOT_ALLOWED', 'Only approved email accounts can sign in.');
   }
 
   const db = getDb();

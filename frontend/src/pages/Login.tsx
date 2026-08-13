@@ -90,11 +90,11 @@ export default function Login() {
       )}
 
       <div className="hive-domain-note">
-        Sign-in is restricted to <strong>@vnrvjiet.in</strong> college email accounts.
+        Sign-in is restricted to approved <strong>@vnrvjiet.in</strong> and select <strong>@gmail.com</strong> accounts.
       </div>
 
       <div className={`hive-login-error${error ? ' show' : ''}`}>
-        {error || 'Sign-in blocked — only @vnrvjiet.in accounts can access Hive.'}
+        {error || 'Sign-in blocked — only approved accounts can access Hive.'}
       </div>
 
       <div className="hive-login-legal">
