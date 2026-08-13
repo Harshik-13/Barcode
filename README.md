@@ -14,12 +14,13 @@ Role-based platform that records student attendance and daily work activity insi
 - **QR/Barcode scanning** — Camera-based entry/exit scanning via `html5-qrcode`
 - **Session lifecycle** — Entry → Active → Summary → Completed with auto-completion
 - **Notifications** — Real-time push notifications for entry/exit/completion events
-- **Student stats** — Session history with duration tracking, streaks, category breakdown
+- **Student stats** — Hive ring animation, streak tracking, session history with filters
 - **Faculty review** — Approve/reject sessions with feedback
 - **Management** — Students, categories, sessions, activity logs, faculty management
 - **Student import** — Bulk import from `.xlsx` with branch/section mapping
-- **Authentication** — Google OAuth with `@vnrvjiet.in` domain gate (`/api/auth/google`), JWT session tokens
+- **Authentication** — Google OAuth with domain gate (`/api/auth/google`), JWT session tokens
 - **Security** — IDOR protection, rate limiting, audit logging, Google OAuth domain gating
+- **Mobile-first UI** — Flat design with hairline borders, bottom nav, viewport-locked layout
 
 ---
 
@@ -53,13 +54,18 @@ npm run dev                 # starts on port 5173
 
 ### Default Credentials
 
-Google OAuth is the only login method. All accounts must use `@vnrvjiet.in` emails. Seeded users (admin@workspace.com, faculty@workspace.com, student@workspace.com) are pre-provisioned and can sign in via Google.
+Google OAuth is the only login method. Two login domains are allowed:
+
+- **`@vnrvjiet.in`** — College email accounts
+- **`@gmail.com`** — Approved dev/test accounts (configured via `ALLOWED_EMAIL_DOMAINS`)
+
+Dev accounts are pre-provisioned in the database with admin and faculty roles. Students are auto-provisioned on first Google login.
 
 ### Run Tests
 
 ```bash
 cd backend
-npm test    # 177 tests across 12 test suites
+npm test    # 177 tests across 13 test suites
 ```
 
 ---
@@ -80,9 +86,10 @@ npm test    # 177 tests across 12 test suites
 ## Core Workflow
 
 1. **Faculty scans** student barcode → creates workspace session
-2. **Faculty exits** session on second scan → session awaits summary
-3. **Summary submitted** → session completed
-4. **Admin** can scan, manage categories, view audit logs
+2. **Student** selects work category → session becomes active
+3. **Faculty exits** session on second scan → session awaits summary
+4. **Student submits** summary → session completed
+5. **Admin** can scan, manage categories, view audit logs
 
 ---
 
@@ -101,11 +108,26 @@ npm test    # 177 tests across 12 test suites
 ├── frontend/          # Single React PWA
 │   └── src/
 │       ├── components/# Reusable UI components
-│       ├── pages/     # Route pages
+│       ├── pages/     # Route pages (Dashboard, Stats, Profile, Settings, etc.)
 │       ├── services/  # API client
-│       └── store/     # Auth context
+│       ├── store/     # Auth context
+│       └── styles/    # Global CSS (design system tokens)
 ├── shared/            # Shared types, constants, validators
 ```
+
+---
+
+## Student Pages
+
+| Route | Page | Description |
+|-------|------|-------------|
+| `/` | StudentDashboard | Active session card, greeting |
+| `/stats` | StudentStats | Hive ring animation, stat tiles |
+| `/stats/history` | AttendanceHistory | Session list with filters and pagination |
+| `/notifications` | NotificationsPage | Notification center with mark-read |
+| `/profile` | ProfilePage | Profile hero, info rows, edit, logout |
+| `/settings` | SettingsPage | Account info, preferences, logout |
+| `/sessions/:id` | SessionDetailPage | Session details, summary submission |
 
 ---
 
@@ -114,9 +136,11 @@ npm test    # 177 tests across 12 test suites
 | File | Purpose |
 |------|---------|
 | `ARCHITECTURE.md` | System architecture and domain model |
+| `DESIGN.md` | Design system tokens, components, and rules |
 | `PRINCIPLES.md` | Engineering principles and security |
 | `AGENTS.md` | Conventions for AI agents |
 | `AUTH_MIGRATION_GOOGLE_OAUTH.md` | Google OAuth migration blueprint (phases, test plan) |
+| `CHANGELOG.md` | Version history and notable changes |
 
 ---
 
@@ -139,26 +163,27 @@ Copy `backend/.env.example` to `backend/.env` and edit:
 | `STUDENT_EMAIL_DOMAIN` | `@vnrvjiet.in` | Student email domain |
 | `GOOGLE_CLIENT_ID` | — | Google OAuth client ID (enables `/api/auth/google`) |
 | `GOOGLE_JWKS_URI` | `https://www.googleapis.com/oauth2/v3/certs` | Google public keys (override for testing) |
-| `ALLOWED_EMAIL_DOMAINS` | `@vnrvjiet.in` | Comma-separated domain allowlist for Google login |
+| `ALLOWED_EMAIL_DOMAINS` | `@vnrvjiet.in,@gmail.com` | Comma-separated domain allowlist for Google login |
 | `AUTH_RATE_LIMIT_MAX` | `10` | Login attempts per window on auth endpoints |
 
 Frontend env (`frontend/.env`): `VITE_API_BASE_URL`, `VITE_GOOGLE_CLIENT_ID` (must match `GOOGLE_CLIENT_ID` for the Google button to render).
 
 ---
 
-## Google OAuth Setup (Google login)
+## Google OAuth Setup
 
 1. **Create an OAuth client** in [Google Cloud Console](https://console.cloud.google.com/apis/credentials) → Create Credentials → OAuth client ID → **Web application**.
 2. **Authorized JavaScript origins** — add exactly `http://localhost:5173` (no trailing slash; add your production origin later).
-3. **OAuth consent screen** — in *Testing* mode, add the `@vnrvjiet.in` accounts that should sign in as **Test users** (or publish the app).
+3. **OAuth consent screen** — in *Testing* mode, add the accounts that should sign in as **Test users** (or publish the app).
 4. **Env vars** — set the same client ID in both files, then restart both dev servers:
 
    ```bash
    # backend/.env
    GOOGLE_CLIENT_ID=xxxxxxxx.apps.googleusercontent.com
+   ALLOWED_EMAIL_DOMAINS=@vnrvjiet.in,@gmail.com
 
    # frontend/.env
    VITE_GOOGLE_CLIENT_ID=xxxxxxxx.apps.googleusercontent.com
    ```
 
-Only verified `@vnrvjiet.in` accounts pass the server-side domain gate (configurable via `ALLOWED_EMAIL_DOMAINS`). The Google button appears on the login page only when `VITE_GOOGLE_CLIENT_ID` is set.
+Approved domains pass the server-side domain gate (configurable via `ALLOWED_EMAIL_DOMAINS`). The Google button appears on the login page only when `VITE_GOOGLE_CLIENT_ID` is set.
