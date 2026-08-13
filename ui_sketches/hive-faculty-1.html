@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hive for Faculty — Attendance & Scanning</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1C1832; --ink-soft:#635E7A; --ink-faint:#9C97AF;
+    --bg:#F3F1FA; --page:#EDEAF7; --surface:#FFFFFF; --surface-alt:#F6F4FC;
+    --primary:#5B3FE0; --primary-dark:#3E2AA6; --primary-tint:#ECE7FC;
+    --amber:#DE9A2E; --amber-tint:#FBF0DC;
+    --green:#2C9C6B; --green-tint:#E2F5EA;
+    --red:#D0483F; --red-tint:#FAE7E5;
+    --teal:#2A87A8; --teal-tint:#E1F1F6;
+    --line:#E7E3F5;
+    --radius-lg:24px; --radius-md:16px; --radius-sm:11px;
+    --shadow-card:0 1px 2px rgba(28,24,50,.04), 0 10px 26px -14px rgba(28,24,50,.16);
+    --shadow-pop:0 20px 60px -20px rgba(28,24,50,.35);
+    --font-display:'Space Grotesk', sans-serif;
+    --font-body:'Inter', sans-serif;
+    --font-mono:'IBM Plex Mono', monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{font-family:var(--font-body); color:var(--ink); background:var(--page); -webkit-font-smoothing:antialiased; min-height:100dvh;}
+  button{font-family:inherit;}
+  ::selection{background:var(--primary-tint); color:var(--primary-dark);}
+
+  .stage{
+    min-height:100dvh; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:28px; padding:32px 16px;
+    background:radial-gradient(60% 50% at 50% 0%, #E9E4FB 0%, transparent 60%), var(--page);
+    position:relative; overflow:hidden;
+  }
+  .stage::before{
+    content:""; position:absolute; inset:0;
+    background-image:
+      repeating-linear-gradient(60deg, rgba(91,63,224,.05) 0, rgba(91,63,224,.05) 1px, transparent 1px, transparent 46px),
+      repeating-linear-gradient(-60deg, rgba(91,63,224,.05) 0, rgba(91,63,224,.05) 1px, transparent 1px, transparent 46px),
+      repeating-linear-gradient(0deg, rgba(91,63,224,.05) 0, rgba(91,63,224,.05) 1px, transparent 1px, transparent 46px);
+    pointer-events:none; mask-image:radial-gradient(70% 70% at 50% 30%, black, transparent);
+  }
+  .brandmark{display:none; align-items:center; gap:10px; font-family:var(--font-display); font-weight:700; font-size:15px; letter-spacing:.02em; color:var(--primary-dark); z-index:1;}
+  .brandmark .tag{font-family:var(--font-mono); font-weight:500; font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-faint); border-left:1px solid var(--line); padding-left:10px; margin-left:2px;}
+
+  .device{position:relative; width:100%; max-width:412px; height:100dvh; background:var(--bg); display:flex; flex-direction:column; overflow:hidden; z-index:1;}
+  @media (min-width:560px){
+    .stage{gap:20px;} .brandmark{display:flex;}
+    .device{height:860px; max-height:88dvh; border-radius:44px; box-shadow:var(--shadow-pop), 0 0 0 10px #14102E, 0 0 0 11px rgba(255,255,255,.06);}
+  }
+
+  .screen{display:none; flex-direction:column; height:100%; min-height:0; animation:rise .32s cubic-bezier(.2,.7,.3,1);}
+  .screen.active{display:flex;}
+  @keyframes rise{ from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:translateY(0);} }
+
+  .screen-scroll{flex:1; overflow-y:auto; padding:4px 20px 28px; scrollbar-width:none;}
+  .screen-scroll::-webkit-scrollbar{display:none;}
+
+  .topbar{display:flex; align-items:center; justify-content:space-between; padding:20px 20px 6px; flex-shrink:0;}
+  .topbar h1{font-family:var(--font-display); font-size:19px; font-weight:700; margin:0; letter-spacing:-.01em;}
+  .icon-btn{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--surface);display:flex;align-items:center;justify-content:center;color:var(--ink);cursor:pointer;position:relative;flex-shrink:0;transition:transform .15s ease;}
+  .icon-btn:active{transform:scale(.92);}
+  .icon-btn.ghost{background:transparent;border-color:transparent;}
+  .back-row{display:flex; align-items:center; gap:12px; padding:18px 20px 6px; flex-shrink:0;}
+  .back-row h1{font-family:var(--font-display); font-size:18px; font-weight:700; margin:0;}
+
+  .brand-row{display:flex;align-items:center;gap:9px;}
+  .hexmark{width:34px;height:34px; background:linear-gradient(150deg, var(--primary), var(--primary-dark)); clip-path:polygon(25% 6%,75% 6%,100% 50%,75% 94%,25% 94%,0% 50%); display:flex;align-items:center;justify-content:center; color:#fff; flex-shrink:0;}
+  .hexmark svg{width:17px;height:17px;}
+  .wordmark{font-family:var(--font-display);font-weight:700;font-size:18px;letter-spacing:-.01em;}
+
+  .avatar-btn{width:38px;height:38px;border-radius:50%;border:none;cursor:pointer;padding:0;flex-shrink:0;background:linear-gradient(150deg,var(--primary),var(--primary-dark));color:#fff;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:700;font-size:15px;}
+
+  .section-title{font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-faint); margin:22px 2px 10px; display:flex; align-items:center; justify-content:space-between;}
+  .section-title .link-btn{margin:0;}
+  .card{background:var(--surface); border-radius:var(--radius-lg); box-shadow:var(--shadow-card); padding:18px;}
+  .link-btn{background:none;border:none;color:var(--primary);font-weight:700;font-size:13px;cursor:pointer;padding:2px;text-transform:none;letter-spacing:0;}
+
+  .greeting{margin:14px 2px 4px;}
+  .greeting .hello{font-size:14px;color:var(--ink-soft);font-weight:500;}
+  .greeting h2{font-family:var(--font-display); font-size:26px; font-weight:700; margin:2px 0 0; letter-spacing:-.02em;}
+
+  /* Today's attendance card */
+  .today-card{margin-top:16px;}
+  .today-card .card-title{font-weight:700; font-size:15px; margin-bottom:14px;}
+  .today-row{display:flex; align-items:stretch;}
+  .today-col{flex:1; padding-right:14px;}
+  .today-col + .today-col{padding-left:16px; border-left:1px solid var(--line);}
+  .today-label{display:flex; align-items:center; gap:6px; font-size:12px; color:var(--ink-soft); font-weight:600; margin-bottom:8px;}
+  .live-pill{background:var(--green-tint); color:var(--green); font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:999px;}
+  .today-value{font-family:var(--font-display); font-size:26px; font-weight:700;}
+  .today-value.small{font-size:18px; display:flex; align-items:center; gap:7px;}
+  .today-value.small svg{width:16px;height:16px; color:var(--ink-faint);}
+
+  /* Present list table */
+  .list-head{display:flex; align-items:center; padding:0 2px 8px; font-size:11px; font-weight:700; color:var(--ink-faint); text-transform:uppercase; letter-spacing:.04em;}
+  .list-head .c-name{flex:1;}
+  .list-head .c-section{width:64px;}
+  .list-head .c-status{width:64px;}
+  .list-head .c-arrow{width:20px;}
+  .stu-row{display:flex; align-items:center; padding:12px 2px; border-bottom:1px solid var(--line); cursor:pointer; gap:0;}
+  .stu-row:last-child{border-bottom:none;}
+  .stu-row:active{background:var(--surface-alt);}
+  .c-name{flex:1; display:flex; align-items:center; gap:10px; min-width:0;}
+  .c-name .nm{font-weight:700; font-size:14.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .c-section{width:64px; font-size:13px; color:var(--ink-soft); font-weight:500;}
+  .c-status{width:64px; display:flex; align-items:center; gap:6px; font-size:13px; font-weight:600; color:var(--green);}
+  .c-status .bd{width:7px;height:7px;border-radius:50%; background:var(--green); flex-shrink:0;}
+  .c-arrow{width:20px; display:flex; justify-content:flex-end; color:var(--ink-faint);}
+  .c-arrow svg{width:15px;height:15px;}
+
+  .letter-avatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;flex-shrink:0;font-family:var(--font-display); font-size:14px;}
+
+  /* Students search */
+  .search-row{display:flex; gap:10px; margin-top:14px;}
+  .search-box{flex:1; display:flex; align-items:center; gap:9px; background:var(--surface); border:1.5px solid var(--line); border-radius:var(--radius-sm); padding:12px 14px;}
+  .search-box svg{width:17px;height:17px; color:var(--ink-faint); flex-shrink:0;}
+  .search-box input{border:none; outline:none; background:none; font-family:inherit; font-size:14px; width:100%; color:var(--ink);}
+  .search-box input::placeholder{color:var(--ink-faint);}
+  .filter-btn{width:46px; flex-shrink:0; background:var(--surface); border:1.5px solid var(--line); border-radius:var(--radius-sm); display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--ink-soft);}
+  .filter-btn svg{width:17px;height:17px;}
+
+  .directory-row{display:flex; align-items:center; gap:12px; padding:13px 2px; border-bottom:1px solid var(--line); cursor:pointer;}
+  .directory-row:last-child{border-bottom:none;}
+  .directory-row:active{background:var(--surface-alt);}
+  .dir-body{flex:1; min-width:0;}
+  .dir-name{font-weight:700; font-size:14.5px;}
+  .dir-sub{font-size:12px; color:var(--ink-faint); font-family:var(--font-mono); margin-top:1px;}
+  .dir-right{text-align:right; flex-shrink:0;}
+  .dir-status{font-size:12.5px; font-weight:700; color:var(--green);}
+  .dir-status.absent{color:var(--red);}
+  .dir-since{font-size:11px; color:var(--ink-faint); margin-top:2px;}
+  .empty-row{padding:26px 4px; text-align:center; color:var(--ink-faint); font-size:13.5px;}
+  .letter-avatar.absent{opacity:.55;}
+
+  .chip-row{display:flex; gap:8px; margin-top:14px;}
+  .chip{padding:8px 16px; border-radius:999px; border:1.5px solid var(--line); background:var(--surface); font-weight:700; font-size:13px; color:var(--ink-soft); cursor:pointer;}
+  .chip.active{background:var(--primary); border-color:var(--primary); color:#fff;}
+
+  /* Scanner */
+  .scan-card{
+    margin-top:10px; background:var(--surface); border:2px dashed #D9D0F7; border-radius:var(--radius-lg);
+    padding:44px 20px; display:flex; flex-direction:column; align-items:center; text-align:center; cursor:pointer;
+    transition:transform .15s ease, border-color .15s ease;
+  }
+  .scan-card:active{transform:scale(.98); border-color:var(--primary);}
+  .scan-icon-wrap{width:96px;height:96px;border-radius:26px;background:var(--primary-tint); display:flex;align-items:center;justify-content:center; margin-bottom:20px; color:var(--primary); transition:background .2s ease;}
+  .scan-icon-wrap svg{width:44px;height:44px;}
+  .scan-icon-wrap.pulse{animation:scanpulse .6s ease;}
+  @keyframes scanpulse{ 0%{transform:scale(1);} 40%{transform:scale(.9);} 100%{transform:scale(1);} }
+  .scan-title{font-family:var(--font-display); font-weight:700; font-size:19px; margin:0 0 6px;}
+  .scan-sub{font-size:13.5px; color:var(--ink-soft); margin:0; line-height:1.4;}
+
+  .result-card{margin-top:10px; min-height:78px; display:flex; align-items:center;}
+  .result-empty{color:var(--ink-faint); font-size:13.5px; line-height:1.5;}
+  .result-empty b{display:block; color:var(--ink); font-weight:700; font-size:14.5px; margin-bottom:3px;}
+  .result-filled{display:flex; align-items:center; gap:12px; width:100%;}
+  .result-ic{width:42px;height:42px;border-radius:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+  .result-text .rt-name{font-weight:700; font-size:14.5px;}
+  .result-text .rt-meta{font-size:12.5px; color:var(--ink-soft); margin-top:2px;}
+
+  /* Reports grid */
+  .report-grid{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:14px;}
+  .report-tile{background:var(--surface); border-radius:var(--radius-md); box-shadow:var(--shadow-card); padding:16px; cursor:pointer; text-align:left; border:none;}
+  .report-tile:active{transform:scale(.98);}
+  .report-ic{width:38px;height:38px;border-radius:11px; background:var(--primary-tint); color:var(--primary); display:flex; align-items:center; justify-content:center; margin-bottom:12px;}
+  .report-ic svg{width:19px;height:19px;}
+  .report-name{font-weight:700; font-size:14.5px; margin-bottom:3px;}
+  .report-desc{font-size:12px; color:var(--ink-soft); line-height:1.4;}
+
+  /* Profile */
+  .profile-hero{display:flex; flex-direction:column; align-items:center; padding:22px 0 6px;}
+  .profile-photo-letter{
+    width:104px;height:104px;border-radius:50%; display:flex; align-items:center; justify-content:center;
+    background:linear-gradient(150deg,var(--primary),var(--primary-dark)); color:#fff;
+    font-family:var(--font-display); font-weight:700; font-size:38px;
+    box-shadow:0 10px 24px -10px rgba(91,63,224,.5);
+  }
+  .info-row{display:flex; align-items:center; gap:14px; padding:14px 2px; border-bottom:1px solid var(--line);}
+  .info-row:last-child{border-bottom:none;}
+  .info-ic{width:38px;height:38px;border-radius:11px;background:var(--primary-tint);color:var(--primary);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .info-ic svg{width:17px;height:17px;}
+  .info-label{font-size:11.5px; color:var(--ink-faint); font-weight:600; text-transform:uppercase; letter-spacing:.04em;}
+  .info-value{font-weight:600; font-size:15px; margin-top:1px;}
+
+  .primary-btn{width:100%; background:linear-gradient(135deg,var(--primary),var(--primary-dark)); color:#fff; border:none; border-radius:var(--radius-md); padding:15px 18px; font-weight:700; font-size:14.5px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; margin-top:18px; box-shadow:0 10px 22px -10px rgba(91,63,224,.6);}
+  .primary-btn svg{width:16px;height:16px;}
+  .primary-btn:active{transform:scale(.985);}
+  .primary-btn:disabled{opacity:.45; cursor:not-allowed;}
+  .ghost-btn{width:100%; background:var(--surface); color:var(--primary); border:1.5px solid var(--primary-tint); border-radius:var(--radius-md); padding:14px 18px; font-weight:700; font-size:14.5px; cursor:pointer; margin-top:10px; display:flex; align-items:center; justify-content:center; gap:8px;}
+
+  /* Student details */
+  .kv-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px 12px; margin-top:16px;}
+  .kv .k{font-size:11.5px; color:var(--ink-faint); font-weight:600; text-transform:uppercase; letter-spacing:.04em; margin-bottom:3px;}
+  .kv .v{font-weight:700; font-size:15px;}
+  .kv .v.mono{font-family:var(--font-mono); font-size:16px;}
+  .badge{font-size:11px; font-weight:700; letter-spacing:.04em; padding:5px 10px; border-radius:999px;}
+  .badge-active{background:var(--green-tint); color:var(--green);}
+  .badge-absent{background:var(--red-tint); color:var(--red);}
+
+  /* Attendance by date */
+  .date-nav{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:14px; background:var(--surface); border-radius:var(--radius-md); box-shadow:var(--shadow-card); padding:10px 14px;}
+  .date-nav button{background:var(--surface-alt); border:none; width:34px;height:34px;border-radius:10px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--ink);}
+  .date-nav button svg{width:16px;height:16px;}
+  .date-label{display:flex; align-items:center; gap:8px; font-weight:700; font-size:14.5px;}
+  .date-label svg{width:16px;height:16px; color:var(--ink-faint);}
+
+  .chip-stat-row{display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:12px;}
+  .chip-stat{background:var(--surface); border:1.5px solid var(--line); border-radius:var(--radius-sm); padding:10px 4px; text-align:center; cursor:pointer;}
+  .chip-stat .n{font-family:var(--font-display); font-weight:700; font-size:17px;}
+  .chip-stat .l{font-size:10.5px; color:var(--ink-soft); font-weight:600; margin-top:1px;}
+  .chip-stat.active{background:var(--primary); border-color:var(--primary);}
+  .chip-stat.active .n, .chip-stat.active .l{color:#fff;}
+
+  /* Feedback */
+  .fb-title{font-family:var(--font-display); font-weight:700; font-size:16.5px; margin:0 0 4px;}
+  .fb-sub{font-size:13.5px; color:var(--ink-soft); margin:0 0 16px; line-height:1.45;}
+  .fb-label{font-size:12px; font-weight:700; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.04em; margin-bottom:8px;}
+  textarea{width:100%; border:1.5px solid var(--line); border-radius:var(--radius-sm); padding:12px; font-family:var(--font-body); font-size:13.5px; resize:vertical; min-height:120px; color:var(--ink); background:var(--surface-alt);}
+  textarea:focus{outline:2px solid var(--primary-tint); border-color:var(--primary);}
+  .char-count{text-align:right; font-size:11.5px; color:var(--ink-faint); margin-top:6px; font-family:var(--font-mono);}
+
+  /* Settings list */
+  .settings-list-row{display:flex; align-items:center; gap:14px; padding:15px 2px; border-bottom:1px solid var(--line); cursor:pointer;}
+  .settings-list-row:last-child{border-bottom:none;}
+  .settings-list-row:active{background:var(--surface-alt);}
+  .settings-list-row .info-value{flex:1;}
+  .settings-list-row.danger .info-ic{background:var(--red-tint); color:var(--red);}
+  .settings-list-row.danger .info-value{color:var(--red);}
+  .settings-list-row svg.chev{width:16px;height:16px; color:var(--ink-faint); flex-shrink:0;}
+
+  .empty-state{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:40px 34px; gap:6px;}
+  .empty-state .hexmark{clip-path:polygon(25% 6%,75% 6%,100% 50%,75% 94%,25% 94%,0% 50%); background:linear-gradient(150deg, var(--primary), var(--primary-dark)); color:#fff; display:flex; align-items:center; justify-content:center; margin-bottom:8px; width:56px; height:56px;}
+  .empty-state .hexmark svg{width:26px;height:26px;}
+  .empty-state h2{font-family:var(--font-display); font-size:20px; margin:2px 0 4px;}
+  .empty-state p{font-size:13.5px; color:var(--ink-soft); line-height:1.5; margin:0 0 22px;}
+
+  .bottom-nav{display:flex; flex-shrink:0; border-top:1px solid var(--line); background:var(--surface); padding:9px 4px calc(9px + env(safe-area-inset-bottom, 0px));}
+  .nav-btn{flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; background:none; border:none; cursor:pointer; padding:6px 1px; color:var(--ink-faint); font-size:10.3px; font-weight:600;}
+  .nav-btn svg{width:20px;height:20px;}
+  .nav-btn.active{color:var(--primary);}
+
+  .toast{position:absolute; left:20px; right:20px; bottom:24px; background:#1C1832; color:#fff; padding:13px 16px; border-radius:var(--radius-sm); font-size:13.5px; font-weight:600; text-align:center; box-shadow:0 14px 30px -10px rgba(0,0,0,.35); transform:translateY(20px); opacity:0; pointer-events:none; transition:transform .28s cubic-bezier(.2,.8,.3,1), opacity .28s ease; z-index:40;}
+  .toast.show{transform:translateY(0); opacity:1;}
+
+  @media (prefers-reduced-motion: reduce){ *{animation-duration:.001ms !important; transition-duration:.001ms !important;} }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <symbol id="i-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></symbol>
+    <symbol id="i-chev-r" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></symbol>
+    <symbol id="i-chev-l" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 6 9 12 15 18"/></symbol>
+    <symbol id="i-cal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="16" rx="3"/><path d="M8 3v4M16 3v4M3.5 10h17"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 13.5a7.6 7.6 0 0 0 0-3l1.8-1.4-2-3.4-2.1.6a7.7 7.7 0 0 0-2.6-1.5L14 2.5h-4l-.5 2.3a7.7 7.7 0 0 0-2.6 1.5l-2.1-.6-2 3.4L4.6 10.5a7.6 7.6 0 0 0 0 3L2.8 15l2 3.4 2.1-.6a7.7 7.7 0 0 0 2.6 1.5l.5 2.3h4l.5-2.3a7.7 7.7 0 0 0 2.6-1.5l2.1.6 2-3.4z"/></symbol>
+    <symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9.5a1 1 0 0 0 1 1h3.5V15h3v5.5H17a1 1 0 0 0 1-1V10"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M2.8 19c1.1-3.3 3.6-5 6.2-5s5.1 1.7 6.2 5"/><circle cx="17.5" cy="8.5" r="2.6"/><path d="M15.3 14.3c2.1.2 4 1.7 4.9 4.7"/></symbol>
+    <symbol id="i-scan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8"/><path d="M20 8V5.5A1.5 1.5 0 0 0 18.5 4H16"/><path d="M4 16v2.5A1.5 1.5 0 0 0 5.5 20H8"/><path d="M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M11 20V4M18 20v-7"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20c1.3-3.8 4.3-6 7.5-6s6.2 2.2 7.5 6"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/></symbol>
+    <symbol id="i-filter" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7.5" y1="12" x2="16.5" y2="12"/><line x1="10.5" y1="18" x2="13.5" y2="18"/></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h6l5 5v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M13 3v5h5"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="3" x2="12" y2="14"/><polyline points="7 10 12 15 17 10"/><path d="M4 19h16"/></symbol>
+    <symbol id="i-mail" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 6.5 12 13l8.5-6.5"/></symbol>
+    <symbol id="i-building" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="1"/><path d="M9 7h2M13 7h2M9 11h2M13 11h2M9 15h2M13 15h2"/></symbol>
+    <symbol id="i-badge" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><circle cx="12" cy="10" r="2.6"/><path d="M8.5 17c.7-2 2-3 3.5-3s2.8 1 3.5 3"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 21 3l-8 18-2.5-7.5L3 11z"/><path d="M11.5 13.5 21 3"/></symbol>
+    <symbol id="i-key" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="4"/><path d="M10.5 12.5 20 3M16 7l2.5 2.5M19 4l2 2"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/><polyline points="9 12 11.2 14.2 15.5 9.8"/></symbol>
+    <symbol id="i-logout" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></symbol>
+    <symbol id="i-check-c" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="8.5 12.5 11 15 15.5 9.5"/></symbol>
+    <symbol id="i-hex" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l8.5 5v10L12 22l-8.5-5V7z"/></symbol>
+  </defs>
+</svg>
+
+<div class="stage">
+  <div class="brandmark"><span>HIVE</span><span class="tag">faculty console</span></div>
+
+  <div class="device">
+
+    <!-- ============ HOME ============ -->
+    <section class="screen active" id="screen-home">
+      <div class="topbar">
+        <div class="brand-row">
+          <div class="hexmark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7.5 4.3v9.4L12 21l-7.5-4.3V7.3z"/></svg></div>
+          <span class="wordmark">Hive</span>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center;">
+          <button class="icon-btn" onclick="App.notReady('Notifications')" aria-label="Notifications"><svg width="19" height="19"><use href="#i-bell"/></svg></button>
+          <button class="avatar-btn" onclick="Nav.tab('profile')" aria-label="Profile">F</button>
+        </div>
+      </div>
+
+      <div class="screen-scroll">
+        <div class="greeting">
+          <div class="hello">Welcome back,</div>
+          <h2>Faculty</h2>
+        </div>
+
+        <div class="card today-card">
+          <div class="card-title">Today's Attendance</div>
+          <div class="today-row">
+            <div class="today-col">
+              <div class="today-label">Students Inside <span class="live-pill">Live</span></div>
+              <div class="today-value" id="insideCount">10</div>
+            </div>
+            <div class="today-col">
+              <div class="today-label">Date</div>
+              <div class="today-value small"><svg><use href="#i-cal"/></svg>7 Aug 26</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-title">List of present students <button class="link-btn" onclick="Nav.tab('students')">View All</button></div>
+        <div class="card" style="padding:6px 14px 2px;">
+          <div class="list-head"><span class="c-name">Name</span><span class="c-section">Section</span><span class="c-status">Status</span><span class="c-arrow"></span></div>
+          <div id="homeStudentList"></div>
+        </div>
+      </div>
+
+      <nav class="bottom-nav" id="bottomNav"></nav>
+    </section>
+
+    <!-- ============ STUDENTS ============ -->
+    <section class="screen" id="screen-students">
+      <div class="back-row">
+        <button class="icon-btn ghost" onclick="Nav.tab('home')" aria-label="Back"><svg><use href="#i-chev-l"/></svg></button>
+        <h1>Students</h1>
+        <div style="flex:1"></div>
+        <span style="font-size:12px; color:var(--ink-faint); font-weight:600;" id="enrolledCount">12 enrolled</span>
+      </div>
+      <div class="screen-scroll">
+        <div class="search-row">
+          <div class="search-box">
+            <svg><use href="#i-search"/></svg>
+            <input id="studentSearch" type="text" placeholder="Search student by name or roll">
+          </div>
+          <button class="filter-btn" onclick="App.notReady('More filters')" aria-label="Filter"><svg><use href="#i-filter"/></svg></button>
+        </div>
+        <div class="chip-row" id="statusChipRow">
+          <button class="chip active" data-status="all">All</button>
+          <button class="chip" data-status="present">Present</button>
+          <button class="chip" data-status="absent">Absent</button>
+        </div>
+        <div class="card" style="margin-top:14px; padding:2px 14px;" id="directoryList"></div>
+      </div>
+      <nav class="bottom-nav" id="bottomNav2"></nav>
+    </section>
+
+    <!-- ============ SCANNER ============ -->
+    <section class="screen" id="screen-scanner">
+      <div class="topbar"><h1>Scanner</h1><div style="width:40px"></div></div>
+      <div class="screen-scroll">
+        <div class="scan-card" id="scanCard" onclick="App.runScan()">
+          <div class="scan-icon-wrap" id="scanIconWrap"><svg><use href="#i-scan"/></svg></div>
+          <div class="scan-title">Tap to Scan</div>
+          <p class="scan-sub">Scan student ID to mark Entry or Exit</p>
+        </div>
+
+        <div class="section-title">Scanning result</div>
+        <div class="card result-card" id="resultCard">
+          <div class="result-empty"><b>Message box</b>Student details and scan status will appear here.</div>
+        </div>
+      </div>
+      <nav class="bottom-nav" id="bottomNav3"></nav>
+    </section>
+
+    <!-- ============ REPORTS ============ -->
+    <section class="screen" id="screen-reports">
+      <div class="topbar"><h1>Reports</h1><div style="width:40px"></div></div>
+      <div class="screen-scroll">
+        <div class="report-grid">
+          <button class="report-tile" onclick="App.notReady('Daily Summary')">
+            <div class="report-ic"><svg><use href="#i-chart"/></svg></div>
+            <div class="report-name">Daily Summary</div>
+            <div class="report-desc">View today's attendance summary</div>
+          </button>
+          <button class="report-tile" onclick="Nav.go('attendance-date')">
+            <div class="report-ic"><svg><use href="#i-cal"/></svg></div>
+            <div class="report-name">Attendance by Date</div>
+            <div class="report-desc">Analyze attendance on any date</div>
+          </button>
+          <button class="report-tile" onclick="App.notReady('Student Logs')">
+            <div class="report-ic"><svg><use href="#i-file"/></svg></div>
+            <div class="report-name">Student Logs</div>
+            <div class="report-desc">View individual student logs</div>
+          </button>
+          <button class="report-tile" onclick="App.exportReport()">
+            <div class="report-ic"><svg><use href="#i-download"/></svg></div>
+            <div class="report-name">Export Report</div>
+            <div class="report-desc">Download attendance data</div>
+          </button>
+        </div>
+      </div>
+      <nav class="bottom-nav" id="bottomNav4"></nav>
+    </section>
+
+    <!-- ============ PROFILE ============ -->
+    <section class="screen" id="screen-profile">
+      <div class="topbar"><div></div><button class="icon-btn ghost" onclick="Nav.go('settings')" aria-label="Settings"><svg><use href="#i-gear"/></svg></button></div>
+      <div class="screen-scroll">
+        <div class="profile-hero"><div class="profile-photo-letter">F</div></div>
+
+        <div class="section-title" style="margin-top:10px;">Faculty details</div>
+        <div class="card" style="padding:4px 14px;">
+          <div class="info-row"><div class="info-ic"><svg><use href="#i-user"/></svg></div><div><div class="info-label">Name</div><div class="info-value">Faculty</div></div></div>
+          <div class="info-row"><div class="info-ic"><svg><use href="#i-mail"/></svg></div><div><div class="info-label">Email</div><div class="info-value" style="font-family:var(--font-mono); font-size:14px;">faculty@college.edu</div></div></div>
+          <div class="info-row"><div class="info-ic"><svg><use href="#i-building"/></svg></div><div><div class="info-label">Department</div><div class="info-value">Computer Science</div></div></div>
+          <div class="info-row"><div class="info-ic"><svg><use href="#i-badge"/></svg></div><div><div class="info-label">Designation</div><div class="info-value">Assistant Professor</div></div></div>
+          <div class="info-row"><div class="info-ic"><svg><use href="#i-hex"/></svg></div><div><div class="info-label">Faculty ID</div><div class="info-value" style="font-family:var(--font-mono);">FAC-2026-07</div></div></div>
+        </div>
+
+        <button class="ghost-btn" onclick="Nav.go('feedback')"><svg width="15" height="15" style="color:var(--primary)"><use href="#i-send"/></svg> Give feedback</button>
+      </div>
+      <nav class="bottom-nav" id="bottomNav5"></nav>
+    </section>
+
+    <!-- ============ STUDENT DETAILS ============ -->
+    <section class="screen" id="screen-detail">
+      <div class="back-row">
+        <button class="icon-btn ghost" onclick="Nav.back()" aria-label="Back"><svg><use href="#i-chev-l"/></svg></button>
+        <h1>Student Details</h1>
+      </div>
+      <div class="screen-scroll">
+        <div class="card">
+          <div style="display:flex; align-items:center; gap:12px; margin-bottom:6px;">
+            <div class="letter-avatar" id="detAvatar" style="width:46px;height:46px;font-size:16px;">H</div>
+            <div>
+              <div style="font-weight:700; font-size:16.5px;" id="detName">Harshik Jagirapu</div>
+              <div style="font-size:12.5px; color:var(--ink-faint); font-family:var(--font-mono);" id="detRoll">23B81A05XX</div>
+            </div>
+          </div>
+          <span class="badge badge-active" id="detBadge" style="display:inline-block; margin:8px 0 2px;">Inside</span>
+          <div class="kv-grid">
+            <div class="kv"><div class="k">Section</div><div class="v" id="detSection">CSE-A</div></div>
+            <div class="kv"><div class="k">Branch</div><div class="v" id="detBranch">Computer Science</div></div>
+            <div class="kv"><div class="k">Hostel</div><div class="v" id="detHostel">BH-1</div></div>
+            <div class="kv"><div class="k">Entry time</div><div class="v mono" id="detEntry">5:03 PM</div></div>
+            <div class="kv"><div class="k">Duration</div><div class="v mono" id="detDuration">1h 24m</div></div>
+            <div class="kv"><div class="k">Today's work</div><div class="v" id="detWork">Coding</div></div>
+          </div>
+        </div>
+        <button class="primary-btn" onclick="Nav.go('attendance-date')">View full log <svg><use href="#i-chev-r"/></svg></button>
+      </div>
+    </section>
+
+    <!-- ============ ATTENDANCE BY DATE ============ -->
+    <section class="screen" id="screen-attendance-date">
+      <div class="back-row">
+        <button class="icon-btn ghost" onclick="Nav.back()" aria-label="Back"><svg><use href="#i-chev-l"/></svg></button>
+        <h1>Attendance by Date</h1>
+      </div>
+      <div class="screen-scroll">
+        <div class="date-nav">
+          <button onclick="App.shiftDate(-1)" aria-label="Previous day"><svg><use href="#i-chev-l"/></svg></button>
+          <div class="date-label"><svg><use href="#i-cal"/></svg><span id="dateLabel">7 Aug 2026</span></div>
+          <button onclick="App.shiftDate(1)" aria-label="Next day"><svg><use href="#i-chev-r"/></svg></button>
+        </div>
+
+        <div class="chip-stat-row" id="statChipRow">
+          <button class="chip-stat active" data-key="inside"><div class="n" id="statInside">10</div><div class="l">Inside</div></button>
+          <button class="chip-stat" data-key="present"><div class="n" id="statPresent">58</div><div class="l">Present</div></button>
+          <button class="chip-stat" data-key="absent"><div class="n" id="statAbsent">12</div><div class="l">Absent</div></button>
+          <button class="chip-stat" data-key="total"><div class="n" id="statTotal">80</div><div class="l">Total</div></button>
+        </div>
+
+        <div class="card" style="margin-top:14px; padding:2px 14px;" id="dateList"></div>
+      </div>
+    </section>
+
+    <!-- ============ GIVE FEEDBACK ============ -->
+    <section class="screen" id="screen-feedback">
+      <div class="back-row">
+        <button class="icon-btn ghost" onclick="Nav.back()" aria-label="Back"><svg><use href="#i-chev-l"/></svg></button>
+        <h1>Give Feedback</h1>
+      </div>
+      <div class="screen-scroll">
+        <div class="card">
+          <div class="fb-title">We value your feedback!</div>
+          <p class="fb-sub">Share your thoughts to help us improve Hive.</p>
+          <div class="fb-label">Feedback</div>
+          <textarea id="fbInput" maxlength="500" placeholder="Write your feedback here..."></textarea>
+          <div class="char-count"><span id="fbCount">0</span>/500</div>
+        </div>
+        <button class="primary-btn" id="fbBtn" disabled onclick="App.submitFeedback()"><svg><use href="#i-send"/></svg> Submit feedback</button>
+      </div>
+    </section>
+
+    <!-- ============ SETTINGS ============ -->
+    <section class="screen" id="screen-settings">
+      <div class="back-row">
+        <button class="icon-btn ghost" onclick="Nav.back()" aria-label="Back"><svg><use href="#i-chev-l"/></svg></button>
+        <h1>Settings</h1>
+      </div>
+      <div class="screen-scroll">
+        <div class="card" style="padding:2px 14px; margin-top:8px;">
+          <div class="settings-list-row" onclick="App.notReady('Profile Settings')">
+            <div class="info-ic"><svg><use href="#i-user"/></svg></div>
+            <div class="info-value">Profile Settings</div>
+            <svg class="chev"><use href="#i-chev-r"/></svg>
+          </div>
+          <div class="settings-list-row" onclick="App.notReady('Notification Settings')">
+            <div class="info-ic"><svg><use href="#i-bell"/></svg></div>
+            <div class="info-value">Notification Settings</div>
+            <svg class="chev"><use href="#i-chev-r"/></svg>
+          </div>
+          <div class="settings-list-row" onclick="App.notReady('Change Password')">
+            <div class="info-ic"><svg><use href="#i-key"/></svg></div>
+            <div class="info-value">Change Password</div>
+            <svg class="chev"><use href="#i-chev-r"/></svg>
+          </div>
+          <div class="settings-list-row" onclick="App.notReady('Privacy Policy')">
+            <div class="info-ic"><svg><use href="#i-shield"/></svg></div>
+            <div class="info-value">Privacy Policy</div>
+            <svg class="chev"><use href="#i-chev-r"/></svg>
+          </div>
+        </div>
+        <div class="card" style="padding:2px 14px; margin-top:14px;">
+          <div class="settings-list-row danger" onclick="App.logout()">
+            <div class="info-ic"><svg><use href="#i-logout"/></svg></div>
+            <div class="info-value">Logout</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ LOGGED OUT ============ -->
+    <section class="screen" id="screen-loggedout">
+      <div class="empty-state">
+        <div class="hexmark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7.5 4.3v9.4L12 21l-7.5-4.3V7.3z"/></svg></div>
+        <h2>You're logged out</h2>
+        <p>Sign back in to continue managing attendance and scanning student IDs.</p>
+        <button class="primary-btn" style="max-width:220px;" onclick="Nav.tab('home')">Log back in</button>
+      </div>
+    </section>
+
+    <div class="toast" id="toast"></div>
+  </div>
+</div>
+
+<script>
+/* ---------- Roster: full enrolled list, mixed present/absent ---------- */
+const roster = [
+  {name:'Harshik Jagirapu', roll:'23B81A05XX', section:'CSE-A',  branch:'Computer Science',       hostel:'BH-1', status:'present', time:'5:03 PM', work:'Coding'},
+  {name:'Siddharth Kumar',  roll:'23B81A05YY', section:'CSE-A',  branch:'Computer Science',       hostel:'BH-2', status:'present', time:'4:45 PM', work:'Lab Work'},
+  {name:'Aditya Reddy',     roll:'23B81A05ZZ', section:'ECE-2',  branch:'Electronics & Comm.',    hostel:'BH-1', status:'present', time:'4:30 PM', work:'Research'},
+  {name:'Rohan Prasad',     roll:'23B81A06AA', section:'AIML-A', branch:'AI & Machine Learning',  hostel:'GH-1', status:'present', time:'4:15 PM', work:'Project Review'},
+  {name:'Karthik M.',       roll:'23B81A06BB', section:'CSE-A',  branch:'Computer Science',       hostel:'BH-2', status:'present', time:'4:05 PM', work:'Workshop'},
+  {name:'Manasvi D.',       roll:'23B81A06CC', section:'IT-A',   branch:'Information Technology', hostel:'GH-1', status:'present', time:'3:55 PM', work:'Coding'},
+  {name:'Ananya Rao',       roll:'23B81A05AB', section:'CSE-B',  branch:'Computer Science',       hostel:'GH-2', status:'absent',  time:null, work:null},
+  {name:'Vikram Chowdary',  roll:'23B81A05CD', section:'CSE-A',  branch:'Computer Science',       hostel:'BH-1', status:'absent',  time:null, work:null},
+  {name:'Priya Nair',       roll:'23B81A06EF', section:'ECE-2',  branch:'Electronics & Comm.',    hostel:'GH-1', status:'absent',  time:null, work:null},
+  {name:'Farhan Ali',       roll:'23B81A06GH', section:'AIML-A', branch:'AI & Machine Learning',  hostel:'BH-2', status:'absent',  time:null, work:null},
+  {name:'Sneha Iyer',       roll:'23B81A07IJ', section:'IT-A',   branch:'Information Technology', hostel:'GH-2', status:'absent',  time:null, work:null},
+  {name:'Devansh Mehta',    roll:'23B81A07KL', section:'CSE-B',  branch:'Computer Science',       hostel:'BH-1', status:'absent',  time:null, work:null},
+];
+let directoryFilter = 'all';
+const avatarColors = ['#6E52E8','#3AA0C4','#EFAE4E','#42B583','#D0483F','#8A5FD8'];
+
+function initials(name){ return name.trim().charAt(0).toUpperCase(); }
+function parseTimeToday(t){
+  const [time, mer] = t.split(' ');
+  let [h, m] = time.split(':').map(Number);
+  if (mer === 'PM' && h !== 12) h += 12;
+  if (mer === 'AM' && h === 12) h = 0;
+  const d = new Date();
+  d.setHours(h, m, 0, 0);
+  return d;
+}
+function fmtDuration(ms){
+  const totalMin = Math.max(0, Math.floor(ms / 60000));
+  const h = Math.floor(totalMin / 60), m = totalMin % 60;
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
+
+/* ---------- Render rosters ---------- */
+function renderHomeList(){
+  const wrap = document.getElementById('homeStudentList');
+  const present = roster.map((s, i) => ({s, i})).filter(({s}) => s.status === 'present').slice(0, 5);
+  wrap.innerHTML = present.map(({s, i}) => `
+    <div class="stu-row" onclick="App.openStudent(${i})">
+      <div class="c-name">
+        <div class="letter-avatar" style="background:${avatarColors[i % avatarColors.length]}">${initials(s.name)}</div>
+        <span class="nm">${s.name}</span>
+      </div>
+      <span class="c-section">${s.section}</span>
+      <span class="c-status"><span class="bd"></span>Active</span>
+      <span class="c-arrow"><svg><use href="#i-chev-r"/></svg></span>
+    </div>`).join('');
+
+  const presentCount = roster.filter(s => s.status === 'present').length;
+  const insideEl = document.getElementById('insideCount');
+  if (insideEl) insideEl.textContent = presentCount;
+  const enrolledEl = document.getElementById('enrolledCount');
+  if (enrolledEl) enrolledEl.textContent = roster.length + ' enrolled';
+}
+
+function renderDirectory(searchTerm){
+  const q = (searchTerm ?? document.getElementById('studentSearch').value).trim().toLowerCase();
+  const wrap = document.getElementById('directoryList');
+  const rows = roster
+    .map((s, i) => ({s, i}))
+    .filter(({s}) => directoryFilter === 'all' || s.status === directoryFilter)
+    .filter(({s}) => !q || s.name.toLowerCase().includes(q) || s.roll.toLowerCase().includes(q));
+
+  if (!rows.length){
+    wrap.innerHTML = `<div class="empty-row">No students match this search.</div>`;
+    return;
+  }
+  wrap.innerHTML = rows.map(({s, i}) => `
+    <div class="directory-row" onclick="App.openStudent(${i})">
+      <div class="letter-avatar ${s.status === 'absent' ? 'absent' : ''}" style="background:${avatarColors[i % avatarColors.length]}">${initials(s.name)}</div>
+      <div class="dir-body">
+        <div class="dir-name">${s.name}</div>
+        <div class="dir-sub">${s.roll} &bull; ${s.section}</div>
+      </div>
+      <div class="dir-right">
+        <div class="dir-status ${s.status === 'absent' ? 'absent' : ''}">${s.status === 'present' ? 'Inside' : 'Absent'}</div>
+        <div class="dir-since">${s.status === 'present' ? 'Since ' + s.time : 'Not marked in'}</div>
+      </div>
+    </div>`).join('');
+}
+
+document.getElementById('studentSearch').addEventListener('input', e => renderDirectory(e.target.value));
+document.getElementById('statusChipRow').addEventListener('click', e => {
+  const chip = e.target.closest('.chip');
+  if (!chip) return;
+  document.querySelectorAll('#statusChipRow .chip').forEach(c => c.classList.remove('active'));
+  chip.classList.add('active');
+  directoryFilter = chip.dataset.status;
+  renderDirectory();
+});
+
+/* ---------- Navigation ---------- */
+const Nav = (() => {
+  const mainTabs = ['home','students','scanner','reports','profile'];
+  let stack = ['home'];
+  const navIcons = [
+    {id:'home', icon:'i-home', label:'Home'},
+    {id:'students', icon:'i-users', label:'Students'},
+    {id:'scanner', icon:'i-scan', label:'Scanner'},
+    {id:'reports', icon:'i-chart', label:'Reports'},
+    {id:'profile', icon:'i-user', label:'Profile'},
+  ];
+  function buildNav(){
+    const html = navIcons.map(n => `<button class="nav-btn" data-id="${n.id}" onclick="Nav.tab('${n.id}')"><svg><use href="#${n.icon}"/></svg>${n.label}</button>`).join('');
+    document.querySelectorAll('.bottom-nav').forEach(el => el.innerHTML = html);
+  }
+  function render(){
+    const current = stack[stack.length - 1];
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('screen-' + current).classList.add('active');
+    const isMain = mainTabs.includes(current);
+    document.querySelectorAll('.bottom-nav').forEach(el => el.style.display = isMain ? 'flex' : 'none');
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.id === current));
+    if (current === 'students') renderDirectory(document.getElementById('studentSearch').value);
+  }
+  function go(id){ stack.push(id); render(); }
+  function tab(id){ stack = [id]; render(); }
+  function back(){ if (stack.length > 1){ stack.pop(); render(); } }
+  buildNav();
+  return { go, tab, back, render };
+})();
+
+/* ---------- App behaviour ---------- */
+const App = (() => {
+  let scanIdx = 0;
+  let dateOffset = 0;
+
+  function toast(msg){
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toast._h);
+    toast._h = setTimeout(() => t.classList.remove('show'), 2200);
+  }
+  function notReady(label){ toast(label + " isn't available in this preview"); }
+
+  let openStudentIdx = null;
+
+  function openStudent(i){
+    const s = roster[i];
+    openStudentIdx = i;
+    document.getElementById('detAvatar').textContent = initials(s.name);
+    document.getElementById('detAvatar').style.background = avatarColors[i % avatarColors.length];
+    document.getElementById('detName').textContent = s.name;
+    document.getElementById('detRoll').textContent = s.roll;
+    document.getElementById('detSection').textContent = s.section;
+    document.getElementById('detBranch').textContent = s.branch;
+    document.getElementById('detHostel').textContent = s.hostel;
+    renderDetailStatus(s);
+    Nav.go('detail');
+  }
+
+  function renderDetailStatus(s){
+    const badge = document.getElementById('detBadge');
+    if (s.status === 'present'){
+      badge.textContent = 'Inside';
+      badge.className = 'badge badge-active';
+      document.getElementById('detEntry').textContent = s.time;
+      document.getElementById('detWork').textContent = s.work;
+      updateDetailDuration();
+    } else {
+      badge.textContent = 'Absent';
+      badge.className = 'badge badge-absent';
+      document.getElementById('detEntry').textContent = '—';
+      document.getElementById('detDuration').textContent = '—';
+      document.getElementById('detWork').textContent = 'Not marked present today';
+    }
+  }
+
+  function updateDetailDuration(){
+    if (openStudentIdx === null || !document.getElementById('screen-detail').classList.contains('active')) return;
+    const s = roster[openStudentIdx];
+    if (s.status !== 'present') return;
+    const entry = parseTimeToday(s.time);
+    document.getElementById('detDuration').textContent = fmtDuration(new Date() - entry);
+  }
+  setInterval(updateDetailDuration, 1000);
+
+  function refreshAllViews(){
+    renderHomeList();
+    if (document.getElementById('screen-students').classList.contains('active')) renderDirectory();
+    if (openStudentIdx !== null && document.getElementById('screen-detail').classList.contains('active')){
+      renderDetailStatus(roster[openStudentIdx]);
+    }
+  }
+
+  function runScan(){
+    const wrap = document.getElementById('scanIconWrap');
+    wrap.classList.remove('pulse'); void wrap.offsetWidth; wrap.classList.add('pulse');
+
+    const s = roster[scanIdx % roster.length];
+    scanIdx++;
+    const now = new Date().toLocaleTimeString([], {hour:'numeric', minute:'2-digit'});
+    let action;
+    if (s.status === 'present'){
+      action = 'Exit';
+      s.status = 'absent'; s.time = null; s.work = null;
+    } else {
+      action = 'Entry';
+      s.status = 'present'; s.time = now; s.work = 'Coding';
+    }
+    const ic = action === 'Entry' ? 'i-check-c' : 'i-logout';
+    const bg = action === 'Entry' ? 'var(--green-tint)' : 'var(--amber-tint)';
+    const fg = action === 'Entry' ? 'var(--green)' : 'var(--amber)';
+
+    document.getElementById('resultCard').innerHTML = `
+      <div class="result-filled">
+        <div class="result-ic" style="background:${bg}; color:${fg};"><svg width="20" height="20"><use href="#${ic}"/></svg></div>
+        <div class="result-text">
+          <div class="rt-name">${s.name}</div>
+          <div class="rt-meta">${s.roll} &bull; marked <b>${action}</b> at ${now}</div>
+        </div>
+      </div>`;
+
+    refreshAllViews();
+  }
+
+  function exportReport(){
+    const header = 'Name,Roll Number,Section,Status,Since\n';
+    const rows = roster.map(s => `${s.name},${s.roll},${s.section},${s.status === 'present' ? 'Inside' : 'Absent'},${s.time || '-'}`).join('\n');
+    const blob = new Blob([header + rows], {type:'text/csv'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'hive-attendance-report.csv';
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+    toast('Report downloaded');
+  }
+
+  function renderDateScreen(){
+    const d = new Date(2026, 7, 7 + dateOffset); // 7 Aug 2026 base
+    document.getElementById('dateLabel').textContent = d.toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'numeric'});
+
+    const isBase = dateOffset === 0;
+    const presentCount = roster.filter(s => s.status === 'present').length;
+    const absentCount = roster.filter(s => s.status === 'absent').length;
+    document.getElementById('statInside').textContent = isBase ? presentCount : 0;
+    document.getElementById('statPresent').textContent = isBase ? presentCount : 0;
+    document.getElementById('statAbsent').textContent = isBase ? absentCount : 0;
+    document.getElementById('statTotal').textContent = isBase ? roster.length : 0;
+
+    applyDateFilter(document.querySelector('#statChipRow .chip-stat.active')?.dataset.key || 'inside');
+  }
+
+  function applyDateFilter(key){
+    const list = document.getElementById('dateList');
+    const isBase = dateOffset === 0;
+    if (!isBase){
+      list.innerHTML = `<div class="empty-row">No attendance data recorded for this date.</div>`;
+      return;
+    }
+    const rows = roster.map((s, i) => ({s, i}))
+      .filter(({s}) => {
+        if (key === 'absent') return s.status === 'absent';
+        if (key === 'total') return true;
+        return s.status === 'present';
+      });
+
+    if (!rows.length){
+      list.innerHTML = `<div class="empty-row">No ${key === 'absent' ? 'absent' : 'present'} students recorded for this date.</div>`;
+      return;
+    }
+    list.innerHTML = rows.map(({s, i}) => `
+      <div class="directory-row" onclick="App.openStudent(${i})">
+        <div class="letter-avatar ${s.status === 'absent' ? 'absent' : ''}" style="background:${avatarColors[i % avatarColors.length]}">${initials(s.name)}</div>
+        <div class="dir-body"><div class="dir-name">${s.name}</div><div class="dir-sub">${s.section}</div></div>
+        <div class="dir-right"><div class="dir-status ${s.status === 'absent' ? 'absent' : ''}">${s.status === 'present' ? 'Inside' : 'Absent'}</div><div class="dir-since">${s.status === 'present' ? s.time : 'Not marked in'}</div></div>
+      </div>`).join('');
+  }
+
+  function shiftDate(delta){
+    dateOffset += delta;
+    renderDateScreen();
+  }
+
+  document.getElementById('statChipRow').addEventListener('click', e => {
+    const chip = e.target.closest('.chip-stat');
+    if (!chip) return;
+    document.querySelectorAll('#statChipRow .chip-stat').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    applyDateFilter(chip.dataset.key);
+  });
+
+  const origGo = Nav.go;
+  Nav.go = function(id){ origGo(id); if (id === 'attendance-date') renderDateScreen(); };
+
+  document.getElementById('fbInput').addEventListener('input', e => {
+    const len = e.target.value.length;
+    document.getElementById('fbCount').textContent = len;
+    document.getElementById('fbBtn').disabled = len === 0;
+  });
+
+  function submitFeedback(){
+    const input = document.getElementById('fbInput');
+    if (!input.value.trim()) return;
+    input.value = '';
+    document.getElementById('fbCount').textContent = '0';
+    document.getElementById('fbBtn').disabled = true;
+    toast('Thanks for your feedback!');
+    Nav.tab('profile');
+  }
+
+  function logout(){
+    const ok = window.confirm('Log out of Hive?');
+    if (!ok) return;
+    toast('Logged out');
+    Nav.tab('loggedout');
+  }
+
+  return { notReady, openStudent, runScan, exportReport, shiftDate, submitFeedback, logout };
+})();
+
+renderHomeList();
+</script>
+</body>
+</html>

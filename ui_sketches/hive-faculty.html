@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hive — Faculty Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1C1832;
+    --ink-soft:#635E7A;
+    --ink-faint:#9C97AF;
+    --bg:#F3F1FA;
+    --page:#EDEAF7;
+    --surface:#FFFFFF;
+    --surface-alt:#F6F4FC;
+    --primary:#5B3FE0;
+    --primary-dark:#3E2AA6;
+    --primary-tint:#ECE7FC;
+    --amber:#DE9A2E;
+    --amber-tint:#FBF0DC;
+    --green:#2C9C6B;
+    --green-tint:#E2F5EA;
+    --red:#D0483F;
+    --red-tint:#FAE7E5;
+    --teal:#2A87A8;
+    --teal-tint:#E1F1F6;
+    --line:#E7E3F5;
+    --radius-lg:24px;
+    --radius-md:16px;
+    --radius-sm:11px;
+    --shadow-card:0 1px 2px rgba(28,24,50,.04), 0 10px 26px -14px rgba(28,24,50,.16);
+    --shadow-pop:0 20px 60px -20px rgba(28,24,50,.35);
+    --font-display:'Space Grotesk', sans-serif;
+    --font-body:'Inter', sans-serif;
+    --font-mono:'IBM Plex Mono', monospace;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:var(--font-body);
+    color:var(--ink);
+    background:var(--page);
+    -webkit-font-smoothing:antialiased;
+    min-height:100dvh;
+  }
+  button{font-family:inherit;}
+  ::selection{background:var(--primary-tint);color:var(--primary-dark);}
+
+  /* ---------- Ambient desktop stage ---------- */
+  .stage{
+    min-height:100dvh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:28px;
+    padding:32px 16px;
+    background:
+      radial-gradient(60% 50% at 50% 0%, #E9E4FB 0%, transparent 60%),
+      var(--page);
+    position:relative;
+    overflow:hidden;
+  }
+  .stage::before{
+    content:"";
+    position:absolute;inset:0;
+    background-image:
+      repeating-linear-gradient(60deg, rgba(91,63,224,.05) 0, rgba(91,63,224,.05) 1px, transparent 1px, transparent 46px),
+      repeating-linear-gradient(-60deg, rgba(91,63,224,.05) 0, rgba(91,63,224,.05) 1px, transparent 1px, transparent 46px),
+      repeating-linear-gradient(0deg, rgba(91,63,224,.05) 0, rgba(91,63,224,.05) 1px, transparent 1px, transparent 46px);
+    pointer-events:none;
+    mask-image:radial-gradient(70% 70% at 50% 30%, black, transparent);
+  }
+
+  /* ---------- App frame ---------- */
+  .device{
+    position:relative;
+    width:100%;
+    max-width:412px;
+    height:100dvh;
+    background:var(--bg);
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+    z-index:1;
+  }
+
+  @media (min-width:560px){
+    .device{
+      height:860px;
+      max-height:88dvh;
+      border-radius:44px;
+      box-shadow:var(--shadow-pop), 0 0 0 10px #14102E, 0 0 0 11px rgba(255,255,255,.06);
+    }
+  }
+
+  .screen{
+    display:none;
+    flex-direction:column;
+    height:100%;
+    min-height:0;
+    animation:rise .32s cubic-bezier(.2,.7,.3,1);
+  }
+  .screen.active{display:flex;}
+  @keyframes rise{
+    from{opacity:0; transform:translateY(10px);}
+    to{opacity:1; transform:translateY(0);}
+  }
+
+  .screen-scroll{
+    flex:1;
+    overflow-y:auto;
+    padding:4px 20px 28px;
+    scrollbar-width:none;
+  }
+  .screen-scroll::-webkit-scrollbar{display:none;}
+
+  /* ---------- Headers ---------- */
+  .topbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:20px 20px 6px;
+    flex-shrink:0;
+  }
+  .topbar h1{
+    font-family:var(--font-display);
+    font-size:19px;
+    font-weight:700;
+    margin:0;
+    letter-spacing:-.01em;
+    flex: 1;
+    text-align: center;
+  }
+  .topbar.left-align h1 {
+    text-align: left;
+  }
+  
+  .icon-btn{
+    width:40px;height:40px;
+    border-radius:50%;
+    border:1px solid var(--line);
+    background:var(--surface);
+    display:flex;align-items:center;justify-content:center;
+    color:var(--ink);
+    cursor:pointer;
+    position:relative;
+    flex-shrink:0;
+    transition:transform .15s ease, background .15s ease;
+  }
+  .icon-btn:active{transform:scale(.92);}
+  .icon-btn.ghost{background:transparent;border-color:transparent;}
+  
+  .back-row{
+    display:flex; align-items:center; gap:12px;
+    padding:18px 20px 6px; flex-shrink:0;
+  }
+  .back-row h1{font-family:var(--font-display); font-size:18px; font-weight:700; margin:0;}
+
+  .brand-row{display:flex;align-items:center;gap:9px;}
+  .hexmark{
+    width:34px;height:34px;
+    background:linear-gradient(150deg, var(--primary), var(--primary-dark));
+    clip-path:polygon(25% 6%,75% 6%,100% 50%,75% 94%,25% 94%,0% 50%);
+    display:flex;align-items:center;justify-content:center;
+    color:#fff; flex-shrink:0;
+  }
+  .hexmark svg{width:17px;height:17px;}
+  .wordmark{font-family:var(--font-display);font-weight:700;font-size:18px;letter-spacing:-.01em;}
+
+  .avatar-btn{
+    width:38px;height:38px;border-radius:50%;
+    border:1.5px solid var(--surface); box-shadow:0 0 0 1.5px var(--line);
+    cursor:pointer; padding:0; flex-shrink:0;
+    background:var(--primary); color:#fff;
+    font-family:var(--font-display); font-weight:700; font-size:16px;
+    display:flex; align-items:center; justify-content:center;
+  }
+
+  /* ---------- Common UI ---------- */
+  .section-title{
+    font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:.06em;
+    color:var(--ink-faint); margin:22px 2px 10px; display:flex; justify-content:space-between; align-items:center;
+  }
+  .card{
+    background:var(--surface);
+    border-radius:var(--radius-lg);
+    box-shadow:var(--shadow-card);
+    padding:18px;
+  }
+  .link-btn{
+    background:none;border:none;color:var(--primary);
+    font-weight:600;font-size:13px;cursor:pointer;padding:0;
+  }
+
+  /* ---------- Custom Faculty UI ---------- */
+  .greeting{margin:14px 2px 20px;}
+  .greeting .hello{font-size:14px;color:var(--ink-soft);font-weight:500;}
+  .greeting h2{
+    font-family:var(--font-display); font-size:26px; font-weight:700;
+    margin:2px 0 0; letter-spacing:-.02em; color:var(--primary-dark);
+  }
+
+  .today-attendance-grid{
+    display:grid; grid-template-columns:1fr 1fr; gap:12px;
+  }
+  .attendance-block{
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--radius-md); padding:16px;
+    display:flex; flex-direction:column; justify-content:center; position:relative;
+  }
+  .attendance-block .lbl{font-size:12px; color:var(--ink-soft); font-weight:600; margin-bottom:6px;}
+  .attendance-block .val{font-family:var(--font-display); font-size:24px; font-weight:700;}
+  .attendance-block .badge{position:absolute; top:16px; right:16px;}
+  
+  .badge{
+    font-size:11px; font-weight:700; letter-spacing:.04em;
+    padding:4px 8px; border-radius:999px;
+  }
+  .badge-live{background:var(--green-tint); color:var(--green);}
+  
+  .list-row{
+    display:flex; align-items:center; gap:12px;
+    padding:12px 0; border-bottom:1px solid var(--line);
+    cursor:pointer;
+  }
+  .list-row:last-child{border-bottom:none;}
+  .list-row .avatar-initial{
+    width:36px; height:36px; border-radius:50%; background:var(--primary-tint); color:var(--primary);
+    font-weight:700; display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0;
+  }
+  .list-row .avatar-initial.amber{background:var(--amber-tint); color:var(--amber);}
+  .list-row .avatar-initial.teal{background:var(--teal-tint); color:var(--teal);}
+
+  .list-info{flex:1;}
+  .list-info .name{font-weight:700; font-size:14.5px; margin-bottom:2px;}
+  .list-info .sub{font-size:12px; color:var(--ink-soft); font-family:var(--font-mono);}
+  
+  .list-status{text-align:right;}
+  .list-status .status{font-weight:700; font-size:12px; color:var(--green); margin-bottom:2px;}
+  .list-status .time{font-size:11px; color:var(--ink-faint);}
+  
+  .chevron{color:var(--ink-faint); margin-left:4px;}
+
+  .search-box{
+    display:flex; gap:10px; margin-bottom:16px;
+  }
+  .search-input{
+    flex:1; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius-md);
+    padding:12px 16px 12px 40px; font-family:inherit; font-size:14px;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239C97AF' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:14px center;
+  }
+  
+  .scanner-viewport{
+    background:var(--surface); border-radius:var(--radius-lg); padding:40px 20px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    box-shadow:var(--shadow-card); margin-bottom:24px; margin-top:10px;
+  }
+  .scan-icon-wrap{
+    width:100px; height:100px; border-radius:24px; background:var(--primary-tint);
+    display:flex; align-items:center; justify-content:center; color:var(--primary);
+    margin-bottom:20px;
+  }
+  .scan-icon-wrap svg{width:50px; height:50px;}
+  .scanner-viewport h3{font-family:var(--font-display); font-size:20px; margin:0 0 6px;}
+  .scanner-viewport p{font-size:13px; color:var(--ink-soft); text-align:center; margin:0;}
+
+  .stat-grid{
+    display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:16px;
+  }
+  .stat-tile{
+    background:var(--surface); border-radius:var(--radius-md);
+    box-shadow:var(--shadow-card); padding:16px; cursor:pointer;
+  }
+  .stat-icon{
+    width:38px;height:38px; border-radius:10px; display:flex; align-items:center; justify-content:center;
+    margin-bottom:12px;
+  }
+  .stat-icon svg{width:20px;height:20px;}
+  .ic-primary{background:var(--primary-tint); color:var(--primary);}
+  .ic-amber{background:var(--amber-tint); color:var(--amber);}
+  .ic-teal{background:var(--teal-tint); color:var(--teal);}
+  .stat-tile h4{font-size:14px; font-weight:700; margin:0 0 4px;}
+  .stat-tile p{font-size:12px; color:var(--ink-soft); margin:0; line-height:1.4;}
+
+  .profile-hero{display:flex; flex-direction:column; align-items:center; padding:18px 0 6px;}
+  .profile-photo{
+    width:90px;height:90px;border-radius:50%; position:relative;
+    background:var(--primary); color:#fff; display:flex; align-items:center; justify-content:center;
+    font-family:var(--font-display); font-weight:700; font-size:36px;
+    box-shadow:0 10px 24px -10px rgba(91,63,224,.5);
+  }
+
+  .info-row{
+    display:flex; align-items:center; gap:14px; padding:14px 2px; border-bottom:1px solid var(--line);
+  }
+  .info-row:last-child{border-bottom:none;}
+  .info-ic{
+    width:38px;height:38px;border-radius:11px;background:var(--primary-tint);color:var(--primary);
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  }
+  .info-ic svg{width:17px;height:17px;}
+  .info-label{font-size:11.5px; color:var(--ink-faint); font-weight:600; text-transform:uppercase; letter-spacing:.04em;}
+  .info-value{font-weight:600; font-size:14.5px; margin-top:1px;}
+
+  .kv-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px 12px;}
+  .kv .k{font-size:11.5px; color:var(--ink-faint); font-weight:600; text-transform:uppercase; letter-spacing:.04em; margin-bottom:3px;}
+  .kv .v{font-weight:700; font-size:14.5px;}
+
+  .menu-item{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:16px 4px; border-bottom:1px solid var(--line); font-weight:600; font-size:14.5px;
+    cursor:pointer;
+  }
+  .menu-item:last-child{border-bottom:none;}
+  .menu-item.danger{color:var(--red);}
+  
+  .primary-btn{
+    width:100%; background:linear-gradient(135deg,var(--primary),var(--primary-dark));
+    color:#fff; border:none; border-radius:var(--radius-md);
+    padding:15px 18px; font-weight:700; font-size:14.5px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    margin-top:18px; box-shadow:0 10px 22px -10px rgba(91,63,224,.6);
+  }
+  .ghost-btn{
+    width:100%; background:var(--surface); color:var(--primary);
+    border:1.5px solid var(--primary-tint); border-radius:var(--radius-md);
+    padding:14px 18px; font-weight:700; font-size:14.5px; cursor:pointer;
+    margin-top:16px;
+  }
+
+  textarea{
+    width:100%; border:1.5px solid var(--line); border-radius:var(--radius-sm);
+    padding:12px; font-family:var(--font-body); font-size:13.5px; resize:vertical;
+    min-height:120px; margin-top:10px; color:var(--ink); background:var(--surface-alt);
+  }
+  textarea:focus{outline:2px solid var(--primary-tint); border-color:var(--primary);}
+
+  /* ---------- Bottom nav ---------- */
+  .bottom-nav{
+    display:flex; flex-shrink:0;
+    border-top:1px solid var(--line);
+    background:var(--surface);
+    padding:9px 6px calc(9px + env(safe-area-inset-bottom, 0px));
+  }
+  .nav-btn{
+    flex:1; display:flex; flex-direction:column; align-items:center; gap:4px;
+    background:none; border:none; cursor:pointer; padding:6px 2px;
+    color:var(--ink-faint); font-size:11px; font-weight:600;
+  }
+  .nav-btn svg{width:21px;height:21px;}
+  .nav-btn.active{color:var(--primary);}
+
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <symbol id="i-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></symbol>
+    <symbol id="i-chev-r" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></symbol>
+    <symbol id="i-chev-l" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 6 9 12 15 18"/></symbol>
+    <symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+    <symbol id="i-scan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" y1="12" x2="17" y2="12"/></symbol>
+    <symbol id="i-reports" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 0 0-16 0"/></symbol>
+    <symbol id="i-cal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></symbol>
+    <symbol id="i-filter" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></symbol>
+    <symbol id="i-mail" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></symbol>
+    <symbol id="i-building" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"/><line x1="9" y1="22" x2="9" y2="22"/><line x1="15" y1="22" x2="15" y2="22"/><line x1="9" y1="6" x2="9" y2="6"/><line x1="15" y1="6" x2="15" y2="6"/><line x1="9" y1="10" x2="9" y2="10"/><line x1="15" y1="10" x2="15" y2="10"/><line x1="9" y1="14" x2="9" y2="14"/><line x1="15" y1="14" x2="15" y2="14"/></symbol>
+    <symbol id="i-badge" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15v5s3-2 5-5c2-3 2-7 2-7a7 7 0 0 0-14 0s0 4 2 7c2 3 5 5 5 5z"/><circle cx="12" cy="10" r="3"/></symbol>
+    <symbol id="i-id" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></symbol>
+    <symbol id="i-logout" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></symbol>
+  </defs>
+</svg>
+
+<div class="stage">
+  <div class="device">
+
+    <!-- ============ 1. HOME ============ -->
+    <section class="screen active" id="screen-home">
+      <div class="topbar left-align">
+        <div class="brand-row">
+          <div class="hexmark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7.5 4.3v9.4L12 21l-7.5-4.3V7.3z"/></svg></div>
+          <span class="wordmark">Hive</span>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center;">
+          <button class="icon-btn ghost" aria-label="Notifications"><svg><use href="#i-bell"/></svg></button>
+          <button class="avatar-btn" onclick="Nav.tab('profile')" aria-label="Profile">F</button>
+        </div>
+      </div>
+
+      <div class="screen-scroll">
+        <div class="greeting">
+          <div class="hello">Welcome back,</div>
+          <h2>Faculty</h2>
+        </div>
+
+        <div class="section-title" style="margin-top:0;">Today's Attendance</div>
+        <div class="today-attendance-grid">
+          <div class="attendance-block">
+            <div class="lbl">Students Inside</div>
+            <div class="val">10</div>
+            <span class="badge badge-live">Live</span>
+          </div>
+          <div class="attendance-block">
+            <div class="lbl">Date</div>
+            <div class="val" style="font-size:18px; display:flex; align-items:center; gap:8px;">
+              7 Aug 26 <svg width="18" height="18" style="color:var(--ink-soft)"><use href="#i-cal"/></svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-title">List of Present Students <button class="link-btn" onclick="Nav.tab('students')">View All</button></div>
+        <div class="card" style="padding:4px 14px;">
+          <div class="list-row" onclick="Nav.go('student-details')">
+            <div class="list-info">
+              <div class="name" style="font-size:12px; color:var(--ink-soft); font-weight:600;">Name</div>
+              <div class="sub" style="font-size:12px; font-weight:600; color:var(--ink-soft); font-family:var(--font-body);">Section</div>
+            </div>
+            <div class="list-status" style="display:flex; gap:18px; align-items:center;">
+              <div class="name" style="font-size:12px; color:var(--ink-soft); font-weight:600;">Status</div>
+              <div class="name" style="font-size:12px; color:var(--ink-soft); font-weight:600;">Details</div>
+            </div>
+          </div>
+          
+          <div class="list-row" onclick="Nav.go('student-details')">
+            <div class="list-info" style="display:grid; grid-template-columns:1fr 1fr;">
+              <div class="name">Harshik J.</div>
+              <div class="sub">CSE-A</div>
+            </div>
+            <div class="list-status" style="display:flex; align-items:center; gap:12px;">
+              <div class="status">● Active</div>
+              <svg class="chevron" width="16" height="16"><use href="#i-chev-r"/></svg>
+            </div>
+          </div>
+          <div class="list-row">
+            <div class="list-info" style="display:grid; grid-template-columns:1fr 1fr;">
+              <div class="name">Siddharth K.</div>
+              <div class="sub">CSE-A</div>
+            </div>
+            <div class="list-status" style="display:flex; align-items:center; gap:12px;">
+              <div class="status">● Active</div>
+              <svg class="chevron" width="16" height="16"><use href="#i-chev-r"/></svg>
+            </div>
+          </div>
+          <div class="list-row">
+            <div class="list-info" style="display:grid; grid-template-columns:1fr 1fr;">
+              <div class="name">Aditya R.</div>
+              <div class="sub">ECE-2</div>
+            </div>
+            <div class="list-status" style="display:flex; align-items:center; gap:12px;">
+              <div class="status">● Active</div>
+              <svg class="chevron" width="16" height="16"><use href="#i-chev-r"/></svg>
+            </div>
+          </div>
+          <div class="list-row">
+            <div class="list-info" style="display:grid; grid-template-columns:1fr 1fr;">
+              <div class="name">Rohan P.</div>
+              <div class="sub">AIML-A</div>
+            </div>
+            <div class="list-status" style="display:flex; align-items:center; gap:12px;">
+              <div class="status">● Active</div>
+              <svg class="chevron" width="16" height="16"><use href="#i-chev-r"/></svg>
+            </div>
+          </div>
+          <div class="list-row">
+            <div class="list-info" style="display:grid; grid-template-columns:1fr 1fr;">
+              <div class="name">Karthik M.</div>
+              <div class="sub">CSE-A</div>
+            </div>
+            <div class="list-status" style="display:flex; align-items:center; gap:12px;">
+              <div class="status">● Active</div>
+              <svg class="chevron" width="16" height="16"><use href="#i-chev-r"/></svg>
+            </div>
+          </div>
+        </div>
+      </div>
+      <nav class="bottom-nav" id="bottomNav1"></nav>
+    </section>
+
+    <!-- ============ 2. STUDENTS ============ -->
+    <section class="screen" id="screen-students">
+      <div class="topbar">
+        <button class="icon-btn ghost" onclick="Nav.tab('home')" aria-label="Back"><svg><use href="#i-chev-l"/></svg></button>
+        <h1>Students</h1>
+        <div style="width:40px"></div>
+      </div>
+      <div class="screen-scroll">
+        <div class="search-box">
+          <input type="text" class="search-input" placeholder="Search student by name or roll">
+          <button class="icon-btn" aria-label="Filter"><svg><use href="#i-filter"/></svg></button>
+        </div>
+
+        <div class="card" style="padding:4px 14px;">
+          <div class="list-row" onclick="Nav.go('student-details')">
+            <div class="avatar-initial">H</div>
+            <div class="list-info">
+              <div class="name">Harshik Jagirapu</div>
+              <div class="sub">23B81A05XX • CSE-A</div>
+            </div>
+            <div class="list-status">
+              <div class="status">Inside</div>
+              <div class="time">Since 5:03 PM</div>
+            </div>
+            <svg class="chevron" width="16" height="16"><use href="#i-chev-r"/></svg>
+          </div>
+          <div class="list-row">
+            <div class="avatar-initial amber">S</div>
+            <div class="list-info">
+              <div class="name">Siddharth Kumar</div>
+              <div class="sub">23B81A05YY • CSE-A</div>
+            </div>
+            <div class="list-status">
+              <div class="status">Inside</div>
+              <div class="time">Since 4:45 PM</div>
+            </div>
+            <svg class="chevron" width="16" height="16"><use href="#i-chev-r"/></svg>
+          </div>
+          <div class="list-row">
+            <div class="avatar-initial teal">A</div>
+            <div class="list-info">
+              <div class="name">Aditya Reddy</div>
+              <div class="sub">23B81A05ZZ • ECE-2</div>
+            </div>
+            <div class="list-status">
+              <div class="status">Inside</div>
+              <div class="time">Since 4:30 PM</div>
+            </div>
+            <svg class="chevron" width="16" height="16"><use href="#i-chev-r"/></svg>
+          </div>
+          <div class="list-row">
+            <div class="avatar-initial amber">R</div>
+            <div class="list-info">
+              <div class="name">Rohan Prasad</div>
+              <div class="sub">23B81A06AA • AIML-A</div>
+            </div>
+            <div class="list-status">
+              <div class="status">Inside</div>
+              <div class="time">Since 4:15 PM</div>
+            </div>
+            <svg class="chevron" width="16" height="16"><use href="#i-chev-r"/></svg>
+          </div>
+          <div class="list-row">
+            <div class="avatar-initial teal">K</div>
+            <div class="list-info">
+              <div class="name">Karthik M.</div>
+              <div class="sub">23B81A06BB • CSE-A</div>
+            </div>
+            <div class="list-status">
+              <div class="status">Inside</div>
+              <div class="time">Since 4:05 PM</div>
+            </div>
+            <svg class="chevron" width="16" height="16"><use href="#i-chev-r"/></svg>
+          </div>
+          <div class="list-row">
+            <div class="avatar-initial">M</div>
+            <div class="list-info">
+              <div class="name">Manasvi D.</div>
+              <div class="sub">23B81A06CC • IT-A</div>
+            </div>
+            <div class="list-status">
+              <div class="status">Inside</div>
+              <div class="time">Since 3:55 PM</div>
+            </div>
+            <svg class="chevron" width="16" height="16"><use href="#i-chev-r"/></svg>
+          </div>
+        </div>
+      </div>
+      <nav class="bottom-nav" id="bottomNav2"></nav>
+    </section>
+
+    <!-- ============ 3. SCANNER ============ -->
+    <section class="screen" id="screen-scanner">
+      <div class="topbar">
+        <div style="width:40px"></div>
+        <h1>Scanner</h1>
+        <div style="width:40px"></div>
+      </div>
+      <div class="screen-scroll">
+        <div class="scanner-viewport">
+          <div class="scan-icon-wrap"><svg><use href="#i-scan"/></svg></div>
+          <h3>Tap to Scan</h3>
+          <p>Scan student ID to mark<br>Entry or Exit</p>
+        </div>
+        
+        <div class="section-title" style="margin-top:0;">Scanning Result</div>
+        <div class="card" style="padding:20px;">
+          <h4 style="margin:0 0 6px; font-size:14px; font-weight:700;">Message Box</h4>
+          <p style="margin:0; font-size:13px; color:var(--ink-soft); line-height:1.4;">Student details and scan status<br>will appear here</p>
+        </div>
+      </div>
+      <nav class="bottom-nav" id="bottomNav3"></nav>
+    </section>
+
+    <!-- ============ 4. REPORTS ============ -->
+    <section class="screen" id="screen-reports">
+      <div class="topbar">
+        <div style="width:40px"></div>
+        <h1>Reports</h1>
+        <div style="width:40px"></div>
+      </div>
+      <div class="screen-scroll">
+        <div class="stat-grid">
+          <div class="stat-tile">
+            <div class="stat-icon ic-primary"><svg><use href="#i-chart"/></svg></div>
+            <h4>Daily Summary</h4>
+            <p>View today's attendance summary</p>
+          </div>
+          <div class="stat-tile" onclick="Nav.go('attendance-date')">
+            <div class="stat-icon ic-primary"><svg><use href="#i-cal"/></svg></div>
+            <h4>Attendance by Date</h4>
+            <p>Analyze attendance on any date</p>
+          </div>
+          <div class="stat-tile">
+            <div class="stat-icon ic-primary"><svg><use href="#i-reports"/></svg></div>
+            <h4>Student Logs</h4>
+            <p>View individual student logs</p>
+          </div>
+          <div class="stat-tile">
+            <div class="stat-icon ic-primary"><svg><use href="#i-reports"/></svg></div>
+            <h4>Export Report</h4>
+            <p>Download attendance data</p>
+          </div>
+        </div>
+      </div>
+      <nav class="bottom-nav" id="bottomNav4"></nav>
+    </section>
+
+    <!-- ============ 5. PROFILE ============ -->
+    <section class="screen" id="screen-profile">
+      <div class="topbar">
+        <div style="width:40px"></div>
+        <h1></h1>
+        <button class="icon-btn ghost" onclick="Nav.go('settings')" aria-label="Settings"><svg><use href="#i-gear"/></svg></button>
+      </div>
+      <div class="screen-scroll">
+        <div class="profile-hero">
+          <div class="profile-photo" style="width:110px; height:110px; font-size:44px;">F</div>
+        </div>
+
+        <div class="section-title">Faculty Details</div>
+        <div class="card" style="padding:4px 14px;">
+          <div class="info-row"><div class="info-ic"><svg><use href="#i-user"/></svg></div><div><div class="info-label">Name</div><div class="info-value">Faculty</div></div></div>
+          <div class="info-row"><div class="info-ic"><svg><use href="#i-mail"/></svg></div><div><div class="info-label">Email</div><div class="info-value">faculty@college.edu</div></div></div>
+          <div class="info-row"><div class="info-ic"><svg><use href="#i-building"/></svg></div><div><div class="info-label">Department</div><div class="info-value">Computer Science</div></div></div>
+          <div class="info-row"><div class="info-ic"><svg><use href="#i-users"/></svg></div><div><div class="info-label">Designation</div><div class="info-value">Assistant Professor</div></div></div>
+          <div class="info-row"><div class="info-ic"><svg><use href="#i-id"/></svg></div><div><div class="info-label">Faculty ID</div><div class="info-value">FAC-2026-07</div></div></div>
+        </div>
+
+        <button class="ghost-btn" onclick="Nav.go('feedback')" style="display:flex;align-items:center;justify-content:center;gap:8px;"><svg width="16" height="16"><use href="#i-reports"/></svg> Give Feedback</button>
+      </div>
+      <nav class="bottom-nav" id="bottomNav5"></nav>
+    </section>
+
+    <!-- ============ 6. STUDENT DETAILS ============ -->
+    <section class="screen" id="screen-student-details">
+      <div class="back-row">
+        <button class="icon-btn ghost" onclick="Nav.back()" aria-label="Back"><svg><use href="#i-chev-l"/></svg></button>
+        <h1>Student Details</h1>
+      </div>
+      <div class="screen-scroll">
+        <div style="display:flex; align-items:center; gap:16px; margin-bottom:24px;">
+          <div class="profile-photo" style="width:64px; height:64px; font-size:24px; background:var(--primary-tint); color:var(--primary); box-shadow:none;">H</div>
+          <div>
+            <div style="font-family:var(--font-display); font-weight:700; font-size:18px;">Harshik Jagirapu</div>
+            <div style="font-size:13px; color:var(--ink-soft); font-family:var(--font-mono); margin-bottom:6px;">23B81A05XX</div>
+            <span class="badge badge-live">Inside</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="kv-grid" style="grid-template-columns:1fr; gap:20px;">
+            <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--line); padding-bottom:12px;">
+              <span style="font-size:14px; color:var(--ink-soft);">Section</span>
+              <span style="font-weight:600; font-size:14.5px;">CSE-A</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--line); padding-bottom:12px;">
+              <span style="font-size:14px; color:var(--ink-soft);">Branch</span>
+              <span style="font-weight:600; font-size:14.5px;">Cyber Security</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--line); padding-bottom:12px;">
+              <span style="font-size:14px; color:var(--ink-soft);">Hostel</span>
+              <span style="font-weight:600; font-size:14.5px;">BH-1</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--line); padding-bottom:12px;">
+              <span style="font-size:14px; color:var(--ink-soft);">Entry Time</span>
+              <span style="font-weight:600; font-size:14.5px;">5:03 PM</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--line); padding-bottom:12px;">
+              <span style="font-size:14px; color:var(--ink-soft);">Duration</span>
+              <span style="font-weight:600; font-size:14.5px;">1h 24m</span>
+            </div>
+            <div style="display:flex; justify-content:space-between;">
+              <span style="font-size:14px; color:var(--ink-soft);">Today's Work</span>
+              <span style="font-weight:600; font-size:14.5px;">Coding</span>
+            </div>
+          </div>
+        </div>
+
+        <button class="primary-btn">View Full Log</button>
+      </div>
+    </section>
+
+    <!-- ============ 7. ATTENDANCE BY DATE ============ -->
+    <section class="screen" id="screen-attendance-date">
+      <div class="back-row">
+        <button class="icon-btn ghost" onclick="Nav.back()" aria-label="Back"><svg><use href="#i-chev-l"/></svg></button>
+        <h1>Attendance by Date</h1>
+      </div>
+      <div class="screen-scroll">
+        <div style="display:flex; align-items:center; justify-content:center; gap:16px; margin-bottom:20px;">
+          <button class="icon-btn ghost"><svg><use href="#i-chev-l"/></svg></button>
+          <span style="font-weight:700; font-size:15px;">7 Aug 2026</span>
+          <button class="icon-btn ghost"><svg><use href="#i-cal"/></svg></button>
+        </div>
+
+        <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; margin-bottom:20px;">
+          <div style="background:var(--primary); color:#fff; border-radius:var(--radius-sm); padding:12px; text-align:center;">
+            <div style="font-size:11px; font-weight:600; margin-bottom:4px;">Inside</div>
+            <div style="font-family:var(--font-display); font-size:20px; font-weight:700;">10</div>
+          </div>
+          <div style="background:var(--surface); border:1px solid var(--line); border-radius:var(--radius-sm); padding:12px; text-align:center;">
+            <div style="font-size:11px; color:var(--ink-soft); font-weight:600; margin-bottom:4px;">Present</div>
+            <div style="font-family:var(--font-display); font-size:20px; font-weight:700;">58</div>
+          </div>
+          <div style="background:var(--surface); border:1px solid var(--line); border-radius:var(--radius-sm); padding:12px; text-align:center;">
+            <div style="font-size:11px; color:var(--ink-soft); font-weight:600; margin-bottom:4px;">Absent</div>
+            <div style="font-family:var(--font-display); font-size:20px; font-weight:700;">12</div>
+          </div>
+          <div style="background:var(--surface); border:1px solid var(--line); border-radius:var(--radius-sm); padding:12px; text-align:center;">
+            <div style="font-size:11px; color:var(--ink-soft); font-weight:600; margin-bottom:4px;">Total</div>
+            <div style="font-family:var(--font-display); font-size:20px; font-weight:700;">80</div>
+          </div>
+        </div>
+
+        <div class="card" style="padding:4px 14px;">
+          <div class="list-row" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr; align-items:center;">
+            <div class="name" style="font-size:13px; font-weight:700;">Harshik Jagirapu</div>
+            <div class="sub" style="font-size:12px; color:var(--ink-soft);">CSE-A</div>
+            <div class="sub" style="font-size:12px; color:var(--ink-soft);">5:03 PM</div>
+            <div class="status" style="font-size:12px; font-weight:700; color:var(--green); text-align:right;">Inside</div>
+          </div>
+          <div class="list-row" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr; align-items:center;">
+            <div class="name" style="font-size:13px; font-weight:700;">Siddharth Kumar</div>
+            <div class="sub" style="font-size:12px; color:var(--ink-soft);">CSE-A</div>
+            <div class="sub" style="font-size:12px; color:var(--ink-soft);">4:45 PM</div>
+            <div class="status" style="font-size:12px; font-weight:700; color:var(--green); text-align:right;">Inside</div>
+          </div>
+          <div class="list-row" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr; align-items:center;">
+            <div class="name" style="font-size:13px; font-weight:700;">Aditya Reddy</div>
+            <div class="sub" style="font-size:12px; color:var(--ink-soft);">ECE-2</div>
+            <div class="sub" style="font-size:12px; color:var(--ink-soft);">4:30 PM</div>
+            <div class="status" style="font-size:12px; font-weight:700; color:var(--green); text-align:right;">Inside</div>
+          </div>
+          <div class="list-row" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr; align-items:center;">
+            <div class="name" style="font-size:13px; font-weight:700;">Rohan Prasad</div>
+            <div class="sub" style="font-size:12px; color:var(--ink-soft);">AIML-A</div>
+            <div class="sub" style="font-size:12px; color:var(--ink-soft);">4:15 PM</div>
+            <div class="status" style="font-size:12px; font-weight:700; color:var(--green); text-align:right;">Inside</div>
+          </div>
+          <div class="list-row" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr; align-items:center;">
+            <div class="name" style="font-size:13px; font-weight:700;">Karthik M.</div>
+            <div class="sub" style="font-size:12px; color:var(--ink-soft);">CSE-A</div>
+            <div class="sub" style="font-size:12px; color:var(--ink-soft);">4:05 PM</div>
+            <div class="status" style="font-size:12px; font-weight:700; color:var(--green); text-align:right;">Inside</div>
+          </div>
+        </div>
+      </div>
+    </section>
+    
+    <!-- ============ 8. FEEDBACK ============ -->
+    <section class="screen" id="screen-feedback">
+      <div class="back-row">
+        <button class="icon-btn ghost" onclick="Nav.back()" aria-label="Back"><svg><use href="#i-chev-l"/></svg></button>
+        <h1>Give Feedback</h1>
+      </div>
+      <div class="screen-scroll">
+        <h3 style="font-size:18px; font-family:var(--font-display); margin:10px 0 6px;">We value your feedback!</h3>
+        <p style="font-size:13.5px; color:var(--ink-soft); margin:0 0 24px; line-height:1.4;">Share your thoughts to help us<br>improve Hive.</p>
+        
+        <div style="margin-bottom:24px;">
+          <label style="font-size:12px; font-weight:700; color:var(--ink-soft);">Feedback</label>
+          <textarea placeholder="Write your feedback here..."></textarea>
+          <div style="text-align:right; font-size:11px; color:var(--ink-faint); margin-top:6px;">0/500</div>
+        </div>
+
+        <button class="primary-btn"><svg><use href="#i-send"/></svg> Submit Feedback</button>
+      </div>
+    </section>
+
+    <!-- ============ 9. SETTINGS ============ -->
+    <section class="screen" id="screen-settings">
+      <div class="back-row">
+        <button class="icon-btn ghost" onclick="Nav.back()" aria-label="Back"><svg><use href="#i-chev-l"/></svg></button>
+        <h1>Settings</h1>
+      </div>
+      <div class="screen-scroll">
+        <div class="card" style="padding:8px 16px;">
+          <div class="menu-item">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <div style="color:var(--primary);"><svg width="20" height="20"><use href="#i-user"/></svg></div>
+              <span>Profile Settings</span>
+            </div>
+            <svg width="18" height="18" style="color:var(--ink-faint);"><use href="#i-chev-r"/></svg>
+          </div>
+          <div class="menu-item">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <div style="color:var(--primary);"><svg width="20" height="20"><use href="#i-bell"/></svg></div>
+              <span>Notification Settings</span>
+            </div>
+            <svg width="18" height="18" style="color:var(--ink-faint);"><use href="#i-chev-r"/></svg>
+          </div>
+          <div class="menu-item">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <div style="color:var(--primary);"><svg width="20" height="20"><use href="#i-lock"/></svg></div>
+              <span>Change Password</span>
+            </div>
+            <svg width="18" height="18" style="color:var(--ink-faint);"><use href="#i-chev-r"/></svg>
+          </div>
+          <div class="menu-item">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <div style="color:var(--primary);"><svg width="20" height="20"><use href="#i-shield"/></svg></div>
+              <span>Privacy Policy</span>
+            </div>
+            <svg width="18" height="18" style="color:var(--ink-faint);"><use href="#i-chev-r"/></svg>
+          </div>
+          <div class="menu-item danger">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <div><svg width="20" height="20"><use href="#i-logout"/></svg></div>
+              <span>Logout</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<script>
+/* ---------- Navigation System ---------- */
+const Nav = (() => {
+  const mainTabs = ['home','students','scanner','reports','profile'];
+  let stack = ['home'];
+
+  const navIcons = [
+    {id:'home', icon:'i-home', label:'Home'},
+    {id:'students', icon:'i-users', label:'Students'},
+    {id:'scanner', icon:'i-scan', label:'Scanner'},
+    {id:'reports', icon:'i-reports', label:'Reports'},
+    {id:'profile', icon:'i-user', label:'Profile'},
+  ];
+
+  function buildNav(){
+    const html = navIcons.map(n =>
+      `<button class="nav-btn" data-id="${n.id}" onclick="Nav.tab('${n.id}')"><svg><use href="#${n.icon}"/></svg>${n.label}</button>`
+    ).join('');
+    document.querySelectorAll('.bottom-nav').forEach(el => el.innerHTML = html);
+  }
+
+  function render(){
+    const current = stack[stack.length - 1];
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('screen-' + current).classList.add('active');
+
+    const isMain = mainTabs.includes(current);
+    document.querySelectorAll('.bottom-nav').forEach(el => el.style.display = isMain ? 'flex' : 'none');
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.id === current));
+  }
+
+  function go(id){ stack.push(id); render(); }
+  function tab(id){ stack = [id]; render(); }
+  function back(){ if (stack.length > 1){ stack.pop(); render(); } }
+
+  buildNav();
+  render();
+  
+  return { go, tab, back, render };
+})();
+</script>
+</body>
+</html>

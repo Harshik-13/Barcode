@@ -129,115 +129,105 @@ export default function Scanner() {
   const isDuplicate = lastResult?.success === false && lastResult.data.error === 'DUPLICATE_SCAN';
 
   return (
-    <div className="scanner-page" style={{ maxWidth: '500px', margin: '0 auto' }}>
-      <div className="scanner-header" style={{ marginBottom: '12px' }}>
-        <h1 style={{ fontSize: '20px', marginBottom: '4px' }}>Attendance Scanner</h1>
-        {user && <p style={{ color: 'var(--color-text-secondary)', fontSize: '13px', margin: 0 }}>Scanned by: {user.name} ({user.role})</p>}
+    <div style={{ maxWidth: 500, margin: '0 auto' }}>
+      {/* Scanner Viewport */}
+      <div className="hive-scanner-viewport" style={{ border: '2px dashed #D9D0F7', cursor: 'pointer', transition: 'transform .15s ease, border-color .15s ease' }}>
+        <div className="hive-scan-icon-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8" />
+            <path d="M20 8V5.5A1.5 1.5 0 0 0 18.5 4H16" />
+            <path d="M4 16v2.5A1.5 1.5 0 0 0 5.5 20H8" />
+            <path d="M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16" />
+          </svg>
+        </div>
+        <h3>Tap to Scan</h3>
+        <p>Scan student ID to mark<br />Entry or Exit</p>
       </div>
 
       <div className="scanner-body">
         <CameraScanner onScan={handleScanWithFeedback} enabled={!isProcessing && !showForceExit} />
 
         {!navigator.onLine && (
-          <div style={{ padding: '12px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '6px', marginTop: '12px', fontSize: '13px', color: '#92400e' }}>
+          <div style={{ padding: 12, background: 'var(--amber-tint)', border: '1px solid var(--amber)', borderRadius: 'var(--radius-sm)', marginTop: 12, fontSize: 13, color: 'var(--amber)' }}>
             <span>You are offline. Scans will be queued.</span>
             {queueSize > 0 && <strong> ({queueSize} pending)</strong>}
           </div>
         )}
 
         {queueSize > 0 && navigator.onLine && (
-          <div style={{ padding: '12px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', marginTop: '12px', fontSize: '13px', color: '#1e40af', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ padding: 12, background: 'var(--primary-tint)', border: '1px solid var(--primary)', borderRadius: 'var(--radius-sm)', marginTop: 12, fontSize: 13, color: 'var(--primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span>{queueSize} scan(s) waiting to sync</span>
-            <button onClick={retryQueued} disabled={isProcessing} style={{ padding: '6px 14px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '12px', cursor: isProcessing ? 'not-allowed' : 'pointer', opacity: isProcessing ? 0.7 : 1 }}>
+            <button onClick={retryQueued} disabled={isProcessing} style={{ padding: '6px 14px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 8, fontSize: 12, cursor: isProcessing ? 'not-allowed' : 'pointer', opacity: isProcessing ? 0.7 : 1, fontWeight: 600 }}>
               {isProcessing ? 'Syncing...' : 'Sync Now'}
             </button>
           </div>
         )}
 
-        {lastResult && (
-          <div role="status" aria-live="polite" style={{
-            marginTop: '12px',
-            padding: '16px',
-            borderRadius: 'var(--radius-md)',
-            border: '1px solid',
-            borderColor: lastResult.success ? 'var(--color-success)' : isQueued ? 'var(--color-warning)' : 'var(--color-error)',
-            background: lastResult.success ? '#f0fdf4' : isQueued ? '#fffbeb' : '#fef2f2',
-            animation: 'fadeIn 0.3s ease',
-            transition: 'all 0.3s ease',
-          }}>
-            {lastResult.success ? (
-              <>
-                <div style={{ textAlign: 'center', marginBottom: '12px' }}>
-                  <p style={{ fontSize: '18px', fontWeight: 700, color: '#047857', margin: 0 }}>
+        {/* Scanning Result */}
+        <div className="hive-section-title" style={{ marginTop: 0 }}>Scanning Result</div>
+        <div className="hive-card" style={{ padding: 20 }}>
+          {lastResult ? (
+            <div role="status" aria-live="polite" style={{ animation: 'fadeIn 0.3s ease' }}>
+              {lastResult.success ? (
+                <>
+                  <h4 style={{ margin: '0 0 6px', fontSize: 14, fontWeight: 700, color: 'var(--green)', textAlign: 'center' }}>
                     {lastResult.data.code === 'SUCCESS_ENTRY' ? 'Entry Recorded' : 'Exit Recorded'}
-                  </p>
-                </div>
-                <div style={{ textAlign: 'center', marginBottom: '12px' }}>
-                  <p style={{ fontSize: '16px', fontWeight: 500, margin: '0 0 4px' }}>{lastResult.data.studentName}</p>
-                  <p style={{ fontSize: '13px', color: 'var(--color-text-secondary)', margin: 0 }}>{lastResult.data.studentRoll}</p>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'center', gap: '24px', fontSize: '13px', color: '#374151' }}>
-                  <div><strong>Entry:</strong> {new Date(lastResult.data.entryTime).toLocaleTimeString()}</div>
-                  {lastResult.data.exitTime && <div><strong>Exit:</strong> {new Date(lastResult.data.exitTime).toLocaleTimeString()}</div>}
-                </div>
-              </>
-            ) : isQueued ? (
-              <>
-                <div style={{ textAlign: 'center', marginBottom: '8px' }}>
-                  <p style={{ fontSize: '18px', fontWeight: 700, color: '#92400e', margin: 0 }}>Queued</p>
-                </div>
-                <p style={{ textAlign: 'center', fontSize: '14px', color: '#92400e', margin: '0 0 8px' }}>
-                  {lastResult.data.message}. {queueSize > 0 ? `(${queueSize} pending)` : ''}
-                </p>
-              </>
-            ) : (
-              <>
-                <div style={{ textAlign: 'center', marginBottom: '8px' }}>
-                  <p style={{ fontSize: '16px', fontWeight: 700, color: '#991b1b', margin: 0 }}>
-                    {isDuplicate ? 'Duplicate Scan' : lastResult.data.error === 'SUMMARY_REQUIRED' ? 'Summary Required' : 'Scan Failed'}
-                  </p>
-                </div>
-                <p style={{ textAlign: 'center', fontSize: '14px', color: '#dc2626', margin: '0 0 12px' }}>
-                  {lastResult.data.message}
-                </p>
-                {(lastResult.data.error === 'SUMMARY_REQUIRED' || isDuplicate) && lastResult.data.details?.sessionId && (
-                  <div style={{ textAlign: 'center', marginTop: '8px' }}>
-                    <button onClick={handleForceExitOpen} style={{
-                      padding: '8px 20px',
-                      background: '#dc2626',
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: '6px',
-                      fontSize: '13px',
-                      fontWeight: 500,
-                      cursor: 'pointer',
-                    }}>
-                      Force Exit Session
-                    </button>
+                  </h4>
+                  <div style={{ textAlign: 'center', marginBottom: 12 }}>
+                    <p style={{ fontSize: 16, fontWeight: 500, margin: '0 0 4px' }}>{lastResult.data.studentName}</p>
+                    <p style={{ fontSize: 13, color: 'var(--ink-soft)', margin: 0 }}>{lastResult.data.studentRoll}</p>
                   </div>
-                )}
-              </>
-            )}
-            <div style={{ textAlign: 'center', marginTop: '12px' }}>
-              <button onClick={dismissResult} style={{
-                padding: '8px 24px',
-                background: 'var(--color-primary)',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '6px',
-                fontSize: '14px',
-                fontWeight: 500,
-                cursor: 'pointer',
-                transition: 'transform 0.1s',
-              }}
-                onMouseDown={(e) => { e.currentTarget.style.transform = 'scale(0.95)'; }}
-                onMouseUp={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
-              >
-                Dismiss
-              </button>
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: 24, fontSize: 13, color: 'var(--ink)' }}>
+                    <div><strong>Entry:</strong> {new Date(lastResult.data.entryTime).toLocaleTimeString()}</div>
+                    {lastResult.data.exitTime && <div><strong>Exit:</strong> {new Date(lastResult.data.exitTime).toLocaleTimeString()}</div>}
+                  </div>
+                </>
+              ) : isQueued ? (
+                <>
+                  <h4 style={{ margin: '0 0 6px', fontSize: 14, fontWeight: 700, color: 'var(--amber)', textAlign: 'center' }}>Queued</h4>
+                  <p style={{ textAlign: 'center', fontSize: 14, color: 'var(--amber)', margin: '0 0 8px' }}>
+                    {lastResult.data.message}. {queueSize > 0 ? `(${queueSize} pending)` : ''}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h4 style={{ margin: '0 0 6px', fontSize: 14, fontWeight: 700, color: 'var(--red)', textAlign: 'center' }}>
+                    {isDuplicate ? 'Duplicate Scan' : lastResult.data.error === 'SUMMARY_REQUIRED' ? 'Summary Required' : 'Scan Failed'}
+                  </h4>
+                  <p style={{ textAlign: 'center', fontSize: 14, color: 'var(--red)', margin: '0 0 12px' }}>
+                    {lastResult.data.message}
+                  </p>
+                  {(lastResult.data.error === 'SUMMARY_REQUIRED' || isDuplicate) && lastResult.data.details?.sessionId && (
+                    <div style={{ textAlign: 'center', marginTop: 8 }}>
+                      <button onClick={handleForceExitOpen} style={{
+                        padding: '8px 20px',
+                        background: 'var(--red)',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: 'var(--radius-sm)',
+                        fontSize: 13,
+                        fontWeight: 500,
+                        cursor: 'pointer',
+                      }}>
+                        Force Exit Session
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+              <div style={{ textAlign: 'center', marginTop: 12 }}>
+                <button onClick={dismissResult} className="hive-primary-btn" style={{ width: 'auto', padding: '8px 24px', marginTop: 0 }}>
+                  Dismiss
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          ) : (
+            <>
+              <h4 style={{ margin: '0 0 6px', fontSize: 14, fontWeight: 700 }}>Message Box</h4>
+              <p style={{ margin: 0, fontSize: 13, color: 'var(--ink-soft)', lineHeight: 1.4 }}>Student details and scan status<br />will appear here</p>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Force Exit Dialog */}
@@ -248,7 +238,7 @@ export default function Scanner() {
           aria-modal="true"
           aria-labelledby="force-exit-title"
           tabIndex={-1}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '16px' }}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 16 }}
           onKeyDown={(e) => {
             if (e.key !== 'Tab' || !dialogRef.current) return;
             const focusables = dialogRef.current.querySelectorAll<HTMLElement>('button, textarea, [href], input, select');
@@ -264,24 +254,24 @@ export default function Scanner() {
             }
           }}
         >
-          <div style={{ padding: '20px', background: '#fff', borderRadius: 'var(--radius-md)', width: '100%', maxWidth: '400px' }}>
-            <h3 id="force-exit-title" style={{ fontSize: '18px', margin: '0 0 4px' }}>Force Exit Session</h3>
+          <div className="hive-card" style={{ padding: 20, width: '100%', maxWidth: 400 }}>
+            <h3 id="force-exit-title" style={{ fontSize: 18, margin: '0 0 4px', fontFamily: 'var(--font-display)' }}>Force Exit Session</h3>
             {forceExitLoading ? (
-              <p style={{ fontSize: '14px', color: 'var(--color-text-secondary)', margin: '12px 0' }}>Loading session details...</p>
+              <p style={{ fontSize: 14, color: 'var(--ink-soft)', margin: '12px 0' }}>Loading session details...</p>
             ) : (
               <>
-                <p style={{ fontSize: '14px', color: 'var(--color-text-primary)', margin: '0 0 8px' }}>
+                <p style={{ fontSize: 14, margin: '0 0 8px' }}>
                   {forceExitInfo
                     ? <strong>Force exit for {forceExitInfo.studentName || `Student #${forceExitInfo.studentId}`} ({forceExitInfo.studentRoll || '-'})</strong>
-                    : <strong>Force exit for this student's session</strong>}
+                    : <strong>Force exit for this student&apos;s session</strong>}
                 </p>
                 {forceExitInfo?.entryTime && (
-                  <p style={{ fontSize: '13px', color: 'var(--color-text-secondary)', margin: '0 0 12px' }}>
+                  <p style={{ fontSize: 13, color: 'var(--ink-soft)', margin: '0 0 12px' }}>
                     Entered at {new Date(forceExitInfo.entryTime).toLocaleTimeString()}
                   </p>
                 )}
-                <p style={{ fontSize: '13px', color: 'var(--color-text-secondary)', margin: '0 0 16px' }}>
-                  This ends the student's current session. They will be asked to submit a work summary.
+                <p style={{ fontSize: 13, color: 'var(--ink-soft)', margin: '0 0 16px' }}>
+                  This ends the student&apos;s current session. They will be asked to submit a work summary.
                 </p>
               </>
             )}
@@ -292,14 +282,15 @@ export default function Scanner() {
               value={forceExitReason}
               onChange={(e) => setForceExitReason(e.target.value)}
               rows={3}
-              style={{ width: '100%', padding: '10px', border: '1px solid var(--color-border)', borderRadius: '6px', fontSize: '14px', resize: 'vertical', boxSizing: 'border-box', marginBottom: '16px' }}
+              className="hive-textarea"
+              style={{ marginBottom: 16 }}
             />
-            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-              <button onClick={() => setShowForceExit(false)} style={{ padding: '8px 16px', border: '1px solid var(--color-border)', borderRadius: '4px', background: '#fff', cursor: 'pointer', fontSize: '14px' }}>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button onClick={() => setShowForceExit(false)} className="hive-ghost-btn" style={{ width: 'auto', padding: '8px 16px', marginTop: 0 }}>
                 Cancel
               </button>
               <button onClick={handleForceExitSubmit} disabled={forceExitSubmitting || !forceExitReason.trim() || forceExitLoading}
-                style={{ padding: '8px 16px', background: forceExitSubmitting || !forceExitReason.trim() || forceExitLoading ? '#9ca3af' : '#dc2626', color: '#fff', border: 'none', borderRadius: '4px', cursor: forceExitSubmitting || !forceExitReason.trim() || forceExitLoading ? 'not-allowed' : 'pointer', fontSize: '14px' }}>
+                style={{ padding: '8px 16px', background: forceExitSubmitting || !forceExitReason.trim() || forceExitLoading ? 'var(--ink-faint)' : 'var(--red)', color: '#fff', border: 'none', borderRadius: 'var(--radius-sm)', cursor: forceExitSubmitting || !forceExitReason.trim() || forceExitLoading ? 'not-allowed' : 'pointer', fontSize: 14, fontWeight: 600 }}>
                 {forceExitSubmitting ? 'Processing...' : 'Force Exit'}
               </button>
             </div>
