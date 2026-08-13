@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hive — Session & Attendance Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1C1832;
+    --ink-soft:#635E7A;
+    --ink-faint:#9C97AF;
+    --bg:#F3F1FA;
+    --page:#EDEAF7;
+    --surface:#FFFFFF;
+    --surface-alt:#F6F4FC;
+    --primary:#5B3FE0;
+    --primary-dark:#3E2AA6;
+    --primary-tint:#ECE7FC;
+    --amber:#DE9A2E;
+    --amber-tint:#FBF0DC;
+    --green:#2C9C6B;
+    --green-tint:#E2F5EA;
+    --red:#D0483F;
+    --red-tint:#FAE7E5;
+    --teal:#2A87A8;
+    --teal-tint:#E1F1F6;
+    --line:#E7E3F5;
+    --radius-lg:24px;
+    --radius-md:16px;
+    --radius-sm:11px;
+    --shadow-card:0 1px 2px rgba(28,24,50,.04), 0 10px 26px -14px rgba(28,24,50,.16);
+    --shadow-pop:0 20px 60px -20px rgba(28,24,50,.35);
+    --font-display:'Space Grotesk', sans-serif;
+    --font-body:'Inter', sans-serif;
+    --font-mono:'IBM Plex Mono', monospace;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:var(--font-body);
+    color:var(--ink);
+    background:var(--page);
+    -webkit-font-smoothing:antialiased;
+    min-height:100dvh;
+  }
+  button{font-family:inherit;}
+  ::selection{background:var(--primary-tint);color:var(--primary-dark);}
+
+  /* ---------- Ambient desktop stage ---------- */
+  .stage{
+    min-height:100dvh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:28px;
+    padding:32px 16px;
+    background:
+      radial-gradient(60% 50% at 50% 0%, #E9E4FB 0%, transparent 60%),
+      var(--page);
+    position:relative;
+    overflow:hidden;
+  }
+  .stage::before{
+    content:"";
+    position:absolute;inset:0;
+    background-image:
+      repeating-linear-gradient(60deg, rgba(91,63,224,.05) 0, rgba(91,63,224,.05) 1px, transparent 1px, transparent 46px),
+      repeating-linear-gradient(-60deg, rgba(91,63,224,.05) 0, rgba(91,63,224,.05) 1px, transparent 1px, transparent 46px),
+      repeating-linear-gradient(0deg, rgba(91,63,224,.05) 0, rgba(91,63,224,.05) 1px, transparent 1px, transparent 46px);
+    pointer-events:none;
+    mask-image:radial-gradient(70% 70% at 50% 30%, black, transparent);
+  }
+  .brandmark{
+    display:none;
+    align-items:center;
+    gap:10px;
+    font-family:var(--font-display);
+    font-weight:700;
+    font-size:15px;
+    letter-spacing:.02em;
+    color:var(--primary-dark);
+    z-index:1;
+  }
+  .brandmark .tag{
+    font-family:var(--font-mono);
+    font-weight:500;
+    font-size:11px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    color:var(--ink-faint);
+    border-left:1px solid var(--line);
+    padding-left:10px;
+    margin-left:2px;
+  }
+
+  /* ---------- App frame ---------- */
+  .device{
+    position:relative;
+    width:100%;
+    max-width:412px;
+    height:100dvh;
+    background:var(--bg);
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+    z-index:1;
+  }
+
+  @media (min-width:560px){
+    .stage{gap:20px;}
+    .brandmark{display:flex;}
+    .device{
+      height:860px;
+      max-height:88dvh;
+      border-radius:44px;
+      box-shadow:var(--shadow-pop), 0 0 0 10px #14102E, 0 0 0 11px rgba(255,255,255,.06);
+    }
+  }
+
+  .screen{
+    display:none;
+    flex-direction:column;
+    height:100%;
+    min-height:0;
+    animation:rise .32s cubic-bezier(.2,.7,.3,1);
+  }
+  .screen.active{display:flex;}
+  @keyframes rise{
+    from{opacity:0; transform:translateY(10px);}
+    to{opacity:1; transform:translateY(0);}
+  }
+
+  .screen-scroll{
+    flex:1;
+    overflow-y:auto;
+    padding:4px 20px 28px;
+    scrollbar-width:none;
+  }
+  .screen-scroll::-webkit-scrollbar{display:none;}
+
+  /* ---------- Header ---------- */
+  .topbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:20px 20px 6px;
+    flex-shrink:0;
+  }
+  .topbar h1{
+    font-family:var(--font-display);
+    font-size:19px;
+    font-weight:700;
+    margin:0;
+    letter-spacing:-.01em;
+  }
+  .icon-btn{
+    width:40px;height:40px;
+    border-radius:50%;
+    border:1px solid var(--line);
+    background:var(--surface);
+    display:flex;align-items:center;justify-content:center;
+    color:var(--ink);
+    cursor:pointer;
+    position:relative;
+    flex-shrink:0;
+    transition:transform .15s ease, background .15s ease;
+  }
+  .icon-btn:active{transform:scale(.92);}
+  .icon-btn.ghost{background:transparent;border-color:transparent;}
+  .icon-btn .dot{
+    position:absolute; top:8px; right:9px;
+    width:7px;height:7px;border-radius:50%;
+    background:var(--red); border:1.5px solid var(--surface);
+  }
+  .back-row{
+    display:flex; align-items:center; gap:12px;
+    padding:18px 20px 6px; flex-shrink:0;
+  }
+  .back-row h1{font-family:var(--font-display); font-size:18px; font-weight:700; margin:0;}
+  .back-row .spacer{flex:1;}
+  .link-btn{
+    background:none;border:none;color:var(--primary);
+    font-weight:600;font-size:14px;cursor:pointer;padding:8px 2px;
+  }
+
+  .brand-row{display:flex;align-items:center;gap:9px;}
+  .hexmark{
+    width:34px;height:34px;
+    background:linear-gradient(150deg, var(--primary), var(--primary-dark));
+    clip-path:polygon(25% 6%,75% 6%,100% 50%,75% 94%,25% 94%,0% 50%);
+    display:flex;align-items:center;justify-content:center;
+    color:#fff; flex-shrink:0;
+  }
+  .hexmark svg{width:17px;height:17px;}
+  .wordmark{font-family:var(--font-display);font-weight:700;font-size:18px;letter-spacing:-.01em;}
+
+  .avatar-btn{
+    width:38px;height:38px;border-radius:50%;overflow:hidden;
+    border:1.5px solid var(--surface); box-shadow:0 0 0 1.5px var(--line);
+    cursor:pointer; padding:0; flex-shrink:0;
+    background:linear-gradient(150deg,#B9AEF2,#8A78E6);
+  }
+  .avatar-btn img{width:100%;height:100%;object-fit:cover;display:block;}
+
+  /* ---------- Cards / sections ---------- */
+  .section-title{
+    font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:.06em;
+    color:var(--ink-faint); margin:22px 2px 10px;
+  }
+  .card{
+    background:var(--surface);
+    border-radius:var(--radius-lg);
+    box-shadow:var(--shadow-card);
+    padding:18px;
+  }
+
+  .greeting{margin:14px 2px 4px;}
+  .greeting .hello{font-size:14px;color:var(--ink-soft);font-weight:500;}
+  .greeting h2{
+    font-family:var(--font-display); font-size:26px; font-weight:700;
+    margin:2px 0 0; letter-spacing:-.02em;
+  }
+
+  .active-session-card{
+    margin-top:16px;
+    background:linear-gradient(155deg, #F4F1FD 0%, #EDE7FC 100%);
+    border:1px solid #E1D9FA;
+    border-radius:var(--radius-lg);
+    padding:18px;
+    position:relative;
+    overflow:hidden;
+  }
+  .active-session-card::after{
+    content:"";
+    position:absolute; right:-30px; top:-30px; width:120px; height:120px;
+    background:radial-gradient(circle, rgba(91,63,224,.14), transparent 70%);
+  }
+  .as-top{display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:14px;}
+  .as-label{font-size:12px; color:var(--ink-soft); font-weight:600; margin:0 0 3px;}
+  .as-cat{display:flex; align-items:center; gap:10px;}
+  .cat-hex{
+    width:38px;height:38px;flex-shrink:0;
+    clip-path:polygon(25% 6%,75% 6%,100% 50%,75% 94%,25% 94%,0% 50%);
+    display:flex;align-items:center;justify-content:center;color:#fff;
+  }
+  .cat-hex svg{width:18px;height:18px;}
+  .cat-coding{background:linear-gradient(150deg,#6E52E8,#4B33B8);}
+  .cat-ai{background:linear-gradient(150deg,#3AA0C4,#217691);}
+  .cat-startup{background:linear-gradient(150deg,#EFAE4E,#C6811F);}
+  .cat-research{background:linear-gradient(150deg,#42B583,#268057);}
+  .as-cat-name{font-family:var(--font-display); font-weight:700; font-size:17px;}
+  .badge{
+    font-size:11px; font-weight:700; letter-spacing:.04em;
+    padding:5px 10px; border-radius:999px;
+  }
+  .badge-active{background:var(--green-tint); color:var(--green);}
+  .badge-ended{background:var(--surface-alt); color:var(--ink-faint);}
+
+  .as-bottom{display:flex; align-items:center; justify-content:space-between;}
+  .as-entry .as-label{margin-bottom:2px;}
+  .as-entry .val{font-family:var(--font-mono); font-weight:600; font-size:15px;}
+  .ring-wrap{position:relative; width:64px;height:64px;}
+  .ring-wrap svg{transform:rotate(-90deg);}
+  .ring-time{
+    position:absolute; inset:0; display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+  }
+  .ring-time .t{font-family:var(--font-mono); font-weight:600; font-size:12.5px;}
+  .ring-time .l{font-size:8px; color:var(--ink-faint); text-transform:uppercase; letter-spacing:.04em;}
+
+  .view-details{
+    display:flex; align-items:center; gap:4px; justify-content:flex-end;
+    margin-top:14px; background:none; border:none; cursor:pointer;
+    font-weight:700; font-size:13px; color:var(--primary); width:100%;
+    padding:2px 0 0;
+  }
+  .view-details svg{width:15px;height:15px;}
+
+  .att-row{
+    display:flex; align-items:center; gap:12px;
+    padding:12px 2px; border-bottom:1px solid var(--line);
+    cursor:default;
+  }
+  .att-row:last-child{border-bottom:none;}
+  .att-date{
+    font-family:var(--font-mono); font-size:12px; color:var(--ink-soft);
+    width:52px; flex-shrink:0; line-height:1.25;
+  }
+  .att-cat{flex:1; font-weight:600; font-size:14.5px;}
+  .att-time{display:block; font-size:11.5px; color:var(--ink-faint); font-weight:400; margin-top:1px;}
+  .status-pill{font-size:12.5px; font-weight:700;}
+  .status-present{color:var(--green);}
+  .status-absent{color:var(--red);}
+
+  .more-btn{
+    width:100%; background:none; border:none; padding:14px 0 4px;
+    color:var(--primary); font-weight:700; font-size:14px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; gap:4px;
+  }
+  .more-btn svg{width:15px;height:15px;}
+
+  /* ---------- Stats screen ---------- */
+  .hive-ring-card{
+    background:var(--surface); border-radius:var(--radius-lg);
+    box-shadow:var(--shadow-card); padding:26px 20px 22px;
+    display:flex; flex-direction:column; align-items:center; margin-top:6px;
+  }
+  .hive-ring-card .caption{font-size:12.5px; color:var(--ink-soft); font-weight:600; margin-top:2px;}
+  #hiveRing{width:196px;height:196px;}
+  .ring-center-num{font-family:var(--font-display); font-size:34px; font-weight:700;}
+  .ring-center-lbl{font-size:11.5px; font-weight:600; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.05em;}
+
+  .stat-grid{
+    display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:16px;
+  }
+  .stat-tile{
+    background:var(--surface); border-radius:var(--radius-md);
+    box-shadow:var(--shadow-card); padding:14px;
+  }
+  .stat-icon{
+    width:34px;height:34px; border-radius:10px; display:flex; align-items:center; justify-content:center;
+    margin-bottom:10px;
+  }
+  .stat-icon svg{width:17px;height:17px;}
+  .ic-primary{background:var(--primary-tint); color:var(--primary);}
+  .ic-amber{background:var(--amber-tint); color:var(--amber);}
+  .ic-teal{background:var(--teal-tint); color:var(--teal);}
+  .ic-green{background:var(--green-tint); color:var(--green);}
+  .stat-label{font-size:12px; color:var(--ink-soft); font-weight:500; margin-bottom:2px;}
+  .stat-value{font-family:var(--font-display); font-size:19px; font-weight:700;}
+
+  .primary-btn{
+    width:100%; background:linear-gradient(135deg,var(--primary),var(--primary-dark));
+    color:#fff; border:none; border-radius:var(--radius-md);
+    padding:15px 18px; font-weight:700; font-size:14.5px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    margin-top:18px; box-shadow:0 10px 22px -10px rgba(91,63,224,.6);
+  }
+  .primary-btn svg{width:16px;height:16px;}
+  .primary-btn:active{transform:scale(.985);}
+
+  .ghost-btn{
+    width:100%; background:var(--surface); color:var(--primary);
+    border:1.5px solid var(--primary-tint); border-radius:var(--radius-md);
+    padding:14px 18px; font-weight:700; font-size:14.5px; cursor:pointer;
+    margin-top:10px;
+  }
+  .danger-btn{
+    width:100%; background:var(--surface); color:var(--red);
+    border:1.5px solid var(--red-tint); border-radius:var(--radius-md);
+    padding:14px 18px; font-weight:700; font-size:14.5px; cursor:pointer;
+    margin-top:10px;
+  }
+  .danger-btn:disabled, .primary-btn:disabled{opacity:.45; cursor:not-allowed;}
+
+  /* ---------- Notifications ---------- */
+  .notif-row{
+    display:flex; gap:12px; padding:14px 0; border-bottom:1px solid var(--line);
+  }
+  .notif-row:last-child{border-bottom:none;}
+  .notif-ic{
+    width:38px;height:38px;border-radius:11px;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .notif-ic svg{width:18px;height:18px;}
+  .notif-body{flex:1; min-width:0;}
+  .notif-title{font-weight:700; font-size:14px; margin:0 0 2px;}
+  .notif-text{font-size:13px; color:var(--ink-soft); margin:0 0 5px; line-height:1.4;}
+  .notif-time{font-size:11px; color:var(--ink-faint); font-family:var(--font-mono);}
+
+  /* ---------- Profile ---------- */
+  .profile-hero{display:flex; flex-direction:column; align-items:center; padding:18px 0 6px;}
+  .profile-photo{
+    width:104px;height:104px;border-radius:50%; position:relative;
+    background:linear-gradient(150deg,#BEB2F5,#8A78E6);
+    box-shadow:0 10px 24px -10px rgba(91,63,224,.5);
+  }
+  .profile-photo img{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block;}
+  .cam-badge{
+    position:absolute; right:0; bottom:2px; width:32px;height:32px; border-radius:50%;
+    background:var(--primary); border:3px solid var(--surface,#fff);
+    display:flex;align-items:center;justify-content:center; color:#fff; cursor:pointer;
+  }
+  .cam-badge svg{width:15px;height:15px;}
+  .profile-name{font-family:var(--font-display); font-weight:700; font-size:20px; margin:14px 0 0;}
+  .profile-sub{font-size:13px; color:var(--ink-soft); margin-top:2px; font-family:var(--font-mono);}
+
+  .info-row{
+    display:flex; align-items:center; gap:14px; padding:14px 2px; border-bottom:1px solid var(--line);
+  }
+  .info-row:last-child{border-bottom:none;}
+  .info-ic{
+    width:38px;height:38px;border-radius:11px;background:var(--primary-tint);color:var(--primary);
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  }
+  .info-ic svg{width:17px;height:17px;}
+  .info-label{font-size:11.5px; color:var(--ink-faint); font-weight:600; text-transform:uppercase; letter-spacing:.04em;}
+  .info-value{font-weight:600; font-size:15px; margin-top:1px;}
+
+  /* ---------- Session details ---------- */
+  .kv-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px 12px; margin-top:16px;}
+  .kv .k{font-size:11.5px; color:var(--ink-faint); font-weight:600; text-transform:uppercase; letter-spacing:.04em; margin-bottom:3px;}
+  .kv .v{font-weight:700; font-size:15px;}
+  .kv .v.mono{font-family:var(--font-mono); font-size:16px;}
+  .status-live{color:var(--green); display:flex; align-items:center; gap:6px;}
+  .status-live .blip{width:7px;height:7px;border-radius:50%; background:var(--green); box-shadow:0 0 0 0 rgba(44,156,107,.5); animation:pulse 1.6s infinite;}
+  @keyframes pulse{
+    0%{box-shadow:0 0 0 0 rgba(44,156,107,.45);}
+    70%{box-shadow:0 0 0 8px rgba(44,156,107,0);}
+    100%{box-shadow:0 0 0 0 rgba(44,156,107,0);}
+  }
+
+  textarea{
+    width:100%; border:1.5px solid var(--line); border-radius:var(--radius-sm);
+    padding:12px; font-family:var(--font-body); font-size:13.5px; resize:vertical;
+    min-height:76px; margin-top:10px; color:var(--ink); background:var(--surface-alt);
+  }
+  textarea:focus{outline:2px solid var(--primary-tint); border-color:var(--primary);}
+  .muted-note{font-size:12.5px; color:var(--ink-soft); margin:2px 0 0;}
+
+  /* ---------- Attendance history ---------- */
+  .chip-row{display:flex; gap:8px; margin:14px 0 4px;}
+  .chip{
+    padding:8px 16px; border-radius:999px; border:1.5px solid var(--line);
+    background:var(--surface); font-weight:700; font-size:13px; color:var(--ink-soft);
+    cursor:pointer;
+  }
+  .chip.active{background:var(--primary); border-color:var(--primary); color:#fff;}
+
+  .hist-row{padding:13px 2px; border-bottom:1px solid var(--line);}
+  .hist-row:last-child{border-bottom:none;}
+  .hist-top{display:flex; align-items:center; justify-content:space-between;}
+  .hist-date{font-family:var(--font-mono); font-size:12px; color:var(--ink-faint); margin-bottom:3px;}
+  .hist-cat{font-weight:700; font-size:14.5px;}
+  .hist-time{font-size:12.5px; color:var(--ink-faint); margin-top:2px;}
+
+  /* ---------- Edit profile form ---------- */
+  .field{margin-bottom:16px;}
+  .field label{display:block; font-size:12px; font-weight:700; color:var(--ink-soft); margin-bottom:6px; text-transform:uppercase; letter-spacing:.04em;}
+  .field input, .field select{
+    width:100%; padding:13px 14px; border-radius:var(--radius-sm);
+    border:1.5px solid var(--line); background:var(--surface-alt);
+    font-family:inherit; font-size:14.5px; font-weight:500; color:var(--ink);
+    appearance:none;
+  }
+  .field select{
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23635E7A' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:right 14px center;
+  }
+  .field input:disabled{color:var(--ink-faint); cursor:not-allowed;}
+  .field input:focus, .field select:focus{outline:none; border-color:var(--primary); background:var(--surface);}
+
+  /* ---------- Settings ---------- */
+  .settings-row{
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    padding:13px 2px; border-bottom:1px solid var(--line);
+  }
+  .settings-row:last-child{border-bottom:none;}
+  .settings-left{display:flex; align-items:center; gap:12px; min-width:0;}
+  .settings-sub{font-size:12px; color:var(--ink-soft); margin-top:2px;}
+  .doc-note{background:var(--primary-tint); color:var(--primary-dark); font-size:12px; font-weight:600; padding:10px 12px; border-radius:var(--radius-sm); margin:14px 0 6px; line-height:1.5;}
+  .doc-section{margin-top:20px;}
+  .doc-section h3{font-family:var(--font-display); font-size:14.5px; font-weight:700; margin:0 0 7px;}
+  .doc-section p{font-size:13.5px; color:var(--ink-soft); line-height:1.65; margin:0;}
+
+  .switch{position:relative; width:44px; height:26px; flex-shrink:0; display:block;}
+  .switch input{position:absolute; opacity:0; width:0; height:0;}
+  .switch .track{
+    position:absolute; inset:0; background:var(--line); border-radius:999px;
+    cursor:pointer; transition:background .2s ease;
+  }
+  .switch .thumb{
+    position:absolute; top:3px; left:3px; width:20px; height:20px; border-radius:50%;
+    background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.25); transition:transform .2s ease;
+  }
+  .switch input:checked ~ .track{background:var(--primary);}
+  .switch input:checked ~ .track .thumb{transform:translateX(18px);}
+
+  /* ---------- Empty state (logged out) ---------- */
+  .empty-state{
+    flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; padding:40px 34px; gap:6px;
+  }
+  .empty-state .hexmark{
+    clip-path:polygon(25% 6%,75% 6%,100% 50%,75% 94%,25% 94%,0% 50%);
+    background:linear-gradient(150deg, var(--primary), var(--primary-dark));
+    color:#fff; display:flex; align-items:center; justify-content:center; margin-bottom:8px;
+  }
+  .empty-state h2{font-family:var(--font-display); font-size:20px; margin:2px 0 4px;}
+  .empty-state p{font-size:13.5px; color:var(--ink-soft); line-height:1.5; margin:0 0 22px;}
+
+  /* ---------- Dark theme ---------- */
+  body[data-theme="dark"]{
+    --ink:#F1EEFA;
+    --ink-soft:#B7B1CF;
+    --ink-faint:#847EA0;
+    --bg:#171330;
+    --page:#0F0C22;
+    --surface:#211C3E;
+    --surface-alt:#282249;
+    --primary:#8A73FF;
+    --primary-dark:#5B3FE0;
+    --primary-tint:#2B2452;
+    --amber-tint:#3A2C15;
+    --green-tint:#123526;
+    --red-tint:#3A1B1A;
+    --teal-tint:#102A34;
+    --line:#332C57;
+    --shadow-card:0 1px 2px rgba(0,0,0,.3), 0 10px 26px -14px rgba(0,0,0,.6);
+    --shadow-pop:0 20px 60px -20px rgba(0,0,0,.7);
+  }
+  body[data-theme="dark"] .stage{
+    background:radial-gradient(60% 50% at 50% 0%, #241C46 0%, transparent 60%), var(--page);
+  }
+  body[data-theme="dark"] .stage::before{
+    background-image:
+      repeating-linear-gradient(60deg, rgba(138,115,255,.06) 0, rgba(138,115,255,.06) 1px, transparent 1px, transparent 46px),
+      repeating-linear-gradient(-60deg, rgba(138,115,255,.06) 0, rgba(138,115,255,.06) 1px, transparent 1px, transparent 46px),
+      repeating-linear-gradient(0deg, rgba(138,115,255,.06) 0, rgba(138,115,255,.06) 1px, transparent 1px, transparent 46px);
+  }
+  body[data-theme="dark"] .active-session-card{
+    background:linear-gradient(155deg, #221C42 0%, #1C1738 100%); border-color:#332C57;
+  }
+
+  /* ---------- Bottom nav ---------- */
+  .bottom-nav{
+    display:flex; flex-shrink:0;
+    border-top:1px solid var(--line);
+    background:var(--surface);
+    padding:9px 6px calc(9px + env(safe-area-inset-bottom, 0px));
+  }
+  .nav-btn{
+    flex:1; display:flex; flex-direction:column; align-items:center; gap:4px;
+    background:none; border:none; cursor:pointer; padding:6px 2px;
+    color:var(--ink-faint); font-size:11px; font-weight:600;
+  }
+  .nav-btn svg{width:21px;height:21px;}
+  .nav-btn.active{color:var(--primary);}
+
+  /* ---------- Toast ---------- */
+  .toast{
+    position:absolute; left:20px; right:20px; bottom:24px;
+    background:#1C1832; color:#fff; padding:13px 16px; border-radius:var(--radius-sm);
+    font-size:13.5px; font-weight:600; text-align:center;
+    box-shadow:0 14px 30px -10px rgba(0,0,0,.35);
+    transform:translateY(20px); opacity:0; pointer-events:none;
+    transition:transform .28s cubic-bezier(.2,.8,.3,1), opacity .28s ease;
+    z-index:40;
+  }
+  .toast.show{transform:translateY(0); opacity:1;}
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:.001ms !important; transition-duration:.001ms !important;}
+  }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <symbol id="i-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></symbol>
+    <symbol id="i-chev-r" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></symbol>
+    <symbol id="i-chev-l" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 6 9 12 15 18"/></symbol>
+    <symbol id="i-flame" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2s5 4.5 5 10a5 5 0 0 1-10 0c0-1.3.5-2.2 1.2-3.2.4.9 1.1 1.4 1.8 1.4-.3-3 1-4.7 2-6.2 0 2 1 2.7 1 4 .6-.6 1-1.6 1-3.2 1 1.5 3 3.3 3 7.2"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></symbol>
+    <symbol id="i-cal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="16" rx="3"/><path d="M8 3v4M16 3v4M3.5 10h17"/></symbol>
+    <symbol id="i-check-c" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="8.5 12.5 11 15 15.5 9.5"/></symbol>
+    <symbol id="i-cam" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.4"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 13.5a7.6 7.6 0 0 0 0-3l1.8-1.4-2-3.4-2.1.6a7.7 7.7 0 0 0-2.6-1.5L14 2.5h-4l-.5 2.3a7.7 7.7 0 0 0-2.6 1.5l-2.1-.6-2 3.4L4.6 10.5a7.6 7.6 0 0 0 0 3L2.8 15l2 3.4 2.1-.6a7.7 7.7 0 0 0 2.6 1.5l.5 2.3h4l.5-2.3a7.7 7.7 0 0 0 2.6-1.5l2.1.6 2-3.4z"/></symbol>
+    <symbol id="i-code" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 8 4 12.5 9 17"/><polyline points="15 8 20 12.5 15 17"/></symbol>
+    <symbol id="i-cpu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="2"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.5 4.5l1.8 1.8M17.7 17.7l1.8 1.8M19.5 4.5l-1.8 1.8M6.3 17.7l-1.8 1.8"/></symbol>
+    <symbol id="i-rocket" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2c3 1.5 5 5 4.8 10-1.7.3-3.4-.2-4.8-1.6-1.4 1.4-3.1 1.9-4.8 1.6C7.2 7 9.2 3.5 12 2z"/><path d="M8.5 14.5 6 21l4-2M15.5 14.5 18 21l-4-2"/><circle cx="12" cy="10" r="1.4"/></symbol>
+    <symbol id="i-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5v-15z"/><path d="M4 20.5A2.5 2.5 0 0 1 6.5 18H20"/></symbol>
+    <symbol id="i-pencil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></symbol>
+    <symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9.5a1 1 0 0 0 1 1h3.5V15h3v5.5H17a1 1 0 0 0 1-1V10"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M11 20V4M18 20v-7"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20c1.3-3.8 4.3-6 7.5-6s6.2 2.2 7.5 6"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polygon points="10 8.5 16 12 10 15.5" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/><polyline points="9 12 11.2 14.2 15.5 9.8"/></symbol>
+    <symbol id="i-hex" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l8.5 5v10L12 22l-8.5-5V7z"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z"/></symbol>
+    <symbol id="i-logout" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="10.5" x2="12" y2="16"/><circle cx="12" cy="7.4" r="1" fill="currentColor" stroke="none"/></symbol>
+  </defs>
+</svg>
+
+<div class="stage">
+  <div class="brandmark"><span>HIVE</span><span class="tag">session &amp; attendance tracker</span></div>
+
+  <div class="device">
+
+    <!-- ============ HOME ============ -->
+    <section class="screen active" id="screen-home">
+      <div class="topbar">
+        <div class="brand-row">
+          <div class="hexmark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7.5 4.3v9.4L12 21l-7.5-4.3V7.3z"/></svg></div>
+          <span class="wordmark">Hive</span>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center;">
+          <button class="icon-btn" onclick="Nav.tab('notifications')" aria-label="Notifications"><svg><use href="#i-bell"/></svg><span class="dot"></span></button>
+          <button class="avatar-btn" onclick="Nav.tab('profile')" aria-label="Profile"><img class="user-avatar-img" src="https://images.unsplash.com/photo-1568602471122-7832951cc4c5?w=160&h=160&fit=crop&crop=faces" alt=""></button>
+        </div>
+      </div>
+
+      <div class="screen-scroll">
+        <div class="greeting">
+          <div class="hello" id="greetingWord">Good Evening,</div>
+          <h2>Harshik</h2>
+        </div>
+
+        <div class="section-title" style="margin-top:20px;">Today's session</div>
+        <div class="active-session-card">
+          <div class="as-top">
+            <div class="as-cat">
+              <div class="cat-hex cat-coding"><svg><use href="#i-code"/></svg></div>
+              <div>
+                <div class="as-label">Category</div>
+                <div class="as-cat-name">Coding</div>
+              </div>
+            </div>
+            <span class="badge badge-active" id="homeBadge">Active</span>
+          </div>
+          <div class="as-bottom">
+            <div class="as-entry">
+              <div class="as-label">Entry time</div>
+              <div class="val">5:03 PM</div>
+            </div>
+            <div class="ring-wrap">
+              <svg viewBox="0 0 64 64">
+                <circle cx="32" cy="32" r="27" fill="none" stroke="#E1D9FA" stroke-width="6"/>
+                <circle cx="32" cy="32" r="27" fill="none" stroke="#5B3FE0" stroke-width="6" stroke-linecap="round" stroke-dasharray="169.6" stroke-dashoffset="60"/>
+              </svg>
+              <div class="ring-time"><span class="t" id="homeDuration">01:24</span><span class="l">Duration</span></div>
+            </div>
+          </div>
+          <button class="view-details" onclick="Nav.go('session')">View details <svg><use href="#i-chev-r"/></svg></button>
+        </div>
+
+        <div class="section-title">My attendance</div>
+        <div class="card" style="padding:6px 14px;">
+          <div class="att-row"><span class="att-date">07 Aug</span><span class="att-cat">Coding</span><span class="status-pill status-present">Present</span></div>
+          <div class="att-row"><span class="att-date">06 Aug</span><span class="att-cat">AI</span><span class="status-pill status-present">Present</span></div>
+          <div class="att-row"><span class="att-date">05 Aug</span><span class="att-cat">Startup</span><span class="status-pill status-absent">Absent</span></div>
+          <div class="att-row"><span class="att-date">04 Aug</span><span class="att-cat">Research</span><span class="status-pill status-present">Present</span></div>
+        </div>
+        <button class="more-btn" onclick="Nav.go('history')">View more <svg><use href="#i-chev-r"/></svg></button>
+      </div>
+
+      <nav class="bottom-nav" id="bottomNav"></nav>
+    </section>
+
+    <!-- ============ STATS ============ -->
+    <section class="screen" id="screen-stats">
+      <div class="topbar"><h1>My Stats</h1><div style="width:40px"></div></div>
+      <div class="screen-scroll">
+        <div class="hive-ring-card">
+          <svg id="hiveRing" viewBox="0 0 200 200"></svg>
+          <div class="caption">Built from 138 tracked sessions</div>
+        </div>
+
+        <div class="stat-grid">
+          <div class="stat-tile"><div class="stat-icon ic-primary"><svg><use href="#i-clock"/></svg></div><div class="stat-label">Average session</div><div class="stat-value">2h 18m</div></div>
+          <div class="stat-tile"><div class="stat-icon ic-amber"><svg><use href="#i-flame"/></svg></div><div class="stat-label">Current streak</div><div class="stat-value">4 Days</div></div>
+          <div class="stat-tile"><div class="stat-icon ic-teal"><svg><use href="#i-cal"/></svg></div><div class="stat-label">Total sessions</div><div class="stat-value">138</div></div>
+          <div class="stat-tile"><div class="stat-icon ic-green"><svg><use href="#i-check-c"/></svg></div><div class="stat-label">Present days</div><div class="stat-value">131</div></div>
+        </div>
+
+        <button class="primary-btn" onclick="Nav.go('history')">View attendance history <svg><use href="#i-chev-r"/></svg></button>
+      </div>
+      <nav class="bottom-nav" id="bottomNav2"></nav>
+    </section>
+
+    <!-- ============ NOTIFICATIONS ============ -->
+    <section class="screen" id="screen-notifications">
+      <div class="topbar"><h1>Notifications</h1><div style="width:40px"></div></div>
+      <div class="screen-scroll">
+        <div class="notif-row">
+          <div class="notif-ic" style="background:var(--green-tint); color:var(--green);"><svg><use href="#i-play"/></svg></div>
+          <div class="notif-body"><p class="notif-title">Session started</p><p class="notif-text">Your session for Coding started at 5:03 PM.</p><span class="notif-time">5:03 PM</span></div>
+        </div>
+        <div class="notif-row">
+          <div class="notif-ic" style="background:var(--amber-tint); color:var(--amber);"><svg><use href="#i-clock"/></svg></div>
+          <div class="notif-body"><p class="notif-title">Summary pending</p><p class="notif-text">Add a work summary before you end today's session.</p><span class="notif-time">7:21 PM</span></div>
+        </div>
+        <div class="notif-row">
+          <div class="notif-ic" style="background:var(--primary-tint); color:var(--primary);"><svg><use href="#i-check-c"/></svg></div>
+          <div class="notif-body"><p class="notif-title">Session completed</p><p class="notif-text">Your session has been completed and logged.</p><span class="notif-time">7:21 PM</span></div>
+        </div>
+        <div class="notif-row">
+          <div class="notif-ic" style="background:var(--teal-tint); color:var(--teal);"><svg><use href="#i-shield"/></svg></div>
+          <div class="notif-body"><p class="notif-title">Summary approved</p><p class="notif-text">Your work summary has been reviewed and approved.</p><span class="notif-time">Yesterday</span></div>
+        </div>
+      </div>
+      <nav class="bottom-nav" id="bottomNav3"></nav>
+    </section>
+
+    <!-- ============ PROFILE ============ -->
+    <section class="screen" id="screen-profile">
+      <div class="topbar"><h1>Profile</h1><button class="icon-btn ghost" onclick="Nav.go('settings')" aria-label="Settings"><svg><use href="#i-gear"/></svg></button></div>
+      <div class="screen-scroll">
+        <div class="profile-hero">
+          <div class="profile-photo">
+            <img class="user-avatar-img" src="https://images.unsplash.com/photo-1568602471122-7832951cc4c5?w=240&h=240&fit=crop&crop=faces" alt="">
+            <div class="cam-badge" onclick="App.pickPhoto()"><svg><use href="#i-cam"/></svg></div>
+          </div>
+          <div class="profile-sub" id="profRoll">23B81A05XX</div>
+        </div>
+
+        <div class="card" style="margin-top:18px; padding:4px 14px;">
+          <div class="info-row"><div class="info-ic"><svg><use href="#i-user"/></svg></div><div><div class="info-label">Name</div><div class="info-value" id="rowName">Harshik Jagirapu</div></div></div>
+          <div class="info-row"><div class="info-ic"><svg><use href="#i-hex"/></svg></div><div><div class="info-label">Roll number</div><div class="info-value" id="rowRoll">23B81A05XX</div></div></div>
+          <div class="info-row"><div class="info-ic"><svg><use href="#i-shield"/></svg></div><div><div class="info-label">Branch</div><div class="info-value" id="rowBranch">Cyber Security</div></div></div>
+          <div class="info-row"><div class="info-ic"><svg><use href="#i-cpu"/></svg></div><div><div class="info-label">Section</div><div class="info-value" id="rowSection">A</div></div></div>
+          <div class="info-row"><div class="info-ic"><svg><use href="#i-home"/></svg></div><div><div class="info-label">Hostel</div><div class="info-value" id="rowHostel">BH-1</div></div></div>
+        </div>
+
+        <button class="ghost-btn" onclick="Nav.go('edit')" style="display:flex;align-items:center;justify-content:center;gap:8px;"><svg width="15" height="15"><use href="#i-pencil"/></svg> Edit profile</button>
+      </div>
+      <nav class="bottom-nav" id="bottomNav4"></nav>
+    </section>
+
+    <!-- ============ SESSION DETAILS ============ -->
+    <section class="screen" id="screen-session">
+      <div class="back-row">
+        <button class="icon-btn ghost" onclick="Nav.back()" aria-label="Back"><svg><use href="#i-chev-l"/></svg></button>
+        <h1>Session Details</h1>
+      </div>
+      <div class="screen-scroll">
+        <div class="card">
+          <div class="as-top" style="margin-bottom:4px;">
+            <div class="as-cat">
+              <div class="cat-hex cat-coding"><svg><use href="#i-code"/></svg></div>
+              <div class="as-cat-name">Coding</div>
+            </div>
+            <span class="badge badge-active" id="sessBadge">Active</span>
+          </div>
+          <div class="kv-grid">
+            <div class="kv"><div class="k">Started at</div><div class="v">07 Aug 2026, 5:03 PM</div></div>
+            <div class="kv"><div class="k">Duration</div><div class="v mono" id="sessDuration">01h 24m</div></div>
+            <div class="kv"><div class="k">Hostel</div><div class="v">BH-1</div></div>
+            <div class="kv"><div class="k">Machine</div><div class="v mono">PC-07</div></div>
+            <div class="kv"><div class="k">Status</div><div class="v status-live" id="sessStatus"><span class="blip"></span>Active</div></div>
+          </div>
+        </div>
+
+        <div class="section-title">Work summary</div>
+        <div class="card">
+          <p class="muted-note" style="margin-top:0;">Add a short note before you end the session — what you worked on.</p>
+          <textarea id="summaryInput" placeholder="e.g. Refactored the auth middleware, fixed 3 bugs..."></textarea>
+          <button class="primary-btn" id="summaryBtn" disabled onclick="App.addSummary()">Add summary</button>
+        </div>
+
+        <button class="danger-btn" id="endBtn" onclick="App.endSession()">End session</button>
+      </div>
+    </section>
+
+    <!-- ============ ATTENDANCE HISTORY ============ -->
+    <section class="screen" id="screen-history">
+      <div class="back-row">
+        <button class="icon-btn ghost" onclick="Nav.back()" aria-label="Back"><svg><use href="#i-chev-l"/></svg></button>
+        <h1>Attendance History</h1>
+      </div>
+      <div class="screen-scroll">
+        <div class="chip-row" id="chipRow">
+          <button class="chip active" data-filter="all">All</button>
+          <button class="chip" data-filter="present">Present</button>
+          <button class="chip" data-filter="absent">Absent</button>
+        </div>
+        <div class="card" style="padding:2px 14px;" id="histList">
+          <div class="hist-row" data-status="present"><div class="hist-top"><div><div class="hist-date">07 Aug 2026</div><div class="hist-cat">Coding</div></div><span class="status-pill status-present">Present</span></div><div class="hist-time">5:03 PM – 7:21 PM</div></div>
+          <div class="hist-row" data-status="present"><div class="hist-top"><div><div class="hist-date">06 Aug 2026</div><div class="hist-cat">AI</div></div><span class="status-pill status-present">Present</span></div><div class="hist-time">4:10 PM – 6:05 PM</div></div>
+          <div class="hist-row" data-status="absent"><div class="hist-top"><div><div class="hist-date">05 Aug 2026</div><div class="hist-cat">Startup</div></div><span class="status-pill status-absent">Absent</span></div><div class="hist-time">—</div></div>
+          <div class="hist-row" data-status="present"><div class="hist-top"><div><div class="hist-date">04 Aug 2026</div><div class="hist-cat">Research</div></div><span class="status-pill status-present">Present</span></div><div class="hist-time">3:15 PM – 5:45 PM</div></div>
+          <div class="hist-row" data-status="present"><div class="hist-top"><div><div class="hist-date">03 Aug 2026</div><div class="hist-cat">Coding</div></div><span class="status-pill status-present">Present</span></div><div class="hist-time">2:00 PM – 4:00 PM</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ EDIT PROFILE ============ -->
+    <section class="screen" id="screen-edit">
+      <div class="back-row">
+        <button class="icon-btn ghost" onclick="Nav.back()" aria-label="Back"><svg><use href="#i-chev-l"/></svg></button>
+        <h1>Edit Profile</h1>
+        <div class="spacer"></div>
+        <button class="link-btn" onclick="App.saveProfile()">Save</button>
+      </div>
+      <div class="screen-scroll">
+        <div class="profile-hero" style="padding-top:6px;">
+          <div class="profile-photo">
+            <img class="user-avatar-img" src="https://images.unsplash.com/photo-1568602471122-7832951cc4c5?w=240&h=240&fit=crop&crop=faces" alt="">
+            <div class="cam-badge" onclick="App.pickPhoto()"><svg><use href="#i-cam"/></svg></div>
+          </div>
+        </div>
+        <div style="margin-top:12px;">
+          <div class="field"><label for="fName">Name</label><input id="fName" type="text" value="Harshik Jagirapu" disabled></div>
+          <div class="field"><label for="fRoll">Roll number</label><input id="fRoll" type="text" value="23B81A05XX" disabled></div>
+          <div class="field"><label for="fBranch">Branch</label>
+            <select id="fBranch" disabled><option selected>Cyber Security</option></select>
+          </div>
+          <div class="field"><label for="fSection">Section</label>
+            <select id="fSection" disabled><option selected>A</option></select>
+          </div>
+          <div class="field"><label for="fHostel">Hostel</label>
+            <select id="fHostel"><option selected>BH-1</option><option>BH-2</option><option>GH-1</option></select>
+          </div>
+        </div>
+        <p class="muted-note" style="margin-top:2px; padding:0 2px;">Name, roll number, branch, and section are set by the college and can't be edited here. Only hostel can be updated.</p>
+      </div>
+    </section>
+
+    <!-- ============ SETTINGS ============ -->
+    <section class="screen" id="screen-settings">
+      <div class="back-row">
+        <button class="icon-btn ghost" onclick="Nav.back()" aria-label="Back"><svg><use href="#i-chev-l"/></svg></button>
+        <h1>Settings</h1>
+      </div>
+      <div class="screen-scroll">
+
+        <div class="section-title" style="margin-top:8px;">Preferences</div>
+        <div class="card" style="padding:2px 14px;">
+          <div class="settings-row">
+            <div class="settings-left"><div class="info-ic"><svg><use href="#i-bell"/></svg></div>
+              <div><div class="info-value">Push notifications</div><div class="settings-sub">Alerts for session start and end</div></div></div>
+            <label class="switch"><input type="checkbox" id="toggleNotif" checked><span class="track"><span class="thumb"></span></span></label>
+          </div>
+          <div class="settings-row">
+            <div class="settings-left"><div class="info-ic"><svg><use href="#i-clock"/></svg></div>
+              <div><div class="info-value">Session reminders</div><div class="settings-sub">Nudge if a summary is pending</div></div></div>
+            <label class="switch"><input type="checkbox" id="toggleReminders" checked><span class="track"><span class="thumb"></span></span></label>
+          </div>
+          <div class="settings-row">
+            <div class="settings-left"><div class="info-ic"><svg><use href="#i-moon"/></svg></div>
+              <div><div class="info-value">Dark mode</div><div class="settings-sub">Easier on the eyes at night</div></div></div>
+            <label class="switch"><input type="checkbox" id="toggleDark"><span class="track"><span class="thumb"></span></span></label>
+          </div>
+        </div>
+
+        <div class="section-title">Account</div>
+        <div class="card" style="padding:2px 14px;">
+          <div class="settings-row"><div class="settings-left"><div class="info-ic"><svg><use href="#i-hex"/></svg></div><div><div class="info-value">Roll number</div><div class="settings-sub" id="setRoll" style="font-family:var(--font-mono);">23B81A05XX</div></div></div></div>
+          <div class="settings-row"><div class="settings-left"><div class="info-ic"><svg><use href="#i-shield"/></svg></div><div><div class="info-value">Branch</div><div class="settings-sub" id="setBranch">Cyber Security</div></div></div></div>
+          <div class="settings-row"><div class="settings-left"><div class="info-ic"><svg><use href="#i-home"/></svg></div><div><div class="info-value">Hostel</div><div class="settings-sub" id="setHostel">BH-1</div></div></div></div>
+        </div>
+
+        <div class="section-title">About</div>
+        <div class="card" style="padding:2px 14px;">
+          <div class="settings-row"><div class="settings-left"><div class="info-ic"><svg><use href="#i-info"/></svg></div><div><div class="info-value">App version</div><div class="settings-sub">Hive 1.0.0</div></div></div></div>
+          <div class="settings-row" style="cursor:pointer;" onclick="Nav.go('privacy')"><div class="settings-left"><div class="info-ic"><svg><use href="#i-shield"/></svg></div><div class="info-value">Privacy policy</div></div><svg width="16" height="16" style="color:var(--ink-faint)"><use href="#i-chev-r"/></svg></div>
+          <div class="settings-row" style="cursor:pointer;" onclick="Nav.go('terms')"><div class="settings-left"><div class="info-ic"><svg><use href="#i-book"/></svg></div><div class="info-value">Terms of service</div></div><svg width="16" height="16" style="color:var(--ink-faint)"><use href="#i-chev-r"/></svg></div>
+        </div>
+
+        <button class="danger-btn" id="logoutBtn" style="display:flex;align-items:center;justify-content:center;gap:8px;" onclick="App.logout()">
+          <svg width="15" height="15"><use href="#i-logout"/></svg> Log out
+        </button>
+      </div>
+    </section>
+
+    <!-- ============ PRIVACY POLICY ============ -->
+    <section class="screen" id="screen-privacy">
+      <div class="back-row">
+        <button class="icon-btn ghost" onclick="Nav.back()" aria-label="Back"><svg><use href="#i-chev-l"/></svg></button>
+        <h1>Privacy Policy</h1>
+      </div>
+      <div class="screen-scroll">
+        <div class="doc-note">Placeholder content for the Hive prototype — not a binding legal document.</div>
+
+        <div class="doc-section">
+          <h3>Overview</h3>
+          <p>Hive helps you track study and coding sessions and confirms attendance with faculty. This page explains what information the app uses and why.</p>
+        </div>
+        <div class="doc-section">
+          <h3>Information we use</h3>
+          <p>Your profile details (name, roll number, branch, section, hostel), your session activity (category, entry time, duration, work summaries), and your attendance history.</p>
+        </div>
+        <div class="doc-section">
+          <h3>How we use it</h3>
+          <p>To show your stats and streaks, to let faculty confirm you attended a session, and to send the session alerts and reminders you've turned on in Settings.</p>
+        </div>
+        <div class="doc-section">
+          <h3>Data retention</h3>
+          <p>Your session and attendance history stays on your account for as long as it's useful to you. You can ask to have it deleted at any time.</p>
+        </div>
+        <div class="doc-section">
+          <h3>Your choices</h3>
+          <p>Control notification and reminder preferences from Settings, and keep your profile details up to date from Edit Profile whenever they change.</p>
+        </div>
+        <div class="doc-section">
+          <h3>Contact</h3>
+          <p>For questions about how your data is used, reach out through your campus administrator.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ TERMS OF SERVICE ============ -->
+    <section class="screen" id="screen-terms">
+      <div class="back-row">
+        <button class="icon-btn ghost" onclick="Nav.back()" aria-label="Back"><svg><use href="#i-chev-l"/></svg></button>
+        <h1>Terms of Service</h1>
+      </div>
+      <div class="screen-scroll">
+        <div class="doc-note">Placeholder content for the Hive prototype — not a binding legal document.</div>
+
+        <div class="doc-section">
+          <h3>Acceptance of terms</h3>
+          <p>Using Hive means you agree to these terms, alongside your institution's own academic and attendance policies.</p>
+        </div>
+        <div class="doc-section">
+          <h3>Using Hive</h3>
+          <p>Log your sessions honestly, keep your profile details accurate, and use the attendance features only for your own account.</p>
+        </div>
+        <div class="doc-section">
+          <h3>Account responsibilities</h3>
+          <p>Keep your device and login secure. Activity logged under your account is treated as yours, so don't share access with anyone else.</p>
+        </div>
+        <div class="doc-section">
+          <h3>Acceptable use</h3>
+          <p>Don't attempt to falsify attendance, mark sessions you didn't take, or interfere with another student's or faculty member's data.</p>
+        </div>
+        <div class="doc-section">
+          <h3>Availability</h3>
+          <p>Hive is provided as-is during this preview. Features may change, and some may be temporarily unavailable, without notice.</p>
+        </div>
+        <div class="doc-section">
+          <h3>Changes to these terms</h3>
+          <p>These terms may be updated as the app evolves. Continuing to use Hive after an update means you accept the current version.</p>
+        </div>
+        <div class="doc-section">
+          <h3>Contact</h3>
+          <p>For questions about these terms, reach out through your campus administrator.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ LOGGED OUT ============ -->
+    <section class="screen" id="screen-loggedout">
+      <div class="empty-state">
+        <div class="hexmark" style="width:56px;height:56px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:26px;height:26px;"><path d="M12 3l7.5 4.3v9.4L12 21l-7.5-4.3V7.3z"/></svg></div>
+        <h2>You're logged out</h2>
+        <p>Sign back in to pick up your sessions, attendance, and stats where you left off.</p>
+        <button class="primary-btn" style="max-width:220px;" onclick="Nav.tab('home')">Log back in</button>
+      </div>
+    </section>
+
+    <input type="file" id="avatarFile" accept="image/*" style="display:none">
+    <div class="toast" id="toast"></div>
+  </div>
+</div>
+
+<script>
+/* ---------- Navigation ---------- */
+const Nav = (() => {
+  const mainTabs = ['home','stats','notifications','profile'];
+  let stack = ['home'];
+
+  const navIcons = [
+    {id:'home', icon:'i-home', label:'Home'},
+    {id:'stats', icon:'i-chart', label:'Stats'},
+    {id:'notifications', icon:'i-bell', label:'Alerts'},
+    {id:'profile', icon:'i-user', label:'Profile'},
+  ];
+
+  function buildNav(){
+    const html = navIcons.map(n =>
+      `<button class="nav-btn" data-id="${n.id}" onclick="Nav.tab('${n.id}')"><svg><use href="#${n.icon}"/></svg>${n.label}</button>`
+    ).join('');
+    document.querySelectorAll('.bottom-nav').forEach(el => el.innerHTML = html);
+  }
+
+  function render(){
+    const current = stack[stack.length - 1];
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('screen-' + current).classList.add('active');
+
+    const isMain = mainTabs.includes(current);
+    document.querySelectorAll('.bottom-nav').forEach(el => el.style.display = isMain ? 'flex' : 'none');
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.id === current));
+
+    if (current === 'stats') drawHiveRing();
+  }
+
+  function go(id){ stack.push(id); render(); }
+  function tab(id){ stack = [id]; render(); }
+  function back(){ if (stack.length > 1){ stack.pop(); render(); } }
+
+  buildNav();
+  return { go, tab, back, render };
+})();
+
+/* ---------- Hive hexagon ring (signature stat visual) ---------- */
+function hexPoints(cx, cy, r){
+  const pts = [];
+  for (let i = 0; i < 6; i++){
+    const a = (Math.PI / 180) * (60 * i);
+    pts.push(`${(cx + r * Math.cos(a)).toFixed(2)},${(cy + r * Math.sin(a)).toFixed(2)}`);
+  }
+  return pts.join(' ');
+}
+
+function drawHiveRing(){
+  const svg = document.getElementById('hiveRing');
+  if (svg.dataset.built) return;
+  svg.dataset.built = '1';
+
+  const count = 22, percent = 95;
+  const filled = Math.round(count * (percent / 100));
+  const cx = 100, cy = 100, orbit = 76, cellR = 12;
+  const ns = 'http://www.w3.org/2000/svg';
+
+  for (let i = 0; i < count; i++){
+    const a = (Math.PI * 2 * i) / count - Math.PI / 2;
+    const x = cx + orbit * Math.cos(a);
+    const y = cy + orbit * Math.sin(a);
+    const poly = document.createElementNS(ns, 'polygon');
+    poly.setAttribute('points', hexPoints(x, y, cellR));
+    const isFilled = i < filled;
+    poly.setAttribute('fill', isFilled ? 'url(#hexGrad)' : 'transparent');
+    poly.setAttribute('stroke', isFilled ? 'none' : '#E7E3F5');
+    poly.setAttribute('stroke-width', '1.6');
+    poly.style.opacity = '0';
+    poly.style.transition = `opacity .35s ease ${i * 18}ms`;
+    svg.appendChild(poly);
+    requestAnimationFrame(() => poly.style.opacity = '1');
+  }
+
+  const defs = document.createElementNS(ns, 'defs');
+  defs.innerHTML = `<linearGradient id="hexGrad" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0%" stop-color="#EFAE4E"/><stop offset="100%" stop-color="#C6811F"/>
+  </linearGradient>`;
+  svg.prepend(defs);
+
+  const fo = document.createElementNS(ns, 'foreignObject');
+  fo.setAttribute('x', '38'); fo.setAttribute('y', '70'); fo.setAttribute('width', '124'); fo.setAttribute('height', '60');
+  fo.innerHTML = `<div xmlns="http://www.w3.org/1999/xhtml" style="text-align:center;">
+      <div class="ring-center-num">${percent}%</div>
+      <div class="ring-center-lbl">Consistency</div>
+    </div>`;
+  svg.appendChild(fo);
+}
+
+/* ---------- App state / behaviour ---------- */
+const App = (() => {
+  const entryTime = new Date();
+  entryTime.setHours(17, 3, 0, 0); // 5:03 PM today, matches "entry time"
+  let sessionActive = true;
+
+  function pad(n){ return String(n).padStart(2, '0'); }
+
+  function tickDuration(){
+    if (!sessionActive) return;
+    const now = new Date();
+    let diff = Math.max(0, now - entryTime);
+    const h = Math.floor(diff / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
+
+    document.getElementById('homeDuration').textContent = `${pad(h * 60 + m)}:${pad(s)}`;
+    document.getElementById('sessDuration').textContent = h > 0 ? `${pad(h)}h ${pad(m)}m` : `${pad(m)}m ${pad(s)}s`;
+  }
+  setInterval(tickDuration, 1000);
+  tickDuration();
+
+  function toast(msg){
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toast._h);
+    toast._h = setTimeout(() => t.classList.remove('show'), 2200);
+  }
+
+  function greet(){
+    const h = new Date().getHours();
+    const word = h < 12 ? 'Good Morning,' : h < 17 ? 'Good Afternoon,' : 'Good Evening,';
+    document.getElementById('greetingWord').textContent = word;
+  }
+  greet();
+
+  function addSummary(){
+    const input = document.getElementById('summaryInput');
+    if (!input.value.trim()) return;
+    input.disabled = true;
+    document.getElementById('summaryBtn').disabled = true;
+    document.getElementById('summaryBtn').textContent = 'Summary added';
+    toast('Work summary added');
+  }
+  document.getElementById('summaryInput').addEventListener('input', e => {
+    document.getElementById('summaryBtn').disabled = e.target.value.trim().length === 0;
+  });
+
+  function endSession(){
+    if (!sessionActive) return;
+    const ok = window.confirm('End today\'s Coding session?');
+    if (!ok) return;
+    sessionActive = false;
+    ['homeBadge','sessBadge'].forEach(id => {
+      const el = document.getElementById(id);
+      el.textContent = 'Ended';
+      el.classList.remove('badge-active');
+      el.classList.add('badge-ended');
+    });
+    const st = document.getElementById('sessStatus');
+    st.innerHTML = 'Ended';
+    st.style.color = 'var(--ink-faint)';
+    document.getElementById('endBtn').disabled = true;
+    document.getElementById('endBtn').textContent = 'Session ended';
+    toast('Session ended and logged');
+  }
+
+  function saveProfile(){
+    const hostel = document.getElementById('fHostel').value;
+    document.getElementById('rowHostel').textContent = hostel;
+    document.getElementById('setHostel').textContent = hostel;
+
+    toast('Hostel updated');
+    Nav.tab('profile');
+  }
+
+  function notReady(label){
+    toast(label + ' isn\'t available in this preview');
+  }
+
+  function logout(){
+    const ok = window.confirm('Log out of Hive?');
+    if (!ok) return;
+    toast('Logged out');
+    Nav.tab('loggedout');
+  }
+
+  function pickPhoto(){
+    document.getElementById('avatarFile').click();
+  }
+
+  document.getElementById('avatarFile').addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      document.querySelectorAll('.user-avatar-img').forEach(img => img.src = ev.target.result);
+      toast('Profile photo updated');
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  });
+
+  document.getElementById('toggleNotif').addEventListener('change', e => {
+    toast(e.target.checked ? 'Push notifications on' : 'Push notifications off');
+  });
+  document.getElementById('toggleReminders').addEventListener('change', e => {
+    toast(e.target.checked ? 'Session reminders on' : 'Session reminders off');
+  });
+  document.getElementById('toggleDark').addEventListener('change', e => {
+    document.body.setAttribute('data-theme', e.target.checked ? 'dark' : 'light');
+    toast(e.target.checked ? 'Dark mode on' : 'Dark mode off');
+  });
+
+  return { addSummary, endSession, saveProfile, notReady, logout, pickPhoto };
+})();
+
+/* ---------- Attendance history filter ---------- */
+document.getElementById('chipRow').addEventListener('click', e => {
+  const chip = e.target.closest('.chip');
+  if (!chip) return;
+  document.querySelectorAll('#chipRow .chip').forEach(c => c.classList.remove('active'));
+  chip.classList.add('active');
+  const filter = chip.dataset.filter;
+  document.querySelectorAll('#histList .hist-row').forEach(row => {
+    row.style.display = (filter === 'all' || row.dataset.status === filter) ? 'block' : 'none';
+  });
+});
+</script>
+</body>
+</html>

@@ -73,6 +73,9 @@ export default function StudentDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeDuration, setActiveDuration] = useState(0);
+  const [summary, setSummary] = useState('');
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [endingSession, setEndingSession] = useState(false);
 
   const fetchData = useCallback(() => {
     if (!user) return;
@@ -151,6 +154,38 @@ export default function StudentDashboard() {
     }
   }
 
+  async function handleSubmitSummary() {
+    if (!activeSession || !summary.trim()) return;
+    setSummaryLoading(true);
+    try {
+      await sessionsApi.complete(activeSession.id, summary.trim(), activeSession.categoryId ?? undefined);
+      setSummary('');
+      setActiveSession(null);
+      fetchData();
+    } catch {
+      setError('Failed to submit summary');
+    } finally {
+      setSummaryLoading(false);
+    }
+  }
+
+  async function handleEndSession() {
+    if (!activeSession) return;
+    const ok = window.confirm('End today\'s session?');
+    if (!ok) return;
+    setEndingSession(true);
+    try {
+      await sessionsApi.complete(activeSession.id, summary.trim() || 'Session ended', activeSession.categoryId ?? undefined);
+      setSummary('');
+      setActiveSession(null);
+      fetchData();
+    } catch {
+      setError('Failed to end session');
+    } finally {
+      setEndingSession(false);
+    }
+  }
+
   if (loading) {
     return <div style={{ textAlign: 'center', padding: '48px', color: 'var(--ink-soft)' }}>Loading your dashboard...</div>;
   }
@@ -223,6 +258,37 @@ export default function StudentDashboard() {
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 6 15 12 9 18" /></svg>
             </button>
           </div>
+
+          {/* Work Summary Section */}
+          {isActive && (
+            <div style={{ marginTop: 14 }}>
+              <div className="hive-section-title" style={{ margin: '0 0 6px', fontSize: 12 }}>Work summary</div>
+              <p style={{ fontSize: 12.5, color: 'var(--ink-soft)', margin: '0 0 6px' }}>Add a short note before you end the session — what you worked on.</p>
+              <textarea
+                className="hive-summary-input"
+                placeholder="e.g. Refactored the auth middleware, fixed 3 bugs..."
+                value={summary}
+                onChange={(e) => setSummary(e.target.value)}
+                disabled={summaryLoading}
+              />
+              <button
+                className="hive-primary-btn"
+                style={{ marginTop: 10 }}
+                disabled={!summary.trim() || summaryLoading}
+                onClick={handleSubmitSummary}
+              >
+                {summaryLoading ? 'Adding...' : 'Add summary'}
+              </button>
+              <button
+                className="hive-danger-btn"
+                style={{ marginTop: 10 }}
+                disabled={endingSession}
+                onClick={handleEndSession}
+              >
+                {endingSession ? 'Ending...' : 'End session'}
+              </button>
+            </div>
+          )}
         </>
       ) : null}
 

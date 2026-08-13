@@ -310,6 +310,60 @@ export default function ProfilePage() {
         </div>
       )}
 
+      {/* Student Settings Section */}
+      {isStudent && (
+        <>
+          <div className="hive-section-title" style={{ marginTop: 24 }}>Settings</div>
+          <div className="hive-card" style={{ padding: '4px 14px' }}>
+            <div className="hive-settings-row">
+              <div className="hive-settings-left">
+                <div className="hive-faculty-info-ic">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 0 1-3.4 0" /></svg>
+                </div>
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: 15 }}>Push notifications</div>
+                  <div className="hive-settings-sub">Alerts for session start and end</div>
+                </div>
+              </div>
+              <label className="hive-switch">
+                <input type="checkbox" defaultChecked />
+                <span className="track"><span className="thumb"></span></span>
+              </label>
+            </div>
+            <div className="hive-settings-row">
+              <div className="hive-settings-left">
+                <div className="hive-faculty-info-ic">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><polyline points="12 7 12 12 15.5 14" /></svg>
+                </div>
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: 15 }}>Session reminders</div>
+                  <div className="hive-settings-sub">Nudge if a summary is pending</div>
+                </div>
+              </div>
+              <label className="hive-switch">
+                <input type="checkbox" defaultChecked />
+                <span className="track"><span className="thumb"></span></span>
+              </label>
+            </div>
+            <div className="hive-settings-row">
+              <div className="hive-settings-left">
+                <div className="hive-faculty-info-ic">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z" /></svg>
+                </div>
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: 15 }}>Dark mode</div>
+                  <div className="hive-settings-sub">Easier on the eyes at night</div>
+                </div>
+              </div>
+              <label className="hive-switch">
+                <input type="checkbox" />
+                <span className="track"><span className="thumb"></span></span>
+              </label>
+            </div>
+          </div>
+        </>
+      )}
+
       {/* Photo management (both roles) */}
       <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 16, flexWrap: 'wrap' }}>
         {profile.profilePicture && (

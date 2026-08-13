@@ -6,6 +6,7 @@ import { usePushNotifications } from '../../hooks/usePushNotifications';
 
 const STUDENT_NAV = [
   { label: 'Home', path: '/', icon: 'home' },
+  { label: 'Stats', path: '/stats', icon: 'chart' },
   { label: 'Alerts', path: '/notifications', icon: 'bell' },
   { label: 'Profile', path: '/profile', icon: 'user' },
 ];
@@ -65,6 +66,7 @@ function NavIcon({ name }: { name: string }) {
     user: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="3.6" /><path d="M4.5 20c1.3-3.8 4.3-6 7.5-6s6.2 2.2 7.5 6" /></svg>,
     users: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>,
     scan: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2" /><path d="M17 3h2a2 2 0 0 1 2 2v2" /><path d="M21 17v2a2 2 0 0 1-2 2h-2" /><path d="M7 21H5a2 2 0 0 1-2-2v-2" /><line x1="7" y1="12" x2="17" y2="12" /></svg>,
+    chart: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20V10M11 20V4M18 20v-7" /></svg>,
   };
   return icons[name] || null;
 }
