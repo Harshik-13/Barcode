@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [ReadyVersion-1.4] — 2026-08-14
+
+### Fixed
+
+- **Misleading statistics removed** — "Consistency %" on stats page always showed 100% due to a no-op calculation; replaced with streak-based ring showing current streak days. "Present Days" tile showed the same value as "Total Sessions"; replaced with "This week" tile using `stats.thisWeek`.
+- **Non-functional settings toggles removed** — "Push notifications" and "Session reminders" toggles on Settings page had no backend persistence and did nothing when toggled; removed the entire Preferences section.
+- **Notification type labels humanized** — Raw enum values (`session_started`, `summary_pending`, etc.) exposed to users; replaced with readable labels ("Session Started", "Summary Required", "Session Completed", "Summary Approved").
+
+### Changed
+
+- **Home screen focused** — Removed "My attendance" section and "View more" button from student dashboard that duplicated the attendance history page. Home now shows only: greeting + active session card (or "no active session" with link to history).
+- **Navigation standardized** — Both links to attendance history now use consistent "View attendance history" label.
+- **Design system alignment** — Replaced `box-shadow` with `border: 1px solid var(--line)` on `.hive-card`, `.hive-stat-tile`, `.hive-hive-ring-card` per DESIGN.md's "Hairline Over Shadow Rule". Cards are now flat with hairline borders as the design doctrine requires.
+- **Inline styles extracted to CSS** — Added reusable classes: `.hive-select`, `.hive-alert-error`, `.hive-alert-success`, `.hive-loading`. Applied across StudentDashboard, SessionDetailPage, NotificationsPage, ProfilePage, AttendanceHistory, StudentStats.
+
+### Added
+
+- **AttendanceHistory page** — New dedicated page at `/stats/history` with back-row header, chip filters (All/Present/Absent), session rows, and pagination.
+- **PrivacyPolicy page** — Placeholder at `/privacy` linked from login legal text.
+- **TermsOfService page** — Placeholder at `/terms` linked from login legal text.
+- **Settings page** — New `/settings` route accessible from profile gear icon; shows account info (roll, branch, hostel) and log out.
+
 ## [ReadyVersion-1.3] — 2026-08-11
 
 ### Changed

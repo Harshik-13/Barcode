@@ -94,11 +94,17 @@ export function Layout() {
   }, [user, isSupported, permission, subscription, subscribe]);
 
   useEffect(() => {
-    if (!user || user.role !== 'student') return;
+    if (!user || (user.role !== 'student' && user.role !== 'faculty')) return;
     const fetchCount = () => {
-      notificationsApi.unreadCount()
-        .then((res) => setUnreadCount(res.data.count))
-        .catch(() => {});
+      if (user.role === 'faculty') {
+        notificationsApi.facultyList(1, 1)
+          .then((res) => setUnreadCount(res.pagination?.total || 0))
+          .catch(() => {});
+      } else {
+        notificationsApi.unreadCount()
+          .then((res) => setUnreadCount(res.data.count))
+          .catch(() => {});
+      }
     };
     fetchCount();
     const interval = setInterval(fetchCount, 60000);
@@ -114,8 +120,56 @@ export function Layout() {
   }
 
   if (isStudent) {
-    return (
-      <div className="hive-app">
+    const path = location.pathname;
+    const isHome = path === '/';
+    const isStats = path === '/stats';
+    const isStatsHistory = path === '/stats/history';
+    const isNotifications = path === '/notifications';
+    const isProfile = path === '/profile' || path.startsWith('/profile/');
+    const isSessionDetail = path.startsWith('/sessions/');
+
+    function renderStudentHeader() {
+      // Pages with their own header — render nothing
+      if (isStatsHistory) return null;
+      if (isStats) {
+        return (
+          <header className="hive-header">
+            <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 19, fontWeight: 700, margin: 0, letterSpacing: '-.01em' }}>My Stats</h1>
+            <div style={{ width: 40 }} />
+          </header>
+        );
+      }
+      if (isNotifications) {
+        return (
+          <header className="hive-header">
+            <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 19, fontWeight: 700, margin: 0, letterSpacing: '-.01em' }}>Notifications</h1>
+            <div style={{ width: 40 }} />
+          </header>
+        );
+      }
+      if (isProfile) {
+        return (
+          <header className="hive-header">
+            <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 19, fontWeight: 700, margin: 0, letterSpacing: '-.01em' }}>Profile</h1>
+            <button className="hive-icon-btn ghost" onClick={() => navigate('/settings')} aria-label="Settings">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ width: 20, height: 20 }}>
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 13.5a7.6 7.6 0 0 0 0-3l1.8-1.4-2-3.4-2.1.6a7.7 7.7 0 0 0-2.6-1.5L14 2.5h-4l-.5 2.3a7.7 7.7 0 0 0-2.6 1.5l-2.1-.6-2 3.4L4.6 10.5a7.6 7.6 0 0 0 0 3L2.8 15l2 3.4 2.1-.6a7.7 7.7 0 0 0 2.6 1.5l.5 2.3h4l.5-2.3a7.7 7.7 0 0 0 2.6-1.5l2.1.6 2-3.4z" />
+              </svg>
+            </button>
+          </header>
+        );
+      }
+      if (isSessionDetail) {
+        return (
+          <header className="hive-header">
+            <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 19, fontWeight: 700, margin: 0, letterSpacing: '-.01em' }}>Session Details</h1>
+            <div style={{ width: 40 }} />
+          </header>
+        );
+      }
+      // Default: Home topbar
+      return (
         <header className="hive-header">
           <div className="hive-brand">
             <div className="hive-hex"><HiveLogo /></div>
@@ -146,6 +200,12 @@ export function Layout() {
             </button>
           </div>
         </header>
+      );
+    }
+
+    return (
+      <div className="hive-app">
+        {renderStudentHeader()}
 
         <div className="hive-scroll">
           <Outlet />
@@ -179,12 +239,14 @@ export function Layout() {
           <div className="hive-header-actions">
             <button
               className="hive-icon-btn ghost"
-              aria-label="Notifications"
+              onClick={() => navigate('/notifications')}
+              aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={{ width: 18, height: 18 }}>
                 <path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
                 <path d="M13.7 21a2 2 0 0 1-3.4 0" />
               </svg>
+              {unreadCount > 0 && <span className="dot" />}
             </button>
             <button
               className="hive-avatar"

@@ -4,27 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import { env } from '../utils/env';
 import type { GoogleCredentialResponse } from '../types/google-accounts';
 
-function HiveHexLogo() {
-  return (
-    <div className="hive-login-hex">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 3l7.5 4.3v9.4L12 21l-7.5-4.3V7.3z" />
-      </svg>
-    </div>
-  );
-}
-
-function GoogleIcon() {
-  return (
-    <svg viewBox="0 0 48 48" width="19" height="19">
-      <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.6 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 8 3l6-6C34.5 5.1 29.6 3 24 3 12.4 3 3 12.4 3 24s9.4 21 21 21 21-9.4 21-21c0-1.4-.1-2.7-.4-3.5z" />
-      <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.5 16 18.9 13 24 13c3.1 0 5.8 1.1 8 3l6-6C34.5 5.1 29.6 3 24 3 16.3 3 9.7 7.3 6.3 14.7z" />
-      <path fill="#4CAF50" d="M24 45c5.2 0 10-1.9 13.6-5.1l-6.3-5.3C29.2 36.6 26.7 37.5 24 37.5c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.6 40.5 16.3 45 24 45z" />
-      <path fill="#1976D2" d="M43.6 20.5H24v8h11.3c-1 3-3.4 5.4-6.3 6.6l6.3 5.3C39.5 37.1 43 31 43 24c0-1.4-.1-2.7-.4-3.5z" />
-    </svg>
-  );
-}
-
 export default function Login() {
   const googleButtonRef = useRef<HTMLDivElement>(null);
   const { loginWithGoogle, isAuthenticated } = useAuth();
@@ -94,7 +73,11 @@ export default function Login() {
 
   return (
     <div className="hive-login-screen">
-      <HiveHexLogo />
+      <div className="hive-login-hex">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 3l7.5 4.3v9.4L12 21l-7.5-4.3V7.3z" />
+        </svg>
+      </div>
       <h2>Welcome to Hive</h2>
       <p className="hive-login-tag">Session &amp; attendance tracking for VNR VJIET students.</p>
 
@@ -115,7 +98,7 @@ export default function Login() {
       </div>
 
       <div className="hive-login-legal">
-        By continuing, you agree to Hive's <button onClick={() => navigate('/login')}>Terms of Service</button> and <button onClick={() => navigate('/login')}>Privacy Policy</button>.
+        By continuing, you agree to Hive's <button onClick={() => navigate('/terms')}>Terms of Service</button> and <button onClick={() => navigate('/privacy')}>Privacy Policy</button>.
       </div>
 
       {loading && (

@@ -4,7 +4,7 @@ Role-based platform that records student attendance and daily work activity insi
 
 ![Status](https://img.shields.io/badge/status-production-brightgreen)
 ![Tests](https://img.shields.io/badge/tests-177%20passing-brightgreen)
-![Version](https://img.shields.io/badge/version-ReadyVersion--1.3-blue)
+![Version](https://img.shields.io/badge/version-ReadyVersion--1.4-blue)
 
 ---
 

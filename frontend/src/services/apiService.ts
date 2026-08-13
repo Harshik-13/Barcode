@@ -41,6 +41,8 @@ export interface SessionWithDetails extends WorkspaceSession {
   studentName?: string;
   studentRoll?: string;
   categoryName?: string;
+  hostel?: string;
+  machineName?: string;
   reviewStatus?: string;
   reviewFeedback?: string;
   reviewedBy?: number;
@@ -133,6 +135,13 @@ export const sessionsApi = {
 
   async archive(id: number): Promise<Data<SessionWithDetails>> {
     return api(`/api/sessions/${id}/archive`, { method: 'PATCH' });
+  },
+
+  async review(id: number, status: 'approved' | 'rejected', feedback?: string): Promise<Data<SessionWithDetails>> {
+    return api(`/api/sessions/${id}/review`, {
+      method: 'POST',
+      body: { status, ...(feedback ? { feedback } : {}) },
+    });
   },
 
   async manualExit(id: number, reason: string): Promise<Data<SessionWithDetails>> {
@@ -261,6 +270,18 @@ export const notificationsApi = {
 
   async markAllAsRead(): Promise<Data<{ success: true }>> {
     return api('/api/notifications/read-all', { method: 'PATCH' });
+  },
+
+  async facultyList(
+    page = 1,
+    limit = 20,
+  ): Promise<Paginated<NotificationItem>> {
+    const qs = new URLSearchParams({ page: String(page), limit: String(limit) });
+    return api(`/api/faculty-notifications?${qs.toString()}`);
+  },
+
+  async facultyMarkAsRead(id: number): Promise<Data<{ success: true }>> {
+    return api(`/api/faculty-notifications/${id}/read`, { method: 'PATCH' });
   },
 };
 

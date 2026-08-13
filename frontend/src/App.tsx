@@ -22,6 +22,10 @@ const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const OnboardingPage = lazy(() => import('./pages/OnboardingPage'));
 const StudentStats = lazy(() => import('./pages/StudentStats'));
 const FacultyManagementPage = lazy(() => import('./pages/FacultyManagementPage'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
+const TermsOfService = lazy(() => import('./pages/TermsOfService'));
+const AttendanceHistory = lazy(() => import('./pages/AttendanceHistory'));
 
 function App() {
   return (
@@ -31,6 +35,8 @@ function App() {
           <Suspense fallback={<Loading fullPage />}>
             <Routes>
               <Route path="/login" element={<Login />} />
+              <Route path="/privacy" element={<PrivacyPolicy />} />
+              <Route path="/terms" element={<TermsOfService />} />
               <Route path="/unauthorized" element={<Unauthorized />} />
               <Route path="/forbidden" element={<Forbidden />} />
               <Route element={<ProtectedRoute />}>
@@ -44,10 +50,12 @@ function App() {
                   <Route path="/categories" element={<RoleRoute roles={['admin']}><CategoriesPage /></RoleRoute>} />
                   <Route path="/sessions" element={<SessionsPage />} />
                   <Route path="/activity-logs" element={<RoleRoute roles={['admin']}><ActivityLogsPage /></RoleRoute>} />
-                  <Route path="/notifications" element={<RoleRoute roles={['student']}><NotificationsPage /></RoleRoute>} />
+                  <Route path="/notifications" element={<RoleRoute roles={['student', 'faculty']}><NotificationsPage /></RoleRoute>} />
                   <Route path="/stats" element={<RoleRoute roles={['student']}><StudentStats /></RoleRoute>} />
+                  <Route path="/stats/history" element={<RoleRoute roles={['student']}><AttendanceHistory /></RoleRoute>} />
                   <Route path="/sessions/:id" element={<SessionDetailPage />} />
                   <Route path="/profile" element={<ProfilePage />} />
+                  <Route path="/settings" element={<RoleRoute roles={['student']}><SettingsPage /></RoleRoute>} />
                 </Route>
               </Route>
               <Route path="*" element={<NotFound />} />

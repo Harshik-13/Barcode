@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
+import { useAuth } from '../store/AuthContext';
 import { sessionsApi, categoriesApi } from '../services/apiService';
 import type { SessionWithDetails } from '../services/apiService';
 import type { Category } from '@workspace/shared';
 import { STATUS_LABELS, statusChipStyle } from '../utils/sessionStatus';
 
 export default function SessionsPage() {
+  const { user } = useAuth();
+  const isFaculty = user?.role === 'faculty';
   const [sessions, setSessions] = useState<SessionWithDetails[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -17,6 +20,10 @@ export default function SessionsPage() {
   const [summary, setSummary] = useState('');
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<number | ''>('');
+
+  const [reviewingId, setReviewingId] = useState<number | null>(null);
+  const [reviewStatus, setReviewStatus] = useState<'approved' | 'rejected'>('approved');
+  const [reviewFeedback, setReviewFeedback] = useState('');
 
   useEffect(() => {
     categoriesApi.list('active').then(r => setCategories(r.data)).catch(() => {});
@@ -57,6 +64,18 @@ export default function SessionsPage() {
       sessionsApi.list({ page, limit: 20, status: statusFilter }).then((res) => setSessions(res.data));
     } catch (err: unknown) {
       alert((err as { message?: string })?.message || 'Failed to archive session');
+    }
+  };
+
+  const handleReview = async (id: number) => {
+    try {
+      await sessionsApi.review(id, reviewStatus, reviewFeedback.trim() || undefined);
+      setReviewingId(null);
+      setReviewFeedback('');
+      setReviewStatus('approved');
+      sessionsApi.list({ page, limit: 20, status: statusFilter }).then((res) => setSessions(res.data));
+    } catch (err: unknown) {
+      alert((err as { message?: string })?.message || 'Failed to review session');
     }
   };
 
@@ -123,6 +142,11 @@ export default function SessionsPage() {
                         Add Summary
                       </button>
                     )}
+                    {isFaculty && s.status === 'completed' && reviewingId !== s.id && (
+                      <button onClick={() => { setReviewingId(s.id); setReviewStatus('approved'); setReviewFeedback(''); }} style={{ background: '#16a34a', color: '#fff', border: 'none', borderRadius: '4px', padding: '4px 8px', fontSize: '12px', cursor: 'pointer' }}>
+                        Review
+                      </button>
+                    )}
                     {(s.status === 'active' || s.status === 'awaiting_summary' || s.status === 'completed') && (
                       <button onClick={() => handleArchive(s.id)} style={{ background: 'none', border: '1px solid #9ca3af', borderRadius: '4px', padding: '4px 8px', fontSize: '12px', cursor: 'pointer', marginLeft: '4px', color: '#6b7280' }}>
                         Archive
@@ -174,6 +198,52 @@ export default function SessionsPage() {
               </button>
               <button onClick={() => handleComplete(completingId)} disabled={!summary.trim()} style={{ padding: '8px 16px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '14px', opacity: summary.trim() ? 1 : 0.5 }}>
                 Complete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {reviewingId !== null && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '16px' }}>
+          <div style={{ padding: '20px', background: '#fff', borderRadius: '8px', width: '100%', maxWidth: '500px' }}>
+            <h3 style={{ marginBottom: '16px', fontSize: '18px' }}>Review Session</h3>
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '8px', color: '#374151' }}>Decision</label>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  onClick={() => setReviewStatus('approved')}
+                  style={{ flex: 1, padding: '10px', border: reviewStatus === 'approved' ? '2px solid #16a34a' : '1px solid #e5e7eb', borderRadius: '4px', background: reviewStatus === 'approved' ? '#f0fdf4' : '#fff', cursor: 'pointer', fontSize: '14px', fontWeight: reviewStatus === 'approved' ? 600 : 400, color: reviewStatus === 'approved' ? '#16a34a' : '#374151' }}
+                >
+                  Approve
+                </button>
+                <button
+                  onClick={() => setReviewStatus('rejected')}
+                  style={{ flex: 1, padding: '10px', border: reviewStatus === 'rejected' ? '2px solid #dc2626' : '1px solid #e5e7eb', borderRadius: '4px', background: reviewStatus === 'rejected' ? '#fef2f2' : '#fff', cursor: 'pointer', fontSize: '14px', fontWeight: reviewStatus === 'rejected' ? 600 : 400, color: reviewStatus === 'rejected' ? '#dc2626' : '#374151' }}
+                >
+                  Reject
+                </button>
+              </div>
+            </div>
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px', color: '#374151' }}>Feedback (optional)</label>
+              <textarea
+                placeholder="Add feedback for the student..."
+                value={reviewFeedback}
+                onChange={(e) => setReviewFeedback(e.target.value)}
+                rows={3}
+                style={{ width: '100%', padding: '10px', border: '1px solid #e5e7eb', borderRadius: '4px', fontSize: '14px', resize: 'vertical', boxSizing: 'border-box' }}
+              />
+            </div>
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+              <button onClick={() => { setReviewingId(null); setReviewFeedback(''); setReviewStatus('approved'); }} style={{ padding: '8px 16px', border: '1px solid #e5e7eb', borderRadius: '4px', background: '#fff', cursor: 'pointer', fontSize: '14px' }}>
+                Cancel
+              </button>
+              <button
+                onClick={() => handleReview(reviewingId)}
+                style={{ padding: '8px 16px', background: reviewStatus === 'approved' ? '#16a34a' : '#dc2626', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '14px' }}
+              >
+                {reviewStatus === 'approved' ? 'Approve' : 'Reject'}
               </button>
             </div>
           </div>
